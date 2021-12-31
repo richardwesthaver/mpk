@@ -1,0 +1,8 @@
+[package]
+name = "octatrack"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hound = "3.4.0"
+ot_utils = "0.1.4"

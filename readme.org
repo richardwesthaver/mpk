@@ -1,0 +1,129 @@
+#+TITLE: mpk
+#+AUTHOR: ellis <ellis@rwest.io>
+#+SUMMARY: media production kit
+* COMMENT notes
+- studio management, organization, support, storage, indexing
+  - database
+- mediums & medias
+- Software
+  - Patchers
+    - [[https://cycling74.com/products/max][Max]]
+    - [[https://puredata.info/][Pure Data]]
+    - [[https://www.native-instruments.com/en/products/komplete/synths/reaktor-6/][Reaktor]]
+  - DAWs
+    - [[https://www.ableton.com][Ableton Live]]
+    - [[https://www.bitwig.com/][Bitwig Studio]]
+    - [[https://www.reasonstudios.com/][Reason]]
+    - [[https://www.image-line.com/][FL Studio]]
+- Hardware
+  - [[https://www.elektron.se/products/octatrack-mkii/][Octatrack]]
+  - [[https://teenage.engineering/products/op-z][OP-Z]]
+  - [[https://buchla.com/][Buchla]]
+- Music
+  - [[https://www.youtube.com/watch?v=DWuAn6C8Mfc][Radiohead]]
+  - [[https://www.youtube.com/watch?v=PGwPSPIhohk][Pink Floyd]]
+  - [[https://www.youtube.com/watch?v=6ZwItYjqXR0][FJAAK]]
+  - [[https://www.youtube.com/watch?v=mjlOw6dNeS0][Bassnectar]]
+  - [[https://www.youtube.com/watch?v=3cSqRMioRik][Partibio69]]
+  - [[https://www.youtube.com/watch?v=J8sS5NkADBE][VURRO]]
+  - [[https://www.youtube.com/watch?v=PoJKpE165_w][Ajax Spearman of the Sun]]
+  - [[https://www.youtube.com/watch?v=tbLt0S0W5jE][Venetian Snares]]
+  - [[https://www.youtube.com/watch?v=961uG4Ixg_Y][Aphex Twin]]
+  - [[https://www.youtube.com/watch?v=6ZwItYjqXR0&list=RDMM][Meng Qi]]
+  - [[https://disasterpeace.com][Disasterpeace]]
+** hardware
+- [[real://patchbay][S-patch 48]]
+  - [[real://patchbay/patchbay_front][front panel]]
+    - [[real://patchbay/patchbay_front/f1][f1]]
+    - [[real://patchbay/patchbay_front/f2][f2]]
+** lilypond
+#+begin_src lilypond :file /tmp/lp1.png
+  \relative c' {
+    g a b c
+    d e f g
+    f e d c
+    b a g a
+    b c d e
+    f g f e
+    d c b a
+    g1
+  }
+#+end_src
+** csound
+#+begin_src csound
+
+#+end_src
+** tech
+- notation
+- patchers
+- plugins
+- data
+- ui
+- net
+- io
+* Overview
+=mpk= is a /Media Programming Kit/ for digital artists, musicians, and
+hackers who want to be creative without being forced into the
+constraints of proprietary software. It provides a set of tools and
+services for building and managing creative workflows on UNIX systems.
+
+Over the years I've seen many popular creative tools implement
+subscription-based/freemium payment models, web-based/always-online
+tech, non-features/bloat, incompatible APIs, and colorful marketing. I
+don't care for any of these things and I don't like the direction
+these tools are taking us. The philosophy always seems to be that the
+computer impedes our ability to be creative -- but don't worry, this
+product will hide all the tricky bits from you so that you can focus
+on what matters - making things!
+
+In reality such tools do indeed hide the tricky bits. You can launch
+these applications with a pretty GUI, plug in your hardware and
+start working immediately. No need to pop the hood and look inside,
+because things Just Work. This is quite valuable, especially for the
+average user who doesn't want to dive head first into the endless pit
+that is modern-day multimedia programming and configuration. There are
+some significant drawbacks to this methodology though.
+
+First, when you run into unexpected behavior such as your Audio
+Interface not being recognized by your tools, you need to pray that
+someone more knowledgeable than you has encountered the same issue and
+that there is a fix available that is compatible with your tools. In
+the worst case you might not even know how to describe your issue and
+spend a night or two furiously googling for answers. In most cases you
+can probably find a solution, but you don't actually learn anything
+meaningful from this experience. You're just putting a bandaid on and
+not reasoning about why you're bleeding in the first place.
+
+Another thing I've noticed with these types of tools is that we become
+very committed to them. This is not specific to creative tools, and
+the best example that comes to mind is Emacs vs Vim which are two code
+editors that serve virtually the same purpose as far in as they edit
+text. The two communites, separated by a line in the sand are very
+committed to their tool of choice, and the friendly competition
+between them helps drive feature development for both
+projects. However, this type of commitment can be /dangerous/ for
+purely creative pursuits. In today's digital world, the tools we
+choose define the work we are capable of more than ever before. If we
+commit to a specific creative tool and decide that this is how we will
+use the computer to create things, we will only ever be capable of
+what our tools can do. Never commit.
+
+My final objection to modern creative tools has to do with those
+tricky bits I previously mentioned. That's where the magic is. 
+** Goals
+*** Resource Management
+*** Session Management
+*** I/O configuration
+- Networking
+- MIDI/OSC
+- Audio
+- Video
+*** Literate Notation
+- Lilypond
+- Csound
+* Installation
+The following dependencies are required to install =mpk=:
+- Meson
+- Rust
+- Python
+- Pipewire
