@@ -1,26 +1,31 @@
-project('mpk', ['c'],
-  version : '0.1',
+project('mpk', ['rust','c','cpp'],
+  version : '0.1.0',
   default_options : ['warning_level=3'])
+
+rustc = find_program('rustc', version:'>=1.52')
+cargo = find_program('cargo', version:'>=1.40')
+cargo_wrapper = find_program('scripts/cargo_wrapper.py')
+
+system = build_machine.system()
+if system == 'windows'
+  ext_dynamic = 'dll'
+  ext_static = 'lib'
+elif system == 'darwin'
+  ext_dynamic = 'dylib'
+  ext_static = 'a'
+else
+  ext_dynamic = 'so'
+  ext_static = 'a'
+endif
 
 cc = meson.get_compiler('c')
 
-pipewire_d = dependency('libpipewire-0.3')
-spa_d = dependency('libspa-0.2')
-m_d = cc.find_library('m', required : false)
-
-exe = executable('dmw', 'dmw.c',
+jack_dep = cc.find_library('jack', required : false)
+m_dep = cc.find_library('m', required : false)
+csound_dep = cc.find_library('csound64', required : false)
+exe = executable('mpk', 'src/mpk.c',
                  # install : true
                 )
-
-# pipewire tutorials
-executable('pw-t1', 'misc/pw_tut/t1.c',
-           dependencies: [pipewire_d])
-executable('pw-t2', 'misc/pw_tut/t2.c',
-           dependencies: [pipewire_d])
-executable('pw-t3', 'misc/pw_tut/t3.c',
-           dependencies: [pipewire_d])
-executable('pw-t4', 'misc/pw_tut/t4.c',
-           dependencies: [pipewire_d, spa_d, m_d])
 
 test('basic', exe)
 
