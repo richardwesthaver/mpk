@@ -1,5 +1,5 @@
-vendor
-build
+^vendor
+^out
 .cache
 /target$
 /Cargo.lock$
