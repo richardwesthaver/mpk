@@ -18,7 +18,6 @@ fn main() {
     // Set final .ot and .wav filename
     slicer.output_filename = check_file.file_name().unwrap().to_str().unwrap().to_string();
 
-
     for path in paths {
       // Get file info (path, name, and extension)
       let file_path = path.unwrap().path();
