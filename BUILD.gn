@@ -1,3 +1,0 @@
-executable("my_program") {
-  sources = [ "src/mpk.c" ]
-}

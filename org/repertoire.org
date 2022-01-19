@@ -1,0 +1,24 @@
+#+TITLE: repertoire
+#+DATE: 2022-01-18
+#+AUTHOR: ellis
+#+EMAIL: ellis@rwest.io
+#+DESCRIPTION: Solo Repertoire
+#+TODO: LEARN(l) PRACTICE(p) PLAY(P) MEMORIZE(m) REFRESH(r) | DONE(d)
+* Piano
+** PRACTICE Clair de Lune
+:PROPERTIES:
+:COMPOSER: Claude Debussy
+:END:
+[[yt:CvFH_6DNRCY][clair de lune]]
+** LEARN Resignation
+:PROPERTIES:
+:composer: Brad Mehldau
+:END:
+[[yt:IeSXWuqHPkM][resignation]]
+
+* COMMENT notes
+#+begin_comment
+Local variables:
+mode: org
+end:
+#+end_comment

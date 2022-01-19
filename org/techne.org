@@ -1,0 +1,22 @@
+#+TITLE: techne
+#+DATE: 2022-01-18
+#+AUTHOR: ellis
+#+EMAIL: ellis@rwest.io
+#+DESCRIPTION: 
+#+TODO: LEARN(l) PRACTICE(p) PLAY(P) MEMORIZE(m) REFRESH(r) | DONE(d)
+* Piano
+** The Virtuoso Pianist in Sixty Exercises
+:PROPERTIES:
+:author:   C.L. Hanon
+:END:
+practice this twice daily.
+* Drums
+** Rudiments
+** Chops
+** Grooves
+* COMMENT notes
+#+begin_comment
+Local variables:
+mode: org
+end:
+#+end_comment
