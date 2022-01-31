@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-01-18
+#+DATE: 2022-01-29
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
@@ -101,11 +101,6 @@ The following dependencies are required to install =mpk=:
   - [[https://www.youtube.com/watch?v=961uG4Ixg_Y][Aphex Twin]]
   - [[https://www.youtube.com/watch?v=6ZwItYjqXR0&list=RDMM][Meng Qi]]
   - [[https://disasterpeace.com][Disasterpeace]]
-** hardware
-- [[real://patchbay][S-patch 48]]
-  - [[real://patchbay/patchbay_front][front panel]]
-    - [[real://patchbay/patchbay_front/f1][f1]]
-    - [[real://patchbay/patchbay_front/f2][f2]]
 ** lilypond
 #+begin_src lilypond :file /tmp/lp1.png
   \relative c' {
@@ -119,6 +114,7 @@ The following dependencies are required to install =mpk=:
     g1
   }
 #+end_src
+
 ** csound
 #+begin_src csound
 
@@ -130,6 +126,7 @@ The following dependencies are required to install =mpk=:
 - data
 - ui
 - net
+- tracker??
 - io
 
 #+begin_comment

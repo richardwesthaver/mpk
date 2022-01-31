@@ -1,5 +1,5 @@
 #+TITLE: techne
-#+DATE: 2022-01-18
+#+DATE: 2022-01-20
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: 
@@ -10,6 +10,22 @@
 :author:   C.L. Hanon
 :END:
 practice this twice daily.
+1. 
+   #+begin_src lilypond :file virp1.pdf
+     \version "2.22.1"
+     \new PianoStaff <<
+       \new Staff = "up" {
+         \autoChange \relative {c16-1 e-2 f-3 g-4 a-5 g f e |}
+       }
+       \new Staff = "down" { \clef bass
+         \relative {c,16-5 e-4 f-3 g-2 a-1 g f e |}}
+     >>
+   #+end_src
+
+   #+RESULTS:
+   [[file:virp.pdf]]
+
+2. 
 * Drums
 ** Rudiments
 ** Chops
