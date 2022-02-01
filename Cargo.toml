@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+    "src/cli",
+    "src/jacki",
+]
+
+exclude = [ "vendor/" ]
