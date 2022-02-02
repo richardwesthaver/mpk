@@ -1,0 +1,10 @@
+[package]
+name = "mdb-id3"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+id3 = "1.0.2"
+serde = { version = "1.0.136", features = ["derive"] }
+serde_json = "1.0.78"
+clap = { version = "3.0.13", features = ["derive"] }

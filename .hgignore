@@ -1,5 +1,5 @@
 ^vendor
 ^out
-.cache
-/target
-/Cargo.lock
+^.cache
+^target
+^Cargo.lock
