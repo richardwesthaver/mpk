@@ -1,43 +1,43 @@
+//! mdb-id3 --- ID3 parsing utils
+// TXXX tag???
 use id3::Tag;
 use clap::Parser;
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use serde::Serialize;
 
-/// CLI Args
+/// mdb-id3
 #[derive(Parser, Debug)]
 struct Args {
   path: PathBuf,
   output: Option<PathBuf>,
 }
 
-fn id3_walk(path: &Path) -> io::Result<HashMap<PathBuf, Option<Tag>>> {
-  let mut coll = HashMap::new();
+fn id3_walk(path: &Path, coll: &mut HashMap<PathBuf, Option<Tag>>) -> Result<(), io::Error> {
   if path.is_dir() {
     for elt in fs::read_dir(path)? {
       let elt = elt?;
       let p = elt.path();
       if p.is_dir() {
-	id3_walk(&p)?;
+	id3_walk(&p, coll).expect("failed to walk path");
       } else if p.is_file() {
 	println!("parsing {:?}", p);
-	coll.insert(path.to_path_buf(),
+	coll.insert(p.to_path_buf(),
 		    if let Ok(t) = Tag::read_from_path(&p) {
 		      Some(t)
 		    } else { None }
 	);
-      }
+      } 
     }
   } else if path.is_file() {
     coll.insert(path.to_path_buf(),
-		if let Ok(t) = Tag::read_from_path(&path)
-		{ Some(t) }
-		else { None });
-    
+		if let Ok(t) = Tag::read_from_path(&path) {
+		  Some(t)
+		} else { None });
   }
-  Ok(coll)
+  Ok(())
 }
 
 #[derive(Debug, Serialize)]
@@ -48,10 +48,9 @@ struct JsonId3 {
 
 impl JsonId3 {
   fn new(path: PathBuf, tag: Option<Tag>) -> Result<JsonId3, id3::Error> {
-
     let tags = if let Some(tag) = tag { 
       let mut map = HashMap::new();
-      for f in tag.frames() {
+      for f in tag.frames().into_iter() {
 	map.insert(f.id().to_string(), f.content().to_string());
       }
       Some(map)
@@ -68,17 +67,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   let args = Args::parse();
   println!("parsing contents of {:?}", args.path.canonicalize()?);
 
-  let coll = id3_walk(args.path.as_path())?;
+  let mut coll = HashMap::new();
+  id3_walk(args.path.as_path(), &mut coll)?;
 
-  for (k,v) in coll {
-    let json = JsonId3::new(k,v)?;
-    if let Some(ref f) = args.output {
-      let mut out = fs::File::create(f)?;
-      serde_json::to_writer(&mut out, &json)?;
-    } else {
-      println!("{}", serde_json::to_string_pretty(&json)?);
+  let mut buff = Vec::new();
+
+  if let Some(ref f) = args.output {
+    let mut out = fs::OpenOptions::new()
+      .create_new(true)
+      .append(true)
+      .open(f)?;
+
+    for (k,v) in coll.into_iter() {
+      let json = JsonId3::new(k,v)?;
+      serde_json::to_writer_pretty(&mut buff, &json)?;
     }
-  }
+    out.write_all(&buff)?;
+  } else {
+      for (k,v) in coll.into_iter() {
+	let json = JsonId3::new(k,v)?;
+	println!("{}", serde_json::to_string_pretty(&json)?);
+      }
+    }
 
   Ok(())
 }
