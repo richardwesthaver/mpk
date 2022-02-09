@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-01-29
+#+DATE: 2022-02-09
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
@@ -128,7 +128,58 @@ The following dependencies are required to install =mpk=:
 - net
 - tracker??
 - io
+** sql notes
+Indexes should not be used in −
+- Small tables.
+- Tables that have frequent, large batch update or insert operations.
+- Columns that contain a high number of NULL values.
+- Columns that are frequently manipulated.
 
+#+begin_src sql
+attach database 'db' as 'alias'
+
+detach database 'alias'
+
+.tables
+.schema 
+
+create table db.table_name(
+  id int primary key not null,
+  name text not null,
+  rms real
+)
+
+drop table db.table_name
+
+insert into table_name ([c1,c2,c3]) values (v1,v2,v3)
+
+select c1,c2,c3 from table_name
+
+select * from table_name
+
+select tbl_name from sqlite_master where type = 'table'
+
+select c1,c2,c3 from table_name where c1 > c2
+
+select count(*) as 'count' from table
+
+select current_timestamp
+
+select c1 from table where exists (select c1 from table where c3 > 65)
+
+update table set c1 = 'val' where c1 = 'noval'
+
+delete from table where COND
+
+select distinct c3 from table limit 3 offset 2 group by c1 having count(c1) > 2 order by c2 asc
+
+pragma pragma_name
+pragma pname = 2
+
+select name from sqlite_master where type = 'trigger'
+
+drop trigger 'trigger_name'
+#+end_src
 #+begin_comment
 Local variables:
 mode: org
