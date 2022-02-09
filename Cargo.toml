@@ -4,7 +4,8 @@ members = [
     "src/cli",
     "src/jacki",
     "src/mdb",
-    "src/mdb-id3",
+    "src/mdb_id3",
+    "src/mdb_emacs",
 ]
 
 exclude = [ "vendor/" ]

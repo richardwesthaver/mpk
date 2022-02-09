@@ -1,29 +1,34 @@
-use emacs::{defun, Env, Result, Value};
-use rocksdb::{DB, Options};
-emacs::plugin_is_GPL_compatible!();
+use rusqlite::{Connection, OpenFlags, Params, Error as SqlError};
+use std::path::Path;
 
-#[emacs::module]
-fn init(_: &Env) -> Result<()> {
+mod id3;
+pub use id3::Id3;
 
-  #[defun(user_ptr)]
-  fn make() -> Result<DB> {
-    Ok(DB::open_default("mdb_db").unwrap())
-  }
+/// Media Database
+pub struct Mdb {
+  conn: Connection
+}
 
-  #[defun]
-  fn get(db: &DB, key: String) -> Result<Option<String>> {
-    let res = match db.get(&key).unwrap() {
-      Some(val) => Some(String::from_utf8(val).unwrap()),
-      None => None,
+impl Mdb {
+  pub fn new<P: AsRef<Path>>(path: Option<P>) -> Result<Mdb, SqlError> {
+    let conn = match path {
+      Some(p) => Connection::open(p)?,
+      None => Connection::open_in_memory()?,
     };
-    Ok(res)
+
+    Ok(Mdb{conn})
   }
 
-  #[defun]
-  fn set(db: &DB, key: String, val: String) -> Result<()> {
-    Ok(db.put(key,val).unwrap())
+  pub fn new_with_flags(path: Option<&Path>, flags: OpenFlags) -> Result< Mdb, SqlError> {
+    let conn = match path {
+      Some(p) => Connection::open_with_flags(p, flags)?,
+      None => Connection::open_in_memory_with_flags(flags)?,
+    };
+
+    Ok(Mdb{conn})
   }
 
-  let _ = DB::destroy(&Options::default(), "mdb_db");
-  Ok(())
+  pub fn exec<P: Params>(&self, sql: &str, params: P) -> Result<usize, SqlError> {
+    self.conn.execute(sql, params)
+  }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "mdb-id3"
+name = "mdb_id3"
 version = "0.1.0"
 edition = "2021"
 
