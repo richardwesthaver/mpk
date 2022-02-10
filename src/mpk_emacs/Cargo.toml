@@ -1,5 +1,5 @@
 [package]
-name = "mdb-emacs"
+name = "mpk_emacs"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,4 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 emacs = "0.18"
-rocksdb = "0.17"
+mdb = { path = "../mdb" }

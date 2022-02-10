@@ -1,7 +1,8 @@
 [package]
-name = "otc"
+name = "mpk_hw"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ot_utils = "0.1.4"
+wmidi = "4.0.6"
+ffmpeg-next = "4.4.0"

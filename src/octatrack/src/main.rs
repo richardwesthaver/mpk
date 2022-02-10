@@ -3,7 +3,7 @@ use std::path::Path;
 use std::fs;
 
 fn main() {
-  let folder_path = "path/to/sample/folder".to_string();
+  let folder_path = "folder".to_string();
   let check_file: &Path = &folder_path.as_ref();
   let slicer = Slicer::new();
   // Validate directory

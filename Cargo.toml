@@ -1,11 +1,13 @@
 [workspace]
-
 members = [
-    "src/cli",
-    "src/jacki",
-    "src/mdb",
-    "src/mdb_id3",
-    "src/mdb_emacs",
+  "src/mpk",
+  "src/mpk_hw",
+  "src/mpk_config",
+  "src/mpk_jack",
+  "src/mpk_emacs",
+  "src/mdb",
+  "src/mdb_id3",
+  "src/mfe",
 ]
 
 exclude = [ "vendor/" ]
