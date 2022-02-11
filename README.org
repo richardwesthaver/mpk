@@ -1,13 +1,13 @@
 #+TITLE: mpk
-#+DATE: 2022-02-09
+#+DATE: 2022-02-10
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
 * Overview
-=mpk= is a /Media Programming Kit/ for digital artists, musicians, and
-hackers who want to be creative without being forced into the
-constraints of proprietary software. It provides a set of tools and
+=mpk= is my /Media Programming Kit/. It provides a set of tools and
 services for building and managing creative workflows on UNIX systems.
+
+
 
 ** Background
 Over the years I've seen many popular creative tools implement
