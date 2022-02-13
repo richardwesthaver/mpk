@@ -1,6 +1,6 @@
-use clap::Parser;
 use std::path::PathBuf;
 use mdb::{Mdb, Id3};
+use clap::Parser;
 
 #[derive(Parser, Debug)]
 struct Args {
