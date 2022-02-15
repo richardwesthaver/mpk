@@ -85,7 +85,7 @@ fn main() {
 	  let year = i.get_tag("TDRC");
 
 	  conn.exec("insert into tracks (path)
-            values (?,?)", [path]).unwrap();
+            values (?)", [path]).unwrap();
 	  conn.exec("insert into track_tags (artist, title, album, genre, year)
             values (?,?,?,?,?)", [artist, title, album, genre, year]).unwrap();
 	}
