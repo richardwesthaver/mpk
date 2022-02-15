@@ -1,13 +1,16 @@
 [workspace]
 members = [
   "src/mpk",
-  "src/mpk_hw",
+  "src/mpk_gear",
   "src/mpk_config",
   "src/mpk_jack",
   "src/mpk_emacs",
+  "src/mpk_flate",
+  "src/mpk_midi",
+  "src/mpk_dsp",
   "src/mpk_id3",
-  "src/mdb",
-  "src/mfe",
+  "src/mpk_db",
+  "src/mpk_fft",
 ]
 
 exclude = [ "vendor/" ]

@@ -1,13 +1,11 @@
-use std::path::PathBuf;
-use mdb::{Mdb, Id3};
+use mpk_db::{Mdb, Id3};
 use clap::Parser;
 
 #[derive(Parser, Debug)]
 struct Args {
   cmd: Option<String>,
   #[clap(short,long)]
-  db: Option<PathBuf>,
-
+  db: Option<String>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

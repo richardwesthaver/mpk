@@ -1,13 +1,12 @@
-use std::path::{PathBuf, Path};
+use std::path::{PathBuf, Path, MAIN_SEPARATOR};
 use std::fs;
 use std::io;
 use std::str::FromStr;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
-
-const DEFAULT_PATH: &str = "~/mpk";
-const CONFIG_FILE: &str = "mpk.toml";
-const DB_FILE: &str = "mpk.db";
+pub const DEFAULT_PATH: &str = "~/mpk";
+pub const CONFIG_FILE: &str = "mpk.toml";
+pub const DB_FILE: &str = "mpk.db";
 
 fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
   let p = path.as_ref();
@@ -30,9 +29,9 @@ fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
 /// MPK Configuration
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-  fs: FsConfig,
-  db: DbConfig,
-  jack: JackConfig,
+  pub fs: FsConfig,
+  pub db: DbConfig,
+  pub jack: JackConfig,
 }
 
 impl Default for Config {
@@ -58,28 +57,38 @@ impl Config {
   pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<(), io::Error> {
     let toml_string = toml::to_string_pretty(self)
       .expect("TOML serialization failed");
-    let path = path.as_ref();
+    let path = expand_tilde(path.as_ref()).unwrap();
 
     if path.is_dir() {
       let path = &path.join(CONFIG_FILE);
       fs::write(path, toml_string)?;
     } else if path.is_file() {
       fs::write(path, toml_string)?;
+    } else if !path.exists() {
+      let prefix = path.parent().unwrap();
+      if !prefix.exists() {
+	fs::create_dir_all(prefix)?;
+      }
+      fs::write(path, toml_string)?;
     }
     Ok(())
   }
 
   pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, toml::de::Error> {
-    let content = fs::read(path).expect("failed to read config file");
+    let content = fs::read(expand_tilde(path).unwrap()).expect("failed to read config file");
     let config: Config = toml::from_slice(&content)?;
     Ok(config)
   }
 
   pub fn build(&self) -> Result<(), io::Error> {
     let root = expand_tilde(&self.fs.root()).unwrap();
-    fs::create_dir(&root)?;
-    for i in ["samples", "projects", "plugins", "patches", "tracks"] {
-      fs::create_dir(root.join(i))?;
+    if !root.exists() {
+      fs::create_dir(&root)?;
+    }
+    for i in ["samples", "projects", "plugins", "patches", "tracks"].map(|x| root.join(x)) {
+      if !i.exists() {
+	fs::create_dir(root.join(i))?;
+      }
     }
     Ok(())
   }
@@ -214,7 +223,7 @@ impl FromStr for Flags {
 
 #[derive(Serialize, Deserialize)]
 pub struct DbConfig {
-  pub path: String,
+  pub path: Option<String>,
   pub log_file: Option<String>,
   pub flags: Option<Vec<String>>,
   pub limits: Option<HashMap<String, usize>>,
@@ -232,14 +241,21 @@ impl DbConfig {
       None => None,
     }
   }
+
+  pub fn path(&self) -> Option<PathBuf> {
+    match &self.path {
+      Some(p) => expand_tilde(p),
+      None => None,
+    }
+  }
 }
 
 impl Default for DbConfig {
   fn default() -> Self {
     DbConfig {
-      path: DB_FILE.into(),
+      path: Some([DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), DB_FILE].concat()),
       log_file: None,
-      flags: None,
+      flags: Some(vec!["readwrite", "create", "nomutex", "uri"].iter().map(|x| x.to_string()).collect()),
       limits: None,
     }
   }

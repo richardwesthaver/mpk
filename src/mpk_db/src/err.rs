@@ -34,7 +34,7 @@ impl From<std::io::Error> for Error {
 }
 
 impl From<mpk_id3::Error> for Error {
-  fn from(err: std::io::Error) -> Error {
+  fn from(err: mpk_id3::Error) -> Error {
     Error::Id3(err)
   }
 }

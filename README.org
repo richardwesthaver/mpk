@@ -1,13 +1,11 @@
 #+TITLE: mpk
-#+DATE: 2022-02-10
+#+DATE: 2022-02-15
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
 * Overview
 =mpk= is my /Media Programming Kit/. It provides a set of tools and
 services for building and managing creative workflows on UNIX systems.
-
-
 
 ** Background
 Over the years I've seen many popular creative tools implement

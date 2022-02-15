@@ -8,4 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 emacs = "0.18"
-mdb = { path = "../mdb" }
+mpk_db = { path = "../mpk_db" }

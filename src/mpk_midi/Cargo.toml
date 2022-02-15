@@ -1,8 +1,7 @@
 [package]
-name = "mpk_hw"
+name = "mpk_midi"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-wmidi = "4.0.6"
-ffmpeg-next = "4.4.0"
+midir = "0.7"
