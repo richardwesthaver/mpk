@@ -1,4 +1,4 @@
-use std::path::MAIN_SEPARATOR;
+use std::path::{Path, MAIN_SEPARATOR};
 use clap::{Parser, Subcommand, AppSettings};
 
 use mpk_config::{Config, DEFAULT_PATH, CONFIG_FILE};
@@ -52,8 +52,13 @@ enum Command {
 
 fn main() {
   let args = Args::parse();
-  let cfg_path = args.cfg;
-  let cfg = Config::load(&cfg_path).unwrap_or_default();
+  let cfg_path = Path::new(&args.cfg);
+  let cfg = if cfg_path.exists() {
+    Config::load(cfg_path).unwrap()
+  } else {
+    Config::default()
+  };
+
   match args.cmd {
     Command::Init => {
       eprint!("  \x1b[1mInitializing MPK\x1b[0m ... ");

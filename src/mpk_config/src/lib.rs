@@ -75,7 +75,7 @@ impl Config {
   }
 
   pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, toml::de::Error> {
-    let content = fs::read(expand_tilde(path).unwrap()).expect("failed to read config file");
+    let content = fs::read(expand_tilde(path).unwrap()).unwrap();
     let config: Config = toml::from_slice(&content)?;
     Ok(config)
   }
