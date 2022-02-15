@@ -43,7 +43,6 @@ impl Mdb {
     let sql = r"
 create table if not exists tracks (
 id integer primary key,
-name text not null,
 path text not null,
 updated datetime default current_timestamp not null);
 

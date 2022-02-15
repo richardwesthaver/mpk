@@ -78,16 +78,14 @@ fn main() {
 	id3_walk(ts, &mut coll).unwrap();
 	for i in coll {
 	  let path = String::from(i.path.to_str().unwrap());
-	  let name = i.get_tag("TIT2").unwrap();
-
 	  let title = i.get_tag("TIT2");
 	  let artist = i.get_tag("TPE1");
 	  let album = i.get_tag("TALB");
 	  let genre = i.get_tag("TCON");
 	  let year = i.get_tag("TDRC");
 
-	  conn.exec("insert into tracks (name, path)
-            values (?,?)", [name, path]).unwrap();
+	  conn.exec("insert into tracks (path)
+            values (?,?)", [path]).unwrap();
 	  conn.exec("insert into track_tags (artist, title, album, genre, year)
             values (?,?,?,?,?)", [artist, title, album, genre, year]).unwrap();
 	}
