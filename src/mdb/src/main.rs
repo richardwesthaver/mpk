@@ -7,6 +7,7 @@ struct Args {
   cmd: Option<String>,
   #[clap(short,long)]
   db: Option<PathBuf>,
+
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

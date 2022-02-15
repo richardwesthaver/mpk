@@ -1,16 +1,16 @@
 use clap::Parser;
 use std::fs;
 use std::path::PathBuf;
-use mdb_id3::id3_walk;
+use mpk_id3::{id3_walk, Result};
 
-/// mdb-id3
+/// mpk_id3
 #[derive(Parser, Debug)]
 struct Args {
   path: PathBuf,
   output: Option<PathBuf>,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
   let args = Args::parse();
   println!("parsing contents of {:?}", args.path.canonicalize()?);
 

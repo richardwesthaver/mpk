@@ -1,12 +1,31 @@
 use std::path::{PathBuf, Path};
 use std::fs;
 use std::io;
+use std::str::FromStr;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 const DEFAULT_PATH: &str = "~/mpk";
 const CONFIG_FILE: &str = "mpk.toml";
 const DB_FILE: &str = "mpk.db";
+
+fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
+  let p = path.as_ref();
+  if !p.starts_with("~") {
+    return Some(p.to_path_buf());
+  }
+  if p == Path::new("~") {
+    return dirs::home_dir();
+  }
+  dirs::home_dir().map(|mut h| {
+    if h == Path::new("/") {
+      p.strip_prefix("~").unwrap().to_path_buf()
+    } else {
+      h.push(p.strip_prefix("~/").unwrap());
+      h
+    }
+  })
+}
 
 /// MPK Configuration
 #[derive(Serialize, Deserialize)]
@@ -57,11 +76,10 @@ impl Config {
   }
 
   pub fn build(&self) -> Result<(), io::Error> {
-    fs::create_dir_all(self.fs.root())?;
-    let paths = ["samples", "projects", "plugins", "patches", "tracks"];
-    for i in paths.iter() {
-      let p = self.fs.get_path(i)?;
-      fs::create_dir(p)?;
+    let root = expand_tilde(&self.fs.root()).unwrap();
+    fs::create_dir(&root)?;
+    for i in ["samples", "projects", "plugins", "patches", "tracks"] {
+      fs::create_dir(root.join(i))?;
     }
     Ok(())
   }
@@ -70,22 +88,12 @@ impl Config {
 #[derive(Serialize, Deserialize)]
 pub struct FsConfig {
   pub root: String,
-  pub samples: String,
-  pub projects: String,
-  pub plugins: String,
-  pub patches: String,
-  pub tracks: String,
 }
 
 impl Default for FsConfig {
   fn default() -> Self {
     FsConfig {
       root: DEFAULT_PATH.into(),
-      samples: "samples".into(),
-      projects: "projects".into(),
-      plugins: "plugins".into(),
-      patches: "patches".into(),
-      tracks: "tracks".into(),
     }
   }
 }
@@ -94,8 +102,7 @@ impl FsConfig {
   pub fn new<P: AsRef<Path>>(root: P) -> Self {
     let root = root.as_ref().to_str().unwrap().to_string();
     FsConfig {
-      root,
-      ..Default::default()
+      root
     }
   }
 
@@ -106,22 +113,125 @@ impl FsConfig {
   pub fn get_path(&self, path: &str) -> Result<PathBuf, io::Error> {
     match path {
       "root" => Ok(PathBuf::from(&self.root)),
-      "samples" => Ok([&self.root, &self.samples].iter().collect()),
-      "projects" => Ok([&self.root, &self.projects].iter().collect()),
-      "plugins" => Ok([&self.root, &self.plugins].iter().collect()),
-      "patches" => Ok([&self.root, &self.patches].iter().collect()),
-      "tracks" => Ok([&self.root, &self.patches].iter().collect()),
+      "samples" => Ok([&self.root, "samples"].iter().collect::<PathBuf>()),
+      "projects" => Ok([&self.root, "projects"].iter().collect::<PathBuf>()),
+      "plugins" => Ok([&self.root, "plugins"].iter().collect::<PathBuf>()),
+      "patches" => Ok([&self.root, "patches"].iter().collect::<PathBuf>()),
+      "tracks" => Ok([&self.root, "tracks"].iter().collect::<PathBuf>()),
       e => Err(io::Error::new(io::ErrorKind::NotFound, e)),
     }
   }
 }
 
+#[allow(non_snake_case, non_camel_case_types)]
+#[allow(clippy::upper_case_acronyms)]
+#[repr(C)]
+pub enum Flags {
+  READ_ONLY = 0x00000001,
+  READ_WRITE = 0x00000002,
+  CREATE = 0x00000004,
+  DELETE_ON_CLOSE = 0x00000008,
+  EXCLUSIVE = 0x00000010,
+  AUTOPROXY = 0x00000020,
+  URI = 0x00000040,
+  MEMORY = 0x00000080,
+  MAIN_DB = 0x00000100,
+  TEMP_DB = 0x00000200,
+  TRANSIENT_DB = 0x00000400,
+  MAIN_JOURNAL = 0x00000800,
+  TEMP_JOURNAL = 0x00001000,
+  SUBJOURNAL = 0x00002000,
+  SUPER_JOURNAL = 0x00004000,
+  NOMUTEX = 0x00008000,
+  FULLMUTEX = 0x00010000,
+  SHAREDCACHE = 0x00020000,
+  PRIVATECACHE = 0x00040000,
+  WAL = 0x00080000,
+  NOFOLLOW = 0x01000000,
+  EXRESCODE = 0x02000000,
+}
+
+impl Flags {
+  pub fn to_int(&self) -> std::os::raw::c_int {
+    match &self {
+      Flags::READ_ONLY => 0x00000001,
+      Flags::READ_WRITE => 0x00000002,
+      Flags::CREATE => 0x00000004,
+      Flags::DELETE_ON_CLOSE => 0x00000008,
+      Flags::EXCLUSIVE => 0x00000010,
+      Flags::AUTOPROXY => 0x00000020,
+      Flags::URI => 0x00000040,
+      Flags::MEMORY => 0x00000080,
+      Flags::MAIN_DB => 0x00000100,
+      Flags::TEMP_DB => 0x00000200,
+      Flags::TRANSIENT_DB => 0x00000400,
+      Flags::MAIN_JOURNAL => 0x00000800,
+      Flags::TEMP_JOURNAL => 0x00001000,
+      Flags::SUBJOURNAL => 0x00002000,
+      Flags::SUPER_JOURNAL => 0x00004000,
+      Flags::NOMUTEX => 0x00008000,
+      Flags::FULLMUTEX => 0x00010000,
+      Flags::SHAREDCACHE => 0x00020000,
+      Flags::PRIVATECACHE => 0x00040000,
+      Flags::WAL => 0x00080000,
+      Flags::NOFOLLOW => 0x01000000,
+      Flags::EXRESCODE => 0x02000000,
+    }
+  }
+}
+impl FromStr for Flags {
+  type Err = ();
+
+  fn from_str(input: &str) -> Result<Flags, Self::Err> {
+    match input {
+      "readonly" => Ok(Flags::READ_ONLY),
+      "readwrite" => Ok(Flags::READ_WRITE),
+      "create" => Ok(Flags::CREATE),
+      "deleteonclose" => Ok(Flags::DELETE_ON_CLOSE),
+      "exclusive" => Ok(Flags::EXCLUSIVE),
+      "autoproxy" => Ok(Flags::AUTOPROXY),
+      "uri" => Ok(Flags::URI),
+      "memory" => Ok(Flags::MEMORY),
+      "maindb" => Ok(Flags::MAIN_DB),
+      "tempdb" => Ok(Flags::TEMP_DB),
+      "transientdb" => Ok(Flags::TRANSIENT_DB),
+      "mainjournal" => Ok(Flags::MAIN_JOURNAL),
+      "tempjournal" => Ok(Flags::TEMP_JOURNAL),
+      "subjournal" => Ok(Flags::SUBJOURNAL),
+      "superjournal" => Ok(Flags::SUPER_JOURNAL),
+      "nomutex" => Ok(Flags::NOMUTEX),
+      "fullmutex" => Ok(Flags::FULLMUTEX),
+      "sharedcache" => Ok(Flags::SHAREDCACHE),
+      "privatecache" => Ok(Flags::PRIVATECACHE),
+      "wal" => Ok(Flags::WAL),
+      "nofollow" => Ok(Flags::NOFOLLOW),
+      "exrescode" => Ok(Flags::EXRESCODE),
+      _ => Err(()),
+    }
+  }
+}
+
+
 #[derive(Serialize, Deserialize)]
 pub struct DbConfig {
-  path: String,
-  log_file: Option<String>,
-  flags: Option<Vec<String>>,
-  limits: Option<HashMap<String, usize>>,
+  pub path: String,
+  pub log_file: Option<String>,
+  pub flags: Option<Vec<String>>,
+  pub limits: Option<HashMap<String, usize>>,
+}
+
+impl DbConfig {
+  pub fn c_flags(&self) -> Option<std::os::raw::c_int> {
+    match &self.flags {
+      Some(fs) => {
+	Some(
+	  fs.into_iter()
+	    .map(|f| Flags::from_str(&f).expect("invalid flag").to_int()).sum()
+	)
+      },
+      None => None,
+    }
+  }
 }
 
 impl Default for DbConfig {

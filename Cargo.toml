@@ -5,8 +5,8 @@ members = [
   "src/mpk_config",
   "src/mpk_jack",
   "src/mpk_emacs",
+  "src/mpk_id3",
   "src/mdb",
-  "src/mdb_id3",
   "src/mfe",
 ]
 

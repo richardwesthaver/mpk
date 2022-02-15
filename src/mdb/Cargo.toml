@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-mdb_id3 = { path = "../mdb_id3" }
+mpk_id3 = { path = "../mpk_id3" }
 mpk_config = { path = "../mpk_config" }
 rusqlite = "0.26"
-clap = { version = "3.0.13", features = ["derive"] }
+clap = { version = "3.0", features = ["derive"] }
+thiserror = "1.0"
