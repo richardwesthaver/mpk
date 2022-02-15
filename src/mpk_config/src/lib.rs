@@ -121,12 +121,12 @@ impl FsConfig {
 
   pub fn get_path(&self, path: &str) -> Result<PathBuf, io::Error> {
     match path {
-      "root" => Ok(PathBuf::from(&self.root)),
-      "samples" => Ok([&self.root, "samples"].iter().collect::<PathBuf>()),
-      "projects" => Ok([&self.root, "projects"].iter().collect::<PathBuf>()),
-      "plugins" => Ok([&self.root, "plugins"].iter().collect::<PathBuf>()),
-      "patches" => Ok([&self.root, "patches"].iter().collect::<PathBuf>()),
-      "tracks" => Ok([&self.root, "tracks"].iter().collect::<PathBuf>()),
+      "root" => Ok(expand_tilde(PathBuf::from(&self.root)).unwrap()),
+      "samples" => Ok(expand_tilde([&self.root, "samples"].iter().collect::<PathBuf>()).unwrap()),
+      "projects" => Ok(expand_tilde([&self.root, "projects"].iter().collect::<PathBuf>()).unwrap()),
+      "plugins" => Ok(expand_tilde([&self.root, "plugins"].iter().collect::<PathBuf>()).unwrap()),
+      "patches" => Ok(expand_tilde([&self.root, "patches"].iter().collect::<PathBuf>()).unwrap()),
+      "tracks" => Ok(expand_tilde([&self.root, "tracks"].iter().collect::<PathBuf>()).unwrap()),
       e => Err(io::Error::new(io::ErrorKind::NotFound, e)),
     }
   }
