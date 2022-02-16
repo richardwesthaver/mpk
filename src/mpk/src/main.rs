@@ -75,19 +75,20 @@ fn main() {
 	let ts = cfg.fs.get_path("tracks").unwrap();
 	let mut coll = Vec::new();
 	let conn = Mdb::new_with_config(cfg.db).unwrap();
-	id3_walk(ts, &mut coll).unwrap();
+	id3_walk(&ts, &mut coll).unwrap();
 	for i in coll {
-	  let path = String::from(i.path.to_str().unwrap());
+	  let path = Some(String::from(i.path.strip_prefix(&ts).unwrap().to_str().unwrap()));
 	  let title = i.get_tag("TIT2");
 	  let artist = i.get_tag("TPE1");
 	  let album = i.get_tag("TALB");
 	  let genre = i.get_tag("TCON");
 	  let year = i.get_tag("TDRC");
 
-	  conn.exec("insert into tracks (path)
-            values (?)", [path]).unwrap();
-	  conn.exec("insert into track_tags (artist, title, album, genre, year)
-            values (?,?,?,?,?)", [artist, title, album, genre, year]).unwrap();
+	  let track_id = conn.exec("insert into tracks (path)
+            values (?)", &[&path]).unwrap();
+	  conn.exec("insert into track_tags (track_id, artist, title, album, genre, year)
+            values (?,?,?,?,?,?)", &[&track_id, &artist, &title, &album, &genre, &year]).unwrap();
+
 	}
       }
     }

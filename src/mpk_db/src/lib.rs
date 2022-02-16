@@ -1,4 +1,4 @@
-use rusqlite::{Connection, OpenFlags, Params};
+use rusqlite::{Connection, OpenFlags, ToSql};
 use std::path::Path;
 use mpk_config::DbConfig;
 pub use mpk_id3::Id3;
@@ -47,7 +47,7 @@ path text not null,
 updated datetime default current_timestamp not null);
 
 create table if not exists track_tags (
-id integer primary key,
+foreign key(track_id) references tracks(id) not null,
 artist text,
 title text,
 album text,
@@ -75,7 +75,7 @@ updated datetime default current_timestamp not null);";
     Ok(())
   }
 
-  pub fn exec<P: Params>(&self, sql: &str, params: P) -> Result<usize> {
+  pub fn exec(&self, sql: &str, params: &[&dyn ToSql]) -> Result<usize> {
     let res = self.conn.execute(sql, params)?;
     Ok(res)
   }

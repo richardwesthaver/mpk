@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             artist text not null,
             album text,
             genre,
-            year)", [])?;
+            year)", &[])?;
 
   let song = Id3::new("Reference-The_Best_Day_In_Detroit.mp3")?;
   let path = Some(String::from(song.path.to_str().unwrap()));
@@ -30,6 +30,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   let year = song.get_tag("TDRC");
 
   mdb.exec("insert into tracks (path, title, artist, album, genre, year)
-            values (?,?,?,?,?,?)", [path, title, artist, album, genre, year])?;
+            values (?,?,?,?,?,?)", &[&path, &title, &artist, &album, &genre, &year])?;
   Ok(())
 }
