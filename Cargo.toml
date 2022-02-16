@@ -10,6 +10,7 @@ members = [
   "src/mpk_dsp",
   "src/mpk_id3",
   "src/mpk_db",
+  "src/mpk_sesh",
   "src/mpk_fft",
 ]
 
