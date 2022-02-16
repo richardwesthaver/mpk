@@ -82,4 +82,8 @@ updated datetime default current_timestamp not null);";
     let res = self.conn.execute(sql, params)?;
     Ok(res)
   }
+
+  pub fn last_insert_rowid(&self) -> i64 {
+    self.conn.last_insert_rowid()
+  }
 }
