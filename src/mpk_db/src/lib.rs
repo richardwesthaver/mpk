@@ -49,12 +49,13 @@ path text not null,
 updated datetime default current_timestamp not null);
 
 create table if not exists track_tags (
-foreign key(track_id) references tracks(id) not null,
+track_id integer,
 artist text,
 title text,
 album text,
 genre text,
-year text);
+year text,
+foreign key(track_id) references tracks(id));
 
 create table if not exists samples (
 id integer primary key,
