@@ -41,6 +41,8 @@ impl Mdb {
 
   pub fn init(&self) -> Result<()> {
     let sql = r"
+pragma foreign_keys = on;
+
 create table if not exists tracks (
 id integer primary key,
 path text not null,
