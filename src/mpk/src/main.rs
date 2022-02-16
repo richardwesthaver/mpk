@@ -84,8 +84,8 @@ fn main() {
 	  let genre = i.get_tag("TCON");
 	  let year = i.get_tag("TDRC");
 
-	  let track_id = conn.exec("insert into tracks (path)
-            values (?)", &[&path]).unwrap();
+	  conn.exec("insert into tracks (path) values (?)", &[&path]).unwrap();
+	  let track_id = conn.last_insert_rowid();
 	  conn.exec("insert into track_tags (track_id, artist, title, album, genre, year)
             values (?,?,?,?,?,?)", &[&track_id, &artist, &title, &album, &genre, &year]).unwrap();
 
