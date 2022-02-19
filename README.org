@@ -4,9 +4,88 @@
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
 * Overview
-=mpk= is my /Media Programming Kit/. It provides a set of tools and
-services for building and managing creative workflows on UNIX systems.
+=mpk= is a /Media Programming Kit/. It provides a development kit for
+digital media.
 
+This project is quite young and will only deal with audio for quite
+some time since that's the medium I'm most interested in.
+
+The =mpk= APIs and programs are primarily written in Rust but there is
+a number of other langs involved including Python, Scheme, and Elisp.
+
+** Features
+- Resource Management
+  - SQLite DB
+  - index tracks, samples, sessions, patches, plugins, MIDI
+  - query metadata and audio features
+- JACK
+  - Session/Patch support
+  - Utility clients
+  - Network Audio
+- HTTP Clients
+  - freesound.org
+  - musicbrainz.org
+- Emacs Frontend
+  - JACK patching and session manager
+  - EMMS playlists
+  - Supercollider/Lilypond IDE
+  - MIDI/OSC keymaps
+  - Org-mode notes/tasks
+- Hardware Support
+  - build and upload sample chains for Elektron devices
+  - send/receive SysEx
+- Configuration
+  - global config =mpk.toml=
+  - session config =session.toml=
+- Distribution
+  - Compress(zst)/Archive(tar) support
+  - backup/dump/restore DB
+* Dependencies
+The following dependencies are required to use =mpk=:
+- Emacs
+  - lilypond-mode
+  - emms
+- Rust
+- Python
+  - essentia
+  - gaia (optional)
+  - tensorflow (optional)
+- Jack
+* COMMENT notes
+#+begin_comment
+Local variables:
+mode: org
+end:
+#+end_comment
+- studio management, organization, support, storage, indexing
+  - database
+- mediums & medias
+- Software
+  - Patchers
+    - [[https://cycling74.com/products/max][Max]]
+    - [[https://puredata.info/][Pure Data]]
+    - [[https://www.native-instruments.com/en/products/komplete/synths/reaktor-6/][Reaktor]]
+  - DAWs
+    - [[https://www.ableton.com][Ableton Live]]
+    - [[https://www.bitwig.com/][Bitwig Studio]]
+    - [[https://www.reasonstudios.com/][Reason]]
+    - [[https://www.image-line.com/][FL Studio]]
+- Hardware
+  - [[https://www.elektron.se/products/octatrack-mkii/][Octatrack]]
+  - [[https://teenage.engineering/products/op-z][OP-Z]]
+  - [[https://buchla.com/][Buchla]]
+- Music
+  - [[https://www.youtube.com/watch?v=DWuAn6C8Mfc][Radiohead]]
+  - [[https://www.youtube.com/watch?v=PGwPSPIhohk][Pink Floyd]]
+  - [[https://www.youtube.com/watch?v=6ZwItYjqXR0][FJAAK]]
+  - [[https://www.youtube.com/watch?v=mjlOw6dNeS0][Bassnectar]]
+  - [[https://www.youtube.com/watch?v=3cSqRMioRik][Partibio69]]
+  - [[https://www.youtube.com/watch?v=J8sS5NkADBE][VURRO]]
+  - [[https://www.youtube.com/watch?v=PoJKpE165_w][Ajax Spearman of the Sun]]
+  - [[https://www.youtube.com/watch?v=tbLt0S0W5jE][Venetian Snares]]
+  - [[https://www.youtube.com/watch?v=961uG4Ixg_Y][Aphex Twin]]
+  - [[https://www.youtube.com/watch?v=6ZwItYjqXR0&list=RDMM][Meng Qi]]
+  - [[https://disasterpeace.com][Disasterpeace]]
 ** Background
 Over the years I've seen many popular creative tools implement
 subscription-based/freemium payment models, web-based/always-online
@@ -51,54 +130,6 @@ what our tools can do. Never commit.
 
 My final objection to modern creative tools has to do with those
 tricky bits I previously mentioned. That's where the magic is. 
-** Goals
-*** Resource Management
-*** Session Management
-*** I/O configuration
-- Networking
-- MIDI/OSC
-- Audio
-- Video
-*** Literate Notation
-- Lilypond
-* Dependencies
-The following dependencies are required to install =mpk=:
-- Emacs
-- Rust
-- Python
-  - librosa
-  - 
-- Jack
-* COMMENT notes
-- studio management, organization, support, storage, indexing
-  - database
-- mediums & medias
-- Software
-  - Patchers
-    - [[https://cycling74.com/products/max][Max]]
-    - [[https://puredata.info/][Pure Data]]
-    - [[https://www.native-instruments.com/en/products/komplete/synths/reaktor-6/][Reaktor]]
-  - DAWs
-    - [[https://www.ableton.com][Ableton Live]]
-    - [[https://www.bitwig.com/][Bitwig Studio]]
-    - [[https://www.reasonstudios.com/][Reason]]
-    - [[https://www.image-line.com/][FL Studio]]
-- Hardware
-  - [[https://www.elektron.se/products/octatrack-mkii/][Octatrack]]
-  - [[https://teenage.engineering/products/op-z][OP-Z]]
-  - [[https://buchla.com/][Buchla]]
-- Music
-  - [[https://www.youtube.com/watch?v=DWuAn6C8Mfc][Radiohead]]
-  - [[https://www.youtube.com/watch?v=PGwPSPIhohk][Pink Floyd]]
-  - [[https://www.youtube.com/watch?v=6ZwItYjqXR0][FJAAK]]
-  - [[https://www.youtube.com/watch?v=mjlOw6dNeS0][Bassnectar]]
-  - [[https://www.youtube.com/watch?v=3cSqRMioRik][Partibio69]]
-  - [[https://www.youtube.com/watch?v=J8sS5NkADBE][VURRO]]
-  - [[https://www.youtube.com/watch?v=PoJKpE165_w][Ajax Spearman of the Sun]]
-  - [[https://www.youtube.com/watch?v=tbLt0S0W5jE][Venetian Snares]]
-  - [[https://www.youtube.com/watch?v=961uG4Ixg_Y][Aphex Twin]]
-  - [[https://www.youtube.com/watch?v=6ZwItYjqXR0&list=RDMM][Meng Qi]]
-  - [[https://disasterpeace.com][Disasterpeace]]
 ** lilypond
 #+begin_src lilypond :file /tmp/lp1.png
   \relative c' {
@@ -113,10 +144,6 @@ The following dependencies are required to install =mpk=:
   }
 #+end_src
 
-** csound
-#+begin_src csound
-
-#+end_src
 ** tech
 - notation
 - patchers
@@ -178,8 +205,3 @@ select name from sqlite_master where type = 'trigger'
 
 drop trigger 'trigger_name'
 #+end_src
-#+begin_comment
-Local variables:
-mode: org
-end:
-#+end_comment
