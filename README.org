@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-02-15
+#+DATE: 2022-02-18
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
@@ -61,13 +61,13 @@ tricky bits I previously mentioned. That's where the magic is.
 - Video
 *** Literate Notation
 - Lilypond
-- Csound
 * Dependencies
 The following dependencies are required to install =mpk=:
 - Emacs
-- Meson
 - Rust
 - Python
+  - librosa
+  - 
 - Jack
 * COMMENT notes
 - studio management, organization, support, storage, indexing
