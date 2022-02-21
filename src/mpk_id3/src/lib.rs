@@ -35,21 +35,6 @@ impl Id3 {
       }
     )
   }
-  pub fn from_tags<P: AsRef<Path>>(path: P, tag: Option<Tag>) -> Result<Id3> {
-    let tags = if let Some(tag) = tag { 
-      let mut map = HashMap::new();
-      for f in tag.frames().into_iter() {
-	map.insert(f.id().to_string(), f.content().to_string());
-      }
-      Some(map)
-    } else { None };
-
-    let path = path.as_ref().to_path_buf();
-    Ok(Id3 {
-      path,
-      tags,
-    })
-  }
 
   pub fn get_tag(&self, tag: &str) -> Option<String> {
     match &self.tags {
@@ -67,6 +52,12 @@ impl Id3 {
   pub fn to_json_string(&self) -> Result<String> {
     let json = serde_json::to_string_pretty(self)?;
     Ok(json)
+  }
+
+  pub fn to_json_writer<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+    let out = fs::OpenOptions::new().create_new(true).append(true).open(&path)?;
+    serde_json::to_writer_pretty(out, self)?;
+    Ok(())
   }
 }
 

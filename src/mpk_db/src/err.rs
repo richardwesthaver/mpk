@@ -10,9 +10,9 @@ pub enum Error {
 impl std::error::Error for Error {
   fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
     match *self {
-      Error::Id3(_) => None,
-      Error::Sql(_) => None,
-      Error::Io(_) => None,
+      Error::Id3(ref err) => Some(err),
+      Error::Sql(ref err) => Some(err),
+      Error::Io(ref err) => Some(err),
     }
   }
 }
