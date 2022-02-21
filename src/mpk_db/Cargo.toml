@@ -7,5 +7,3 @@ edition = "2021"
 mpk_id3 = { path = "../mpk_id3" }
 mpk_config = { path = "../mpk_config" }
 rusqlite = "0.26"
-clap = { version = "3.0", features = ["derive"] }
-thiserror = "1.0"

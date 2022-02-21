@@ -39,6 +39,20 @@ impl Mdb {
     )
   }
 
+  pub fn exec_batch(&self, sql: &str) -> Result<()> {
+    self.conn.execute_batch(sql)?;
+    Ok(())
+  }
+
+  pub fn exec(&self, sql: &str, params: &[&dyn ToSql]) -> Result<usize> {
+    let res = self.conn.execute(sql, params)?;
+    Ok(res)
+  }
+
+  pub fn last_insert_rowid(&self) -> i64 {
+    self.conn.last_insert_rowid()
+  }
+
   pub fn init(&self) -> Result<()> {
     let sql = r"
 pragma foreign_keys = on;
@@ -59,9 +73,7 @@ foreign key(track_id) references tracks(id));
 
 create table if not exists samples (
 id integer primary key,
-name text not null,
 path text not null,
-ext text not null,
 updated datetime default current_timestamp not null);
 
 create table if not exists projects (
@@ -73,17 +85,23 @@ updated datetime default current_timestamp not null);";
 
     self.exec_batch(sql)
   }
-  pub fn exec_batch(&self, sql: &str) -> Result<()> {
-    self.conn.execute_batch(sql)?;
+
+  pub fn insert_track(&self, path: &str) -> Result<()> {
+    self.exec("insert into tracks (path) values (?)", &[&path])?;
     Ok(())
   }
 
-  pub fn exec(&self, sql: &str, params: &[&dyn ToSql]) -> Result<usize> {
-    let res = self.conn.execute(sql, params)?;
-    Ok(res)
+  pub fn insert_track_tags(&self,
+			   id: i64, artist: &str,
+			   title: &str, album: &str,
+			   genre: &str, year: &str) -> Result<()> {
+    self.exec("insert into track_tags (track_id, artist, title, album, genre, year)
+values (?,?,?,?,?,?)", &[&id, &artist, &title, &album, &genre, &year])?;
+    Ok(())
   }
 
-  pub fn last_insert_rowid(&self) -> i64 {
-    self.conn.last_insert_rowid()
+  pub fn insert_sample(&self, path: &str) -> Result<()> {
+    self.exec("insert into samples (path) values (?)", &[&path])?;
+    Ok(())
   }
 }

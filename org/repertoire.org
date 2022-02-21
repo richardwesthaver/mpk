@@ -1,10 +1,10 @@
 #+TITLE: repertoire
-#+DATE: 2022-01-18
+#+DATE: 2022-02-18
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Solo Repertoire
 #+TODO: LEARN(l) PRACTICE(p) PLAY(P) MEMORIZE(m) REFRESH(r) | DONE(d)
-* Piano
+* Solo Piano
 ** PRACTICE Clair de Lune
 :PROPERTIES:
 :COMPOSER: Claude Debussy
@@ -17,6 +17,8 @@
 [[yt:IeSXWuqHPkM][resignation]]
 
 * COMMENT notes
+- include video (or maybe just audio) of piece
+- link to PDF
 #+begin_comment
 Local variables:
 mode: org

@@ -4,14 +4,18 @@
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
 * Overview
-=mpk= is a /Media Programming Kit/. It provides a development kit for
-digital media.
+=mpk= is my /Media Programming Kit/. It provides a development kit for
+digital media. Batteries are *not* included -- =mpk= is a flexible
+ecosystem designed to organize your creative workflow which may
+include your own hardware, software, and digital assets.
 
 This project is quite young and will only deal with audio for quite
-some time since that's the medium I'm most interested in.
+some time since that's the medium I'm most interested in. Emacs is the
+only GUI available for =mpk=, but a CLI is also provided.
 
-The =mpk= APIs and programs are primarily written in Rust but there is
-a number of other langs involved including Python, Scheme, and Elisp.
+The =mpk= APIs and programs are primarily written in Rust but there
+are a number of other langs involved including Python, Scheme, and
+Elisp.
 
 ** Features
 - Resource Management
@@ -40,17 +44,23 @@ a number of other langs involved including Python, Scheme, and Elisp.
 - Distribution
   - Compress(zst)/Archive(tar) support
   - backup/dump/restore DB
-* Dependencies
-The following dependencies are required to use =mpk=:
-- Emacs
-  - lilypond-mode
-  - emms
+** Dependencies
 - Rust
 - Python
   - essentia
-  - gaia (optional)
-  - tensorflow (optional)
+  - gaia
+  - tensorflow
+  - numpy
+  - sklearn
+  - libyaml
+- Emacs
+  - lilypond-mode
+  - emms
 - Jack
+- NSM
+- FFmpeg
+- snd
+- Ecasound
 * COMMENT notes
 #+begin_comment
 Local variables:

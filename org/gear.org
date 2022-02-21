@@ -1,0 +1,34 @@
+#+TITLE: Gear
+#+DATE: 2022-02-18
+#+AUTHOR: ellis
+#+EMAIL: ellis@rwest.io
+#+DESCRIPTION: RTFM
+
+* Octatrack MKII
+[[https://www.elektron.se/support/?connection=octatrack-mkii#resources][Manufacturer Resources]]
+* Analog Rytm MKII
+[[https://www.elektron.se/support/?connection=analog-rytm-mkii#resources][Manufacturer Resources]]
+* OP-1
+
+* S-patch plus
+
+* Scarlett 18i20
+
+* MGP12X
+
+* SV-1
+
+* Prophet Rev2
+
+* Model D
+
+* APC40 MKII
+
+* Volca Beats
+
+* COMMENT notes
+#+begin_comment
+Local variables:
+mode: org
+end:
+#+end_comment
