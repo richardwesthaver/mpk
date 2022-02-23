@@ -1,0 +1,7 @@
+include_guard = "mpk_ffi_h"
+autogen_warning = "/* DO NOT TOUCH */"
+include_version = true
+language = "C"
+[parse]
+parse_deps = true
+include = ["mpk_db", "mpk_id3"]

@@ -12,7 +12,7 @@ pub struct Mdb {
 }
 
 impl Mdb {
-  pub fn new<P: AsRef<Path>>(path: Option<P>) -> Result<Mdb> {
+  pub fn new(path: Option<&Path>) -> Result<Mdb> {
     let conn = match path {
       Some(p) => Connection::open(p)?,
       None => Connection::open_in_memory()?,
@@ -80,20 +80,20 @@ foreign key(track_id) references tracks(id));
 
 create table if not exists track_stats (
 track_id integer,
-foreign key(track_id) references tracks(id))
+foreign key(track_id) references tracks(id));
 
 create table if not exists track_images (
 track_id integer,
 mel_spectra blob,
 lin_spectra blob,
 waveform blob,
-foreign key(track_id) references tracks(id))
+foreign key(track_id) references tracks(id));
 
 create table if not exists track_user_data (
 track_id integer,
 user_tags text,
 notes text,
-foreign key(track_id) references tracks(id))
+foreign key(track_id) references tracks(id));
 
 create table if not exists samples (
 id integer primary key,
@@ -109,27 +109,27 @@ updated datetime default current_timestamp not null);
 
 create table if not exists sample_stats (
 sample_id integer,
-foreign key(sample_id) references samples(id))
+foreign key(sample_id) references samples(id));
 
 create table if not exists sample_images (
 sample_id integer,
 mel_spectra blob,
 lin_spectra blob,
 waveform blob,
-foreign key(sample_id) references samples(id))
+foreign key(sample_id) references samples(id));
 
 create table if not exists sample_user_data (
 sample_id integer,
 user_tags text,
 notes text,
-foreign key(sample_id) references samples(id))
+foreign key(sample_id) references samples(id));
 
 create table if not exists projects (
 id integer primary key,
 name text not null,
 path text not null,
 type text not null,
-updated datetime default current_timestamp not null)
+updated datetime default current_timestamp not null);
 
 create table if not exists project_user_data (
 project_id integer,
