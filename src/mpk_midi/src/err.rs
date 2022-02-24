@@ -11,10 +11,10 @@ pub enum Error {
 impl std::error::Error for Error {
   fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
     match *self {
-      Error::MidiInit(_) => None,
-      Error::MidiConnect(_) => None,
-      Error::MidiPortInfo(_) => None,
-      Error::MidiSend(_) => None,
+      Error::MidiInit(ref err) => Some(err),
+      Error::MidiConnect(ref err) => Some(err),
+      Error::MidiPortInfo(ref err) => Some(err),
+      Error::MidiSend(ref err) => Some(err),
     }
   }
 }

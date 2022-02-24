@@ -7,6 +7,7 @@ mod err;
 pub use err::{Error, Result};
 
 /// MPK Database
+#[derive(Debug)]
 pub struct Mdb {
   conn: Connection,
 }

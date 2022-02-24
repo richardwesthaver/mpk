@@ -3,3 +3,4 @@
 ^.cache
 ^target
 ^Cargo.lock
+^mpk_ffi.h

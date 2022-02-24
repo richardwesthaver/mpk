@@ -1,9 +1,13 @@
 use std::path::{PathBuf, Path, MAIN_SEPARATOR};
 use std::fs;
-use std::io;
 use std::str::FromStr;
-use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
+
+use serde::{Serialize, Deserialize};
+
+mod err;
+pub use err::{Result, Error};
+
 pub const DEFAULT_PATH: &str = "~/mpk";
 pub const CONFIG_FILE: &str = "mpk.toml";
 pub const DB_FILE: &str = "mpk.db";
@@ -44,7 +48,7 @@ impl Default for Config {
   }
 }
 impl Config {
-  pub fn new(fs: FsConfig, db: DbConfig, jack: JackConfig) -> Result<Config, toml::de::Error> {
+  pub fn new(fs: FsConfig, db: DbConfig, jack: JackConfig) -> Result<Config> {
     Ok(
       Config {
 	fs,
@@ -54,7 +58,7 @@ impl Config {
     )
   }
 
-  pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<(), io::Error> {
+  pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<()> {
     let toml_string = toml::to_string_pretty(self)
       .expect("TOML serialization failed");
     let path = expand_tilde(path.as_ref()).unwrap();
@@ -74,13 +78,13 @@ impl Config {
     Ok(())
   }
 
-  pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, toml::de::Error> {
+  pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
     let content = fs::read(expand_tilde(path).unwrap()).unwrap();
     let config: Config = toml::from_slice(&content)?;
     Ok(config)
   }
 
-  pub fn build(&self) -> Result<(), io::Error> {
+  pub fn build(&self) -> Result<()> {
     let root = expand_tilde(&self.fs.root()).unwrap();
     if !root.exists() {
       fs::create_dir(&root)?;
@@ -108,7 +112,7 @@ impl Default for FsConfig {
 }
 
 impl FsConfig {
-  pub fn new<P: AsRef<Path>>(root: P) -> Result<Self, io::Error> {
+  pub fn new<P: AsRef<Path>>(root: P) -> Result<Self> {
     let root = root.as_ref().to_str().unwrap().to_string();
     Ok(
       FsConfig {
@@ -121,7 +125,7 @@ impl FsConfig {
     PathBuf::from(&self.root)
   }
 
-  pub fn get_path(&self, path: &str) -> Result<PathBuf, io::Error> {
+  pub fn get_path(&self, path: &str) -> Result<PathBuf> {
     match path {
       "root" => Ok(expand_tilde(PathBuf::from(&self.root)).unwrap()),
       "samples" => Ok(expand_tilde([&self.root, "samples"].iter().collect::<PathBuf>()).unwrap()),
@@ -129,7 +133,7 @@ impl FsConfig {
       "plugins" => Ok(expand_tilde([&self.root, "plugins"].iter().collect::<PathBuf>()).unwrap()),
       "patches" => Ok(expand_tilde([&self.root, "patches"].iter().collect::<PathBuf>()).unwrap()),
       "tracks" => Ok(expand_tilde([&self.root, "tracks"].iter().collect::<PathBuf>()).unwrap()),
-      e => Err(io::Error::new(io::ErrorKind::NotFound, e)),
+      e => Err(Error::NotFound(e.to_string())),
     }
   }
 }
@@ -191,9 +195,9 @@ impl Flags {
   }
 }
 impl FromStr for Flags {
-  type Err = ();
+  type Err = Error;
 
-  fn from_str(input: &str) -> Result<Flags, Self::Err> {
+  fn from_str(input: &str) -> Result<Flags> {
     match input {
       "readonly" => Ok(Flags::READ_ONLY),
       "readwrite" => Ok(Flags::READ_WRITE),
@@ -217,7 +221,7 @@ impl FromStr for Flags {
       "wal" => Ok(Flags::WAL),
       "nofollow" => Ok(Flags::NOFOLLOW),
       "exrescode" => Ok(Flags::EXRESCODE),
-      _ => Err(()),
+      e => Err(Error::BadFlag(e.to_string())),
     }
   }
 }
@@ -299,7 +303,7 @@ impl Default for JackConfig {
 }
 
 impl JackConfig {
-  pub fn new() -> Result<Self, io::Error> {
+  pub fn new() -> Result<Self> {
     Ok(
       JackConfig {
 	..Default::default()

@@ -4,10 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type =["cdylib", "staticlib"]
+crate-type =["cdylib"]
 
 [dependencies]
-libc = "0.2"
 mpk_id3 = { path = "../mpk_id3" }
 mpk_db = { path = "../mpk_db" }
 mpk_config = { path = "../mpk_config" }

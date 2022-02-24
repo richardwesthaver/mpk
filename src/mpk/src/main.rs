@@ -55,9 +55,13 @@ enum Command {
 
 fn ppln(i:&str,s:char) {
   match s {
+    // progress
     'p' => eprint!("  \x1b[1m{}\x1b[0m ... ", i),
+    // done
     'd' => eprint!("\x1b[1;32m{}\x1b[0m\n", i),
+    // err
     'e' => eprint!("\x1b[0:31m{}\x1b[0m", i),
+    // Error
     'E' => eprintln!("\x1b[0:31m{}\x1b[0m", i),
     _ => eprintln!("{}", i),
   }
@@ -67,7 +71,7 @@ fn main() -> Result<()> {
   let args = Args::parse();
   let cfg_path = Path::new(&args.cfg);
   let cfg = if cfg_path.exists() {
-    Config::load(cfg_path).unwrap()
+    Config::load(cfg_path)?
   } else {
     Config::default()
   };
@@ -75,13 +79,14 @@ fn main() -> Result<()> {
   match args.cmd {
     Command::Init => {
       ppln("Initializing MPK", 'p');
-      cfg.build().unwrap();
+      cfg.build()?;
       cfg.write(cfg_path)?;
-      Mdb::new(cfg.db.path())?.init()?;
+      let db_path = cfg.db.path();
+      Mdb::new(db_path.as_deref())?.init()?;
       ppln("[DONE]", 'd');
     },
     Command::Info => {
-      mpk_midi::list_midi_ports().unwrap();
+      mpk_midi::list_midi_ports()?;
     }
     Command::Sync { tracks, samples, projects } => {
       let conn = Mdb::new_with_config(cfg.db)?;
@@ -89,14 +94,14 @@ fn main() -> Result<()> {
       if tracks {
 	let ts = cfg.fs.get_path("tracks")?;
 	let mut coll = Vec::new();
-	id3_walk(&ts, &mut coll).unwrap();
+	id3_walk(&ts, &mut coll)?;
 	for i in coll {
 	  let path = i.path.strip_prefix(&ts).unwrap().to_str().unwrap();
 	  let title = i.get_tag("TIT2");
 	  let artist = i.get_tag("TPE1");
 	  let album = i.get_tag("TALB");
 	  let genre = i.get_tag("TCON");
-	  let year = i.get_tag("TDRC");
+	  let year = i.get_tag("TDRC").map(|y| y.parse::<i16>().unwrap());
 
 	  conn.insert_track(&path)?;
 	  let track_id = conn.last_insert_rowid();
