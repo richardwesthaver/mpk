@@ -27,7 +27,7 @@ fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
 }
 
 /// MPK Configuration
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
   pub fs: FsConfig,
   pub db: DbConfig,
@@ -94,7 +94,7 @@ impl Config {
   }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct FsConfig {
   pub root: String,
 }
@@ -108,11 +108,13 @@ impl Default for FsConfig {
 }
 
 impl FsConfig {
-  pub fn new<P: AsRef<Path>>(root: P) -> Self {
+  pub fn new<P: AsRef<Path>>(root: P) -> Result<Self, io::Error> {
     let root = root.as_ref().to_str().unwrap().to_string();
-    FsConfig {
-      root
-    }
+    Ok(
+      FsConfig {
+	root
+      }
+    )
   }
 
   pub fn root(&self) -> PathBuf {
@@ -221,7 +223,7 @@ impl FromStr for Flags {
 }
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DbConfig {
   pub path: Option<String>,
   pub log_file: Option<String>,
@@ -230,7 +232,7 @@ pub struct DbConfig {
 }
 
 impl DbConfig {
-  pub fn c_flags(&self) -> Option<std::os::raw::c_int> {
+  pub fn flags(&self) -> Option<std::os::raw::c_int> {
     match &self.flags {
       Some(fs) => {
 	Some(
@@ -261,7 +263,7 @@ impl Default for DbConfig {
   }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct JackConfig {
   name: String,
   audio: String,
@@ -297,10 +299,12 @@ impl Default for JackConfig {
 }
 
 impl JackConfig {
-  pub fn new() -> Self {
-    JackConfig {
-      ..Default::default()
-    }
+  pub fn new() -> Result<Self, io::Error> {
+    Ok(
+      JackConfig {
+	..Default::default()
+      }
+    )
   }
 }
 

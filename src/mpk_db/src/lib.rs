@@ -6,7 +6,7 @@ pub use mpk_id3::Id3;
 mod err;
 pub use err::{Error, Result};
 
-/// Media Database
+/// MPK Database
 pub struct Mdb {
   conn: Connection,
 }
@@ -26,7 +26,7 @@ impl Mdb {
   }
 
   pub fn new_with_config(cfg: DbConfig) -> Result<Mdb> {
-    let flags: OpenFlags = OpenFlags::from_bits(cfg.c_flags().unwrap()).unwrap();
+    let flags: OpenFlags = OpenFlags::from_bits(cfg.flags().unwrap()).unwrap();
     let conn = match cfg.path() {
       Some(p) => Connection::open_with_flags(p, flags)?,
       None => Connection::open_in_memory_with_flags(flags)?,
@@ -55,6 +55,7 @@ impl Mdb {
 
   pub fn init(&self) -> Result<()> {
     let sql = r"
+BEGIN;
 pragma foreign_keys = on;
 
 create table if not exists tracks (
@@ -135,21 +136,22 @@ create table if not exists project_user_data (
 project_id integer,
 user_tags text,
 notes text,
-foreign key(project_id) references projects(id));";
+foreign key(project_id) references projects(id));
+COMMIT;";
 
     self.exec_batch(sql)
   }
 
-  pub fn insert_track(&self, path: &str) -> Result<()> {
+  pub fn insert_track(&self, path: &str) -> Result<i64> {
     self.exec("insert into tracks (path) values (?)", &[&path])?;
-    Ok(())
+    Ok(self.last_insert_rowid())
   }
 
   pub fn insert_track_tags(&self,
 			   id: i64, artist: Option<String>,
 			   title: Option<String>, album: Option<String>,
-			   genre: Option<String>, year: Option<String>) -> Result<()> {
-    for t in [&artist, &title, &album, &genre, &year] {
+			   genre: Option<String>, year: Option<i16>) -> Result<()> {
+    for t in [&artist, &title, &album, &genre, &year.map(|x| x.to_string())] {
       if t.is_some() {
 	self.exec("insert into track_tags (track_id, artist, title, album, genre, year)
                values (?,?,?,?,?,?)", &[&id, &artist, &title, &album, &genre, &year])?;
