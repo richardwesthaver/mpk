@@ -1,0 +1,23 @@
+[fs]
+root = '~/mpk'
+
+[db]
+path = '~/mpk/mpk.db'
+flags = [
+    'readwrite',
+    'create',
+    'nomutex',
+    'uri',
+]
+
+[jack]
+name = 'mpk'
+audio = 'alsa'
+midi = 'seq'
+device = 'default'
+realtime = true
+auto = ' '
+temp = false
+rate = 44100
+period = 1024
+n_periods = 2

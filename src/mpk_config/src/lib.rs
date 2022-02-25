@@ -101,12 +101,22 @@ impl Config {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct FsConfig {
   pub root: String,
+  pub ext_samples: Option<Vec<String>>,
+  pub ext_tracks: Option<Vec<String>>,
+  pub ext_projects: Option<Vec<String>>,
+  pub ext_plugins: Option<Vec<String>>,
+  pub ext_patches: Option<Vec<String>>,
 }
 
 impl Default for FsConfig {
   fn default() -> Self {
     FsConfig {
       root: DEFAULT_PATH.into(),
+      ext_samples: None,
+      ext_tracks: None,
+      ext_projects: None,
+      ext_plugins: None,
+      ext_patches: None,
     }
   }
 }
@@ -116,7 +126,8 @@ impl FsConfig {
     let root = root.as_ref().to_str().unwrap().to_string();
     Ok(
       FsConfig {
-	root
+	root,
+	..Default::default()
       }
     )
   }
@@ -129,12 +140,59 @@ impl FsConfig {
     match path {
       "root" => Ok(expand_tilde(PathBuf::from(&self.root)).unwrap()),
       "samples" => Ok(expand_tilde([&self.root, "samples"].iter().collect::<PathBuf>()).unwrap()),
+      "tracks" => Ok(expand_tilde([&self.root, "tracks"].iter().collect::<PathBuf>()).unwrap()),
       "projects" => Ok(expand_tilde([&self.root, "projects"].iter().collect::<PathBuf>()).unwrap()),
       "plugins" => Ok(expand_tilde([&self.root, "plugins"].iter().collect::<PathBuf>()).unwrap()),
       "patches" => Ok(expand_tilde([&self.root, "patches"].iter().collect::<PathBuf>()).unwrap()),
-      "tracks" => Ok(expand_tilde([&self.root, "tracks"].iter().collect::<PathBuf>()).unwrap()),
       e => Err(Error::NotFound(e.to_string())),
     }
+  }
+
+  pub fn get_ext_paths(&self, path: &str) -> Option<Vec<PathBuf>> {
+    match path {
+      "samples" => {
+	if let Some(ps) = &self.ext_samples {
+	  Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
+	} else {
+	  None
+	}
+      },
+      "tracks" => {
+	if let Some(ps) = &self.ext_tracks {
+	  Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
+	} else {
+	  None
+	}
+      },
+      "projects" => {
+	if let Some(ps) = &self.ext_projects {
+	  Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
+	} else {
+	  None
+	}
+      },
+      "plugins" => {
+	if let Some(ps) = &self.ext_plugins {
+	  Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
+	} else {
+	  None
+	}
+      },
+      "patches" => {
+	if let Some(ps) = &self.ext_patches {
+	  Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
+	} else {
+	  None
+	}
+      },
+      _ => None,
+    }
+  }
+}
+
+impl From<Config> for FsConfig {
+  fn from(cfg: Config) -> FsConfig {
+    cfg.fs
   }
 }
 
@@ -226,7 +284,6 @@ impl FromStr for Flags {
   }
 }
 
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DbConfig {
   pub path: Option<String>,
@@ -264,6 +321,12 @@ impl Default for DbConfig {
       flags: Some(vec!["readwrite", "create", "nomutex", "uri"].iter().map(|x| x.to_string()).collect()),
       limits: None,
     }
+  }
+}
+
+impl From<Config> for DbConfig {
+  fn from(cfg: Config) -> DbConfig {
+    cfg.db
   }
 }
 
@@ -309,6 +372,12 @@ impl JackConfig {
 	..Default::default()
       }
     )
+  }
+}
+
+impl From<Config> for JackConfig {
+  fn from(cfg: Config) -> JackConfig {
+    cfg.jack
   }
 }
 

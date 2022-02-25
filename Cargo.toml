@@ -3,6 +3,7 @@ members = [
   "src/mpk",
   "src/mpk_gear",
   "src/mpk_config",
+  "src/mpk_audio",
   "src/mpk_jack",
   "src/mpk_emacs",
   "src/mpk_flate",
