@@ -2,5 +2,6 @@
 ^out
 ^.cache
 ^target
+^build
 ^Cargo.lock
 ^mpk_ffi.h

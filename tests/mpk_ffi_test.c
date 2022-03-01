@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../mpk_ffi.h"
+#include "mpk_ffi.h"
 
 int main() {
   printf("starting mpk_ffi_test.c ...\n");
