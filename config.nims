@@ -11,9 +11,22 @@ const
   pkg {.strdefine.}: string = ""
   ffi {.booldefine.} = false
   MPK_BIN = "src/mpk"
+
 var
   target_dir = "target/debug"
-  build_dir = "build"
+  build_dir = absolutePath("build")
+  
+when defined(Windows):
+  let ext = ".dll"
+elif defined(Linux):
+  let ext = ".so"
+elif defined(MacOsX):
+  let ext = ".dylib"
+let 
+  ffi_lib = "libmpk_ffi" & ext
+  ffi_h = "mpk_ffi.h"
+  mpk_py = "mpk.py"
+  include_dir = build_dir / "include"
 
 proc DepMissing(dep: string) =
   var d = case dep:
@@ -57,20 +70,13 @@ task build, "build MPK":
     args.insert(" --release")
     target_dir = "target/release"
   exec "cargo build" & args.join
-  when defined(Windows):
-    let ext = ".dll"
-  elif defined(Linux):
-    let ext = ".so"
-  elif defined(MacOsX):
-    let ext = ".dylib"
-  let 
-    ffi_lib = "libmpk_ffi" & ext
-    ffi_h = "mpk_ffi.h"
-    include_dir = build_dir / "include"
-  mkDir("build/include")
+  mkDir(include_dir)
   cpFile(target_dir / ffi_lib, build_dir / ffi_lib)
   if fileExists(ffi_h):
     mvFile(ffi_h, include_dir / ffi_h)
+  if fileExists(mpk_py):
+    mvFile(mpk_py, build_dir / mpk_py)
+    exec "cd " & build_dir & " && " & "python " & mpk_py
 
 task run, "run MPK binary":
   var args: seq[string]
@@ -98,10 +104,9 @@ task test, "run MPK tests":
   exec "cargo test" & args.join
 
   when defined(ffi):
-    let test_build_dir = build_dir / "tests"
     let ffi_test = "mpk_ffi_test"
-    if not fileExists(test_build_dir / "mpk_ffi_test"):
-      mkDir(test_build_dir)
-      exec "gcc tests/mpk_ffi_test.c -Ibuild/include -Lbuild -lmpk_ffi -o " & test_build_dir / ffi_test
-    exec test_build_dir / ffi_test
+    exec "LD_RUN_PATH=" & '"' & build_dir & '"' & " gcc tests/mpk_ffi_test.c -I" & include_dir & " -L" & build_dir & " -lmpk_ffi -o " & build_dir / ffi_test
+    cpFile("tests" / ffi_test & ".py", build_dir / ffi_test & ".py")
+    exec "cd " & build_dir & " && python " & build_dir / ffi_test & ".py"
+    exec build_dir / ffi_test
     rmFile("/tmp/mpk.toml")

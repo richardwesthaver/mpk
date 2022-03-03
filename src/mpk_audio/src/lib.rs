@@ -1,5 +1,7 @@
-pub use rodio::cpal::{ALL_HOSTS, available_hosts, host_from_id, Host, Device, Stream, HostId};
+use rodio::cpal::{ALL_HOSTS, available_hosts, host_from_id};
 pub use rodio::cpal::traits::{DeviceTrait, HostTrait};
+
+pub mod gen;
 
 pub fn info() {
   println!("supported hosts: {:?}", ALL_HOSTS);
@@ -69,4 +71,33 @@ pub fn info() {
 #[test]
 fn all_hosts() {
   info()
+}
+
+#[test]
+fn beep() {
+  let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+  let sink = rodio::Sink::try_new(&stream_handle).unwrap();
+  sink.set_volume(0.2);
+  let sin = rodio::source::SineWave::new(55.0);
+  sink.append(sin);
+  std::thread::sleep(std::time::Duration::from_secs(1));
+  sink.detach();
+}
+
+#[test]
+fn sample_chain() {
+  use gen::SampleChain;
+  let mut chain = SampleChain::default();
+  let path = std::path::Path::new("tic.wav");
+  chain.add_file(path).unwrap();
+  chain.process_file(path, false).unwrap();
+}
+
+#[test]
+fn metro() {
+  use gen::Metro;
+  use gen::metro::MetroMsg::Stop;
+  let metro = Metro::new(128, 4, 4).start();
+  std::thread::sleep(std::time::Duration::from_secs(1));
+  metro.send(Stop).unwrap();
 }

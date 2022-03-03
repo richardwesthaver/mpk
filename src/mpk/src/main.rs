@@ -1,4 +1,4 @@
-use std::path::{Path, MAIN_SEPARATOR};
+use std::path::{Path, MAIN_SEPARATOR, PathBuf};
 use clap::{Parser, Subcommand, AppSettings};
 
 use mpk_config::{Config, DEFAULT_PATH, CONFIG_FILE};
@@ -27,13 +27,16 @@ struct Args {
 enum Command {
   /// Initialize MPK
   Init,
-  /// Start MPK instance
-  Start,
-  /// Save MPK instance
+  /// Run a service
+  Run {
+    #[clap(subcommand)]
+    runner: Runner,
+  },
+  /// Save a session
   Save,
-  /// Query MPK resources
+  /// Query MDB
   Query,
-  /// Sync MPK resources with DB
+  /// Sync resources with DB
   Sync {
     #[clap(short, long)]
     tracks: bool,
@@ -42,16 +45,39 @@ enum Command {
     #[clap(short, long)]
     projects: bool,
   },
-  /// Print info about MPK resources
-  Info,
-  /// Package MPK resources [.tar.zst]
+  /// Print info
+  Info {
+    #[clap(short, long)]
+    audio: bool,
+    #[clap(short,long)]
+    midi: bool,
+  },
+  /// Package resources [.tar.zst]
   Pack,
-  /// Unpackage MPK resources [.tar.zst]
+  /// Unpackage resources [.tar.zst]
   Unpack,
-  /// Shutdown MPK instance
+  /// Shutdown services
   Quit,
 }
 
+#[derive(Subcommand)]
+enum Runner {
+  // start the jack server
+  Jack,
+  // start a network server
+  Net,
+  // create a sample chain
+  Chain {
+    #[clap(parse(from_os_str))]
+    input: Vec<PathBuf>,
+    #[clap(parse(from_os_str))]
+    output: PathBuf,
+  },
+  Metro {
+    bpm: u16,
+    time_sig: String,
+  }
+}
 
 fn ppln(i:&str,s:char) {
   match s {
@@ -85,9 +111,16 @@ fn main() -> Result<()> {
       Mdb::new(db_path.as_deref())?.init()?;
       ppln("[DONE]", 'd');
     },
-    Command::Info => {
-      mpk_midi::list_midi_ports()?;
-    }
+    Command::Info{audio, midi} => {
+      if audio {
+	mpk_audio::info();
+      } else if midi {
+	mpk_midi::list_midi_ports()?;
+      } else {
+	mpk_audio::info();
+	mpk_midi::list_midi_ports()?;
+      }
+    },
     Command::Sync { tracks, samples, projects } => {
       let conn = Mdb::new_with_config(cfg.db)?;
 
@@ -113,6 +146,19 @@ fn main() -> Result<()> {
       }
       if projects {
 	let _ps = cfg.fs.get_path("projects")?;
+      }
+    },
+    Command::Run{runner} => {
+      match runner {
+	Runner::Metro{bpm, time_sig} => {
+	  let sig: Vec<u8> = time_sig.trim().split("/")
+	    .map(|x| x.parse().unwrap())
+	    .collect();
+	  let metro = mpk_audio::gen::Metro::new(bpm, sig[0], sig[1]);
+	  metro.start();
+	  loop {}
+	}
+	_ => println!("starting jack server"),
       }
     }
     _ => ppln("Invalid command", 'E'),

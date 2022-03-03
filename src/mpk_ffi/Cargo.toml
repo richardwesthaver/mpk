@@ -14,7 +14,6 @@ mpk_flate = { path = "../mpk_flate" }
 mpk_sesh = { path = "../mpk_sesh" }
 mpk_midi = { path = "../mpk_midi" }
 mpk_gear = { path = "../mpk_gear" }
-mpk_dsp = { path = "../mpk_dsp" }
 mpk_jack = { path = "../mpk_jack" }
 [build-dependencies]
 cbindgen = "0.20"

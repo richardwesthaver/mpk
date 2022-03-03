@@ -1,11 +1,55 @@
 #+TITLE: Gear
-#+DATE: 2022-02-18
+#+DATE: 2022-03-02
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: RTFM
 
 * Octatrack MKII
 [[https://www.elektron.se/support/?connection=octatrack-mkii#resources][Manufacturer Resources]]
+[[https://www.elektron.se/wp-content/uploads/2021/03/Octatrack-MKII-User-Manual_ENG_OS1.40A_210414.pdf][Manual]]
+
+- 16 or 24 bit/44.1 kHz wav/aiff files, mono or stereo
+- .ot file stores Trim, Slices, Attributes
+
+#+name: ot_file_spec
+#+begin_src c
+// The 16 first bytes are just a header: “FORM DPS1SMPA”
+//
+// Then follows the settings. Most of the file are reserved for the slices. All values are big endian.
+//
+// The last byte but three are the total number of slices.
+//
+// the last two bytes are the values of all the bytes in the file minus the header summed together.
+
+const int pos_sampleCount = 0x32;
+const int pos_sliceStart = 0x3A;
+const int pos_sliceCount = 0x33D;
+const int pos_loop = 0x2A;
+const int pos_stretch = 0x26;
+
+// The last two bytes:
+void OTWriter::setChecksum()
+{
+unsigned short value = 0;
+for (int i = 16; i < OTFILESIZE - 2; i++)
+value += data[i];
+data[OTFILESIZE - 2] = (value >> 8)&0xFF;
+data[OTFILESIZE - 1] = value&0xFF;
+}
+
+// And the slices, beginning at 0x3A:
+struct Slice
+{
+unsigned char startSample[4];
+unsigned char endSample[4];
+uint32_t loop;
+};
+
+// maybe?
+enum Loop_t { NoLoop = 0, Loop = 1, PIPO = 2 };
+enum Stretch_t { NoStrech = 0, Normal = 2, Beat = 3 };
+#+end_src
+
 * Analog Rytm MKII
 [[https://www.elektron.se/support/?connection=analog-rytm-mkii#resources][Manufacturer Resources]]
 * OP-1

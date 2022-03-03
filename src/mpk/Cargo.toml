@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 clap = { version = "3.0.13", features = ["derive"] }
 mpk_config = { path = "../mpk_config" }
+mpk_audio = { path = "../mpk_audio" }
 mpk_midi = { path = "../mpk_midi" }
 mpk_db = { path = "../mpk_db" }
 mpk_id3 = { path = "../mpk_id3" }
