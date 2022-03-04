@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-02-18
+#+DATE: 2022-03-03
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
@@ -14,8 +14,7 @@ some time since that's the medium I'm most interested in. Emacs is the
 only GUI available for =mpk=, but a CLI is also provided.
 
 The =mpk= APIs and programs are primarily written in Rust but there
-are a number of other langs involved including Python, Scheme, and
-Elisp.
+are a number of other langs involved including C, Nim, and Python.
 
 ** Features
 - Resource Management
