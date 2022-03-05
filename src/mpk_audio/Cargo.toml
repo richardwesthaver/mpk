@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rodio = "0.15"
+rodio = { version = "0.15", features = ["symphonia-all"] }
 hound = "3.4"
 claxon = "0.4"

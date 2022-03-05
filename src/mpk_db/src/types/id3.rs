@@ -4,8 +4,7 @@ use id3::Tag;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 
-mod err;
-pub use err::{Error, Result};
+use crate::err::Result;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Id3 {

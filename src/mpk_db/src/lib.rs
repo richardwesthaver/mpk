@@ -50,95 +50,13 @@ impl Mdb {
     Ok(res)
   }
 
+
   pub fn last_insert_rowid(&self) -> i64 {
     self.conn.last_insert_rowid()
   }
 
   pub fn init(&self) -> Result<()> {
-    let sql = r"
-BEGIN;
-pragma foreign_keys = on;
-
-create table if not exists tracks (
-id integer primary key,
-path text not null,
-format text,
-channels integer,
-filesize integer,
-bitrate integer,
-bitdepth integer,
-duration integer,
-samplerate integer,
-updated datetime default current_timestamp not null);
-
-create table if not exists track_tags (
-track_id integer,
-artist text,
-title text,
-album text,
-genre text,
-year text,
-foreign key(track_id) references tracks(id));
-
-create table if not exists track_stats (
-track_id integer,
-foreign key(track_id) references tracks(id));
-
-create table if not exists track_images (
-track_id integer,
-mel_spectra blob,
-lin_spectra blob,
-waveform blob,
-foreign key(track_id) references tracks(id));
-
-create table if not exists track_user_data (
-track_id integer,
-user_tags text,
-notes text,
-foreign key(track_id) references tracks(id));
-
-create table if not exists samples (
-id integer primary key,
-path text not null,
-format text,
-channels integer,
-filesize integer,
-bitrate integer,
-bitdepth integer,
-duration integer,
-samplerate integer,
-updated datetime default current_timestamp not null);
-
-create table if not exists sample_stats (
-sample_id integer,
-foreign key(sample_id) references samples(id));
-
-create table if not exists sample_images (
-sample_id integer,
-mel_spectra blob,
-lin_spectra blob,
-waveform blob,
-foreign key(sample_id) references samples(id));
-
-create table if not exists sample_user_data (
-sample_id integer,
-user_tags text,
-notes text,
-foreign key(sample_id) references samples(id));
-
-create table if not exists projects (
-id integer primary key,
-name text not null,
-path text not null,
-type text not null,
-updated datetime default current_timestamp not null);
-
-create table if not exists project_user_data (
-project_id integer,
-user_tags text,
-notes text,
-foreign key(project_id) references projects(id));
-COMMIT;";
+    let sql = include_str!("init.sql");
 
     self.exec_batch(sql)
   }
@@ -162,13 +80,73 @@ COMMIT;";
     Ok(())
   }
 
+  pub fn insert_track_tags_musicbrainz(&self, tags: MusicbrainzTags) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_track_features_lowlevel(&self, features: LowlevelFeatures) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_track_features_rhythm(&self, features: RhythmFeatures) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_track_features_sfx(&self, features: SfxFeatures) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_track_features_tonal(&self, features: TonalFeatures) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_track_user_notes(&self, note: &str, append: bool) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_track_user_tags(&self, tag: &str, append: bool) -> Result<()> {
+    Ok(())
+  }
+
   pub fn insert_sample(&self, path: &str) -> Result<()> {
     self.exec("insert into samples (path) values (?)", &[&path])?;
     Ok(())
   }
 
+  pub fn insert_sample_features_lowlevel(&self, features: LowlevelFeatures) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_sample_features_rhythm(&self, features: RhythmFeatures) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_sample_features_sfx(&self, features: SfxFeatures) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_sample_features_tonal(&self, features: TonalFeatures) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_sample_user_notes(&self, note: &str, append: bool) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_sample_user_tags(&self, tag: &str, append: bool) -> Result<()> {
+    Ok(())
+  }
+
   pub fn insert_project(&self, name: &str, path: &str, ty: &str) -> Result<()> {
     self.exec("insert into projects (name, path, type) values (?,?,?)", &[&name, &path, &ty])?;
+    Ok(())
+  }
+
+  pub fn insert_project_user_notes(&self, note: &str, append: bool) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn insert_project_user_tags(&self, tag: &str, append: bool) -> Result<()> {
     Ok(())
   }
 }
