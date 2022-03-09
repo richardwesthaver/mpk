@@ -2,7 +2,7 @@ use std::path::{Path, MAIN_SEPARATOR, PathBuf};
 use clap::{Parser, Subcommand, AppSettings};
 
 use mpk_config::{Config, DEFAULT_PATH, CONFIG_FILE};
-use mpk_db::Mdb;
+use mpk_db::{Mdb, TrackTags};
 use mpk_id3::id3_walk;
 
 use mpk::Result;
@@ -138,7 +138,14 @@ fn main() -> Result<()> {
 
 	  conn.insert_track(&path)?;
 	  let track_id = conn.last_insert_rowid();
-	  conn.insert_track_tags(track_id, artist, title, album, genre, year)?;
+	  let tags = TrackTags {
+	    artist,
+	    title,
+	    album,
+	    genre,
+	    year
+	  };
+	  conn.insert_track_tags(track_id, &tags)?;
 	}
       }
       if samples {

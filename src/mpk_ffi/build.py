@@ -14,7 +14,7 @@ def parse_header(header):
 
 def init_ffi(cdef):
   ffi = FFI()
-  ffi.set_source("mpk",
+  ffi.set_source("_mpk",
                  """
                  #include "mpk_ffi.h"
                  """,

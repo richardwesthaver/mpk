@@ -88,9 +88,10 @@ fn beep() {
 fn sample_chain() {
   use gen::SampleChain;
   let mut chain = SampleChain::default();
-  let path = std::path::Path::new("tic.wav");
-  chain.add_file(path).unwrap();
-  chain.process_file(path, false).unwrap();
+  chain.add_file("ch1.wav").unwrap();
+  chain.add_file("ch2.wav").unwrap();
+  chain.process_file("ch1.wav", false).unwrap();
+  chain.process_file("ch2.wav", false).unwrap();
 }
 
 #[test]

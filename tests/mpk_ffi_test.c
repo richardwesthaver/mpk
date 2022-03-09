@@ -11,7 +11,7 @@ int main() {
   mpk_config_write(cfg, "/tmp/mpk.toml");
   mpk_config_load("/tmp/mpk.toml");
   printf("fs_root: %s\n", mpk_fs_config_get_path(fs_cfg, "root"));
-  printf("db_flags: %d\n", *mpk_db_config_flags(db_cfg));
+  printf("db_flags: %d\n", mpk_db_config_flags(db_cfg));
 
   Mdb* db = mdb_new(NULL);
 
@@ -19,7 +19,8 @@ int main() {
   printf("init success!\n");
   int64_t last_id = mdb_insert_track(db, "./mpk_test.c");
   printf("last_id: %lld\n", last_id);
-  mdb_insert_track_tags(db, last_id, "artist", "title", "album", "genre", 1234);
+  TrackTags* track_tags = mdb_track_tags_new("artist", "title", "album", "genre", 0);
+  mdb_insert_track_tags(db, last_id, track_tags);
   mdb_exec_batch(db, "select * from track_tags"); // NOTE: no output
   printf("... Done\n");
 }

@@ -1,10 +1,12 @@
 use rusqlite::{Connection, OpenFlags, ToSql};
 use std::path::Path;
 use mpk_config::DbConfig;
-pub use mpk_id3::Id3;
 
 mod err;
 pub use err::{Error, Result};
+
+mod types;
+pub use types::*;
 
 /// MPK Database
 #[derive(Debug)]
@@ -66,37 +68,128 @@ impl Mdb {
     Ok(self.last_insert_rowid())
   }
 
-  pub fn insert_track_tags(&self,
-			   id: i64, artist: Option<String>,
-			   title: Option<String>, album: Option<String>,
-			   genre: Option<String>, year: Option<i16>) -> Result<()> {
-    for t in [&artist, &title, &album, &genre, &year.map(|x| x.to_string())] {
-      if t.is_some() {
-	self.exec("insert into track_tags (track_id, artist, title, album, genre, year)
-               values (?,?,?,?,?,?)", &[&id, &artist, &title, &album, &genre, &year])?;
-	break;
-      }
-    }
+  pub fn insert_track_tags(&self, id: i64, tags: &TrackTags) -> Result<()> {
+    self.exec("insert into track_tags values (?,?,?,?,?,?)",
+	      &[&id, &tags.artist, &tags.title, &tags.album, &tags.genre, &tags.year])?;
     Ok(())
   }
 
-  pub fn insert_track_tags_musicbrainz(&self, tags: MusicbrainzTags) -> Result<()> {
+  pub fn insert_track_tags_musicbrainz(&self, id: i64, tags: &MusicbrainzTags) -> Result<()> {
+    self.exec("insert into track_tags_musicbrainz values (?,?,?,?,?,?,?,?,?)",
+	      &[&id,
+		&tags.albumartistid,
+		&tags.albumid,
+		&tags.albumstatus,
+		&tags.albumtype,
+		&tags.artistid,
+		&tags.releasegroupid,
+		&tags.releasetrackid,
+		&tags.trackid])?;
     Ok(())
   }
 
-  pub fn insert_track_features_lowlevel(&self, features: LowlevelFeatures) -> Result<()> {
+  pub fn insert_track_features_lowlevel(&self, id: i64, features: &LowlevelFeatures) -> Result<()> {
+    self.exec("insert into track_features_lowlevel
+values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+	      &[&id,
+		&features.average_loudness,
+		&features.barkbanks_kurtosis,
+		&features.barkbanks_skewness,
+		&features.barkbanks_spread,
+		&features.barkbanks,
+		&features.dissonance,
+		&features.hfc,
+		&features.pitch,
+		&features.pitch_instantaneous_confidence,
+		&features.pitch_salience,
+		&features.silence_rate_20db,
+		&features.silence_rate_30db,
+		&features.silence_rate_60db,
+		&features.spectral_centroid,
+		&features.spectral_complexity,
+		&features.spectral_crest,
+		&features.spectral_decrease,
+		&features.spectral_energy,
+		&features.spectral_energyband_high,
+		&features.spectral_energyband_low,
+		&features.spectral_energyband_middle_high,
+		&features.spectral_energyband_middle_low,
+		&features.spectral_flatness_db,
+		&features.spectral_flux,
+		&features.spectral_kurtosis,
+		&features.spectral_rms,
+		&features.spectral_rolloff,
+		&features.spectral_skewness,
+		&features.spectral_spread,
+		&features.spectral_strongpeak,
+		&features.zerocrossingrate,
+		&features.mfcc,
+		&features.sccoeffs,
+		&features.scvalleys])?;
     Ok(())
   }
 
-  pub fn insert_track_features_rhythm(&self, features: RhythmFeatures) -> Result<()> {
+  pub fn insert_track_features_rhythm(&self, id: i64, features: &RhythmFeatures) -> Result<()> {
+    self.exec("insert into track_features_rhythm values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+	      &[&id,
+		&features.bpm,
+		&features.confidence,
+		&features.onset_rate,
+		&features.beats_loudness,
+		&features.first_peak_bpm,
+		&features.first_peak_spread,
+		&features.first_peak_weight,
+		&features.second_peak_bpm,
+		&features.second_peak_spread,
+		&features.second_peak_weight,
+		&features.beats_position,
+		&features.bpm_estimates,
+		&features.bpm_intervals,
+		&features.onset_times,
+		&features.beats_loudness_band_ratio,
+		&features.histogram])?;
     Ok(())
   }
 
-  pub fn insert_track_features_sfx(&self, features: SfxFeatures) -> Result<()> {
+  pub fn insert_track_features_sfx(&self, id: i64, features: &SfxFeatures) -> Result<()> {
+    self.exec("insert into track_features_sfx values (?,?,?,?,?,?,?,?)",
+	      &[&id,
+		&features.pitch_after_max_to_before_max_energy_ratio,
+		&features.pitch_centroid,
+		&features.pitch_max_to_total,
+		&features.pitch_min_to_total,
+		&features.inharmonicity,
+		&features.oddtoevenharmonicenergyratio,
+		&features.tristimulus])?;
     Ok(())
   }
 
-  pub fn insert_track_features_tonal(&self, features: TonalFeatures) -> Result<()> {
+  pub fn insert_track_features_tonal(&self, id: i64, features: &TonalFeatures) -> Result<()> {
+    self.exec("insert into track_features_tonal (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+	      &[&id,
+		&features.chords_change_rate,
+		&features.chords_number_rate,
+		&features.key_strength,
+		&features.tuning_diatonic_strength,
+		&features.tuning_equal_tempered_deviation,
+		&features.tuning_frequency,
+		&features.tuning_nontempered_tuning_ratio,
+		&features.chords_strength,
+		&features.chords_histogram,
+		&features.thpcp,
+		&features.hpcp,
+		&features.chords_key,
+		&features.chords_scale,
+		&features.key_key,
+		&features.key_scale,
+		&features.chord_progression
+	      ])?;
+    Ok(())
+  }
+
+  pub fn insert_track_images(&self, id: i64, images: &Spectograms) -> Result<()> {
+    self.exec("insert into track_images values (?,?,?,?)",
+	      &[&id, &images.mel_spec, &images.log_spec, &images.freq_spec])?;
     Ok(())
   }
 
@@ -113,19 +206,107 @@ impl Mdb {
     Ok(())
   }
 
-  pub fn insert_sample_features_lowlevel(&self, features: LowlevelFeatures) -> Result<()> {
+  pub fn insert_sample_features_lowlevel(&self, id: i64, features: LowlevelFeatures) -> Result<()> {
+    self.exec("insert into sample_features_lowlevel values (?)",
+	      &[&id,
+		&features.average_loudness,
+		&features.barkbanks_kurtosis,
+		&features.barkbanks_skewness,
+		&features.barkbanks_spread,
+		&features.barkbanks,
+		&features.dissonance,
+		&features.hfc,
+		&features.pitch,
+		&features.pitch_instantaneous_confidence,
+		&features.pitch_salience,
+		&features.silence_rate_20db,
+		&features.silence_rate_30db,
+		&features.silence_rate_60db,
+		&features.spectral_centroid,
+		&features.spectral_complexity,
+		&features.spectral_crest,
+		&features.spectral_decrease,
+		&features.spectral_energy,
+		&features.spectral_energyband_high,
+		&features.spectral_energyband_low,
+		&features.spectral_energyband_middle_high,
+		&features.spectral_energyband_middle_low,
+		&features.spectral_flatness_db,
+		&features.spectral_flux,
+		&features.spectral_kurtosis,
+		&features.spectral_rms,
+		&features.spectral_rolloff,
+		&features.spectral_skewness,
+		&features.spectral_spread,
+		&features.spectral_strongpeak,
+		&features.zerocrossingrate,
+		&features.mfcc,
+		&features.sccoeffs,
+		&features.scvalleys])?;
     Ok(())
   }
 
-  pub fn insert_sample_features_rhythm(&self, features: RhythmFeatures) -> Result<()> {
+  pub fn insert_sample_features_rhythm(&self, id: i64, features: RhythmFeatures) -> Result<()> {
+    self.exec("insert into sample_features_rhythm values (?)",
+	      &[&id,
+		&features.bpm,
+		&features.confidence,
+		&features.onset_rate,
+		&features.beats_loudness,
+		&features.first_peak_bpm,
+		&features.first_peak_spread,
+		&features.first_peak_weight,
+		&features.second_peak_bpm,
+		&features.second_peak_spread,
+		&features.second_peak_weight,
+		&features.beats_position,
+		&features.bpm_estimates,
+		&features.bpm_intervals,
+		&features.onset_times,
+		&features.beats_loudness_band_ratio,
+		&features.histogram])?;
     Ok(())
   }
 
-  pub fn insert_sample_features_sfx(&self, features: SfxFeatures) -> Result<()> {
+  pub fn insert_sample_features_sfx(&self, id: i64, features: SfxFeatures) -> Result<()> {
+    self.exec("insert into sample_features_sfx values (?)",
+	      &[&id,
+		&features.pitch_after_max_to_before_max_energy_ratio,
+		&features.pitch_centroid,
+		&features.pitch_max_to_total,
+		&features.pitch_min_to_total,
+		&features.inharmonicity,
+		&features.oddtoevenharmonicenergyratio,
+		&features.tristimulus])?;
     Ok(())
   }
 
-  pub fn insert_sample_features_tonal(&self, features: TonalFeatures) -> Result<()> {
+  pub fn insert_sample_features_tonal(&self, id: i64, features: TonalFeatures) -> Result<()> {
+    self.exec("insert into sample_features_tonal (?)",
+	      &[&id,
+		&features.chords_change_rate,
+		&features.chords_number_rate,
+		&features.key_strength,
+		&features.tuning_diatonic_strength,
+		&features.tuning_equal_tempered_deviation,
+		&features.tuning_frequency,
+		&features.tuning_nontempered_tuning_ratio,
+		&features.chords_strength,
+		&features.chords_histogram,
+		&features.thpcp,
+		&features.hpcp,
+		&features.chords_key,
+		&features.chords_scale,
+		&features.key_key,
+		&features.key_scale,
+//		&features.chord_progression
+	      ])?;
+    Ok(())
+  }
+
+  pub fn insert_sample_images(&self, id: i64, images: Spectograms) -> Result<()> {
+    self.exec("insert into track_images values (?)",
+	      &[&id, &images.mel_spec, &images.log_spec, &images.freq_spec])?;
     Ok(())
   }
 
