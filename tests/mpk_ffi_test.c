@@ -22,5 +22,12 @@ int main() {
   TrackTags* track_tags = mdb_track_tags_new("artist", "title", "album", "genre", 0);
   mdb_insert_track_tags(db, last_id, track_tags);
   mdb_exec_batch(db, "select * from track_tags"); // NOTE: no output
+
+  mdb_free(db);
+  mpk_config_free(cfg);
+  mpk_jack_config_free(jk_cfg);
+  mpk_db_config_free(db_cfg);
+  mpk_fs_config_free(fs_cfg);
+
   printf("... Done\n");
 }

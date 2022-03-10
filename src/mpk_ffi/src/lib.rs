@@ -53,6 +53,16 @@ pub extern "C" fn mdb_vecreal_new(ptr: *const f32, len: size_t) -> CVecReal {
 }
 
 #[no_mangle]
+pub extern "C" fn mpk_string_free(ptr: *mut c_char) {
+  if ptr.is_null() {
+    return;
+  }
+  unsafe {
+    Box::from_raw(ptr);
+  }
+}
+
+#[no_mangle]
 pub extern "C" fn mpk_config_new(fs: *const FsConfig, db: *const DbConfig, jack: *const JackConfig) -> *mut Config {
   if !fs.is_null() | !db.is_null() | !jack.is_null() {
     unsafe {
@@ -67,7 +77,7 @@ pub extern "C" fn mpk_config_new(fs: *const FsConfig, db: *const DbConfig, jack:
 }
 
 #[no_mangle]
-pub extern "C" fn mpk_config_free(ptr: *mut DbConfig) {
+pub extern "C" fn mpk_config_free(ptr: *mut Config) {
   if ptr.is_null() {
     return;
   }
