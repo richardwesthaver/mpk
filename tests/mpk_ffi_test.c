@@ -24,10 +24,11 @@ int main() {
   mdb_exec_batch(db, "select * from track_tags"); // NOTE: no output
 
   mdb_free(db);
-  mpk_config_free(cfg);
+  mdb_track_tags_free(track_tags);
   mpk_jack_config_free(jk_cfg);
   mpk_db_config_free(db_cfg);
   mpk_fs_config_free(fs_cfg);
+  mpk_config_free(cfg);
 
   printf("... Done\n");
 }

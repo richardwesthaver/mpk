@@ -63,7 +63,7 @@ pub extern "C" fn mpk_string_free(ptr: *mut c_char) {
 }
 
 #[no_mangle]
-pub extern "C" fn mpk_config_new(fs: *const FsConfig, db: *const DbConfig, jack: *const JackConfig) -> *mut Config {
+pub extern "C" fn mpk_config_new(fs: *mut FsConfig, db: *mut DbConfig, jack: *mut JackConfig) -> *mut Config {
   if !fs.is_null() | !db.is_null() | !jack.is_null() {
     unsafe {
       let fs = &*fs;
@@ -104,15 +104,13 @@ pub extern "C" fn mpk_config_write(cfg: *const Config, path: *const c_char) {
     CStr::from_ptr(path)
   };
   let p: &Path = Path::new(OsStr::from_bytes(cstr.to_bytes()));
-  let cfg = unsafe {
-    cfg.as_ref().unwrap()
-  };
+  let cfg = unsafe{&*cfg};
   cfg.write(p).unwrap()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mpk_config_build(cfg: *const Config) {
-  cfg.as_ref().unwrap().build().unwrap()
+pub extern "C" fn mpk_config_build(cfg: *const Config) {
+  unsafe{&*cfg}.build().unwrap()
 }
 
 #[no_mangle]
@@ -140,13 +138,13 @@ pub extern "C" fn mpk_fs_config_free(ptr: *mut FsConfig) {
 }
 
 #[no_mangle]
-pub extern "C" fn mpk_fs_config_get_path(cfg: *const FsConfig, path: *const c_char) -> *const c_char {
+pub extern "C" fn mpk_fs_config_get_path(cfg: *const FsConfig, path: *const c_char) -> *mut c_char {
   let p = &unsafe {
     assert!(!path.is_null());
     CStr::from_ptr(path)
   }.to_str().unwrap();
 
-  let cfg = unsafe {cfg.as_ref().unwrap()};
+  let cfg = unsafe{&*cfg};
   let res = cfg.get_path(p).unwrap();
   CString::new(res.as_os_str().as_bytes()).unwrap().into_raw()
 }
@@ -515,7 +513,7 @@ pub extern "C" fn mdb_free(ptr: *mut Mdb) {
 
 #[no_mangle]
 pub unsafe extern "C" fn mdb_init(db: *const Mdb) {
-  db.as_ref().unwrap().init().unwrap();
+  db.as_ref().unwrap().init().unwrap()
 }
 
 #[no_mangle]
@@ -526,9 +524,8 @@ pub extern "C" fn mdb_insert_track(db: *const Mdb, path: *const c_char) -> i64 {
         CStr::from_ptr(path)
     };
   let str = c_str.to_str().unwrap();
-  let mdb = unsafe {
-    db.as_ref().unwrap()
-  };
+  let mdb = unsafe{&*db};
+
   mdb.insert_track(&str).unwrap()
 }
 
@@ -601,9 +598,6 @@ pub extern "C" fn mdb_exec_batch(db: *const Mdb, sql: *const c_char) {
     CStr::from_ptr(sql).to_str().unwrap()
   };
 
-  let mdb = unsafe {
-    db.as_ref().unwrap()
-  };
-
+  let mdb = unsafe{&*db};
   mdb.exec_batch(sql).unwrap()
 }
