@@ -3,19 +3,25 @@
 
 int main() {
   printf("starting mpk_ffi_test.c ...\n");
-  FsConfig* fs_cfg = mpk_fs_config_new(NULL);
-  DbConfig* db_cfg = mpk_db_config_new();
-  JackConfig* jk_cfg = mpk_jack_config_new();
-  Config* cfg = mpk_config_new(fs_cfg, db_cfg, jk_cfg);
-  printf("fs_root: %s\n", mpk_fs_config_get_path(fs_cfg, "root"));
+  FsConfig *fs_cfg = mpk_fs_config_new(NULL);
+  DbConfig *db_cfg = mpk_db_config_new();
+  JackConfig *jk_cfg = mpk_jack_config_new();
+  Config *cfg = mpk_config_new(fs_cfg, db_cfg, jk_cfg);
+
+  char *root_path = mpk_fs_config_get_path(fs_cfg, "root");
+  printf("fs_root: %s\n", root_path);
+  mpk_string_free(root_path);
+
   printf("db_flags: %d\n", mpk_db_config_flags(db_cfg));
   mpk_config_write(cfg, "/tmp/mpk.toml");
+
   mpk_jack_config_free(jk_cfg);
   mpk_db_config_free(db_cfg);
   mpk_fs_config_free(fs_cfg);
   mpk_config_free(cfg);
 
   Config* config = mpk_config_load("/tmp/mpk.toml");
+
   mpk_config_free(config);
 
   Mdb* db = mdb_new(NULL);
