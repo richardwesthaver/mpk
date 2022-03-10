@@ -7,24 +7,25 @@ use mpk_db::{Mdb, TrackTags, MusicbrainzTags, LowlevelFeatures, SfxFeatures, Ton
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct CVecReal {
   pub ptr: *const f32,
   pub len: size_t,
 }
 
-impl std::ops::Deref for CVecReal {
-    type Target = [f32];
+// impl std::ops::Deref for CVecReal {
+//     type Target = [f32];
 
-    fn deref(&self) -> &[f32] {
-        unsafe { slice::from_raw_parts(self.ptr, self.len) }
-    }
-}
+//     fn deref(&self) -> &[f32] {
+//         unsafe { slice::from_raw_parts(self.ptr, self.len) }
+//     }
+// }
 
-impl Drop for CVecReal {
-    fn drop(&mut self) {
-      unsafe { Box::from_raw(&mut self.ptr) };
-    }
-}
+// impl Drop for CVecReal {
+//     fn drop(&mut self) {
+//       unsafe { Box::from_raw(&mut self.ptr) };
+//     }
+// }
 
 impl From<VecReal> for CVecReal {
   fn from(v: VecReal) -> Self {
@@ -39,6 +40,16 @@ impl From<CVecReal> for VecReal {
   fn from(v: CVecReal) -> Self {
     VecReal(unsafe{slice::from_raw_parts(v.ptr, v.len)}.to_vec())
   }
+}
+
+#[no_mangle]
+pub extern "C" fn mdb_vecreal_new(ptr: *const f32, len: size_t) -> CVecReal {
+  CVecReal {
+    ptr,
+    len,
+  }
+//  let box_vec = Box::new(vec);
+//  Box::into_raw(box_vec)
 }
 
 #[no_mangle]
@@ -231,7 +242,7 @@ pub extern "C" fn mdb_musicbrainz_tags_free(ptr: *mut MusicbrainzTags) {
 }
 
 #[no_mangle]
-pub extern "C" fn mdb_lowlevel_features_new(average_loudness: *const f32,
+pub extern "C" fn mdb_lowlevel_features_new(average_loudness: f32,
 					    barkbanks_kurtosis: CVecReal,
 					    barkbanks_skewness: CVecReal,
 					    barkbanks_spread: CVecReal,
@@ -266,7 +277,7 @@ pub extern "C" fn mdb_lowlevel_features_new(average_loudness: *const f32,
 					    sccoeffs: CVecReal,
 					    scvalleys: CVecReal) -> *mut LowlevelFeatures {
   let features = LowlevelFeatures {
-    average_loudness: unsafe{*average_loudness},
+    average_loudness,
     barkbanks_kurtosis: VecReal::from(barkbanks_kurtosis),
     barkbanks_skewness: VecReal::from(barkbanks_skewness),
     barkbanks_spread: VecReal::from(barkbanks_spread),
@@ -316,16 +327,16 @@ pub extern "C" fn mdb_lowlevel_features_free(ptr: *mut LowlevelFeatures) {
 }
 
 #[no_mangle]
-pub extern "C" fn mdb_rhythm_features_new(bpm: *const f32,
-					  confidence: *const f32,
-					  onset_rate: *const f32,
+pub extern "C" fn mdb_rhythm_features_new(bpm: f32,
+					  confidence: f32,
+					  onset_rate: f32,
 					  beats_loudness: CVecReal,
-					  first_peak_bpm: *const i16,
-					  first_peak_spread: *const f32,
-					  first_peak_weight: *const f32,
-					  second_peak_bpm: *const i16,
-					  second_peak_spread: *const f32,
-					  second_peak_weight: *const f32,
+					  first_peak_bpm: i16,
+					  first_peak_spread: f32,
+					  first_peak_weight: f32,
+					  second_peak_bpm: i16,
+					  second_peak_spread: f32,
+					  second_peak_weight: f32,
 					  beats_position: CVecReal,
 					  bpm_estimates: CVecReal,
 					  bpm_intervals: CVecReal,
@@ -333,16 +344,16 @@ pub extern "C" fn mdb_rhythm_features_new(bpm: *const f32,
 					  beats_loudness_band_ratio: CVecReal,
 					  histogram:CVecReal) -> *mut RhythmFeatures {
   let features = RhythmFeatures {
-    bpm: unsafe{*bpm},
-    confidence: unsafe{*confidence},
-    onset_rate: unsafe{*onset_rate},
+    bpm,
+    confidence,
+    onset_rate,
     beats_loudness: VecReal::from(beats_loudness),
-    first_peak_bpm: unsafe{*first_peak_bpm},
-    first_peak_spread: unsafe{*first_peak_spread},
-    first_peak_weight: unsafe{*first_peak_weight},
-    second_peak_bpm: unsafe{*second_peak_bpm},
-    second_peak_spread: unsafe{*second_peak_spread},
-    second_peak_weight: unsafe{*second_peak_weight},
+    first_peak_bpm,
+    first_peak_spread,
+    first_peak_weight,
+    second_peak_bpm,
+    second_peak_spread,
+    second_peak_weight,
     beats_position: VecReal::from(beats_position),
     bpm_estimates: VecReal::from(bpm_estimates),
     bpm_intervals: VecReal::from(bpm_intervals),
@@ -365,18 +376,18 @@ pub extern "C" fn mdb_rhythm_features_free(ptr: *mut RhythmFeatures) {
 }
 
 #[no_mangle]
-pub extern "C" fn mdb_sfx_features_new(pitch_after_max_to_before_max_energy_ratio: *const f32,
-				       pitch_centroid: *const f32,
-				       pitch_max_to_total: *const f32,
-				       pitch_min_to_total: *const f32,
+pub extern "C" fn mdb_sfx_features_new(pitch_after_max_to_before_max_energy_ratio: f32,
+				       pitch_centroid: f32,
+				       pitch_max_to_total: f32,
+				       pitch_min_to_total: f32,
 				       inharmonicity: CVecReal,
 				       oddtoevenharmonicenergyratio: CVecReal,
 				       tristimulus: CVecReal) -> *mut SfxFeatures {
   let features = SfxFeatures {
-    pitch_after_max_to_before_max_energy_ratio: unsafe{*pitch_after_max_to_before_max_energy_ratio},
-    pitch_centroid: unsafe{*pitch_centroid},
-    pitch_max_to_total: unsafe{*pitch_max_to_total},
-    pitch_min_to_total: unsafe{*pitch_min_to_total},
+    pitch_after_max_to_before_max_energy_ratio,
+    pitch_centroid,
+    pitch_max_to_total,
+    pitch_min_to_total,
     inharmonicity: VecReal::from(inharmonicity),
     oddtoevenharmonicenergyratio: VecReal::from(oddtoevenharmonicenergyratio),
     tristimulus: VecReal::from(tristimulus),
@@ -396,13 +407,13 @@ pub extern "C" fn mdb_sfx_features_free(ptr: *mut SfxFeatures) {
 }
 
 #[no_mangle]
-pub extern "C" fn mdb_tonal_features_new(chords_change_rate: *const f32,
-					 chords_number_rate: *const f32,
-					 key_strength: *const f32,
-					 tuning_diatonic_strength: *const f32,
-					 tuning_equal_tempered_deviation: *const f32,
-					 tuning_frequency: *const f32,
-					 tuning_nontempered_tuning_ratio: *const f32,
+pub extern "C" fn mdb_tonal_features_new(chords_change_rate: f32,
+					 chords_number_rate: f32,
+					 key_strength: f32,
+					 tuning_diatonic_strength: f32,
+					 tuning_equal_tempered_deviation: f32,
+					 tuning_frequency: f32,
+					 tuning_nontempered_tuning_ratio: f32,
 					 chords_strength: CVecReal,
 					 chords_histogram: CVecReal,
 					 thpcp: CVecReal,
@@ -413,13 +424,13 @@ pub extern "C" fn mdb_tonal_features_new(chords_change_rate: *const f32,
 					 key_scale: *const c_char,
 					 chord_progression: *const c_char) -> *mut TonalFeatures {
   let features = TonalFeatures {
-    chords_change_rate: unsafe{*chords_change_rate},
-    chords_number_rate: unsafe{*chords_number_rate},
-    key_strength: unsafe{*key_strength},
-    tuning_diatonic_strength: unsafe{*tuning_diatonic_strength},
-    tuning_equal_tempered_deviation: unsafe{*tuning_equal_tempered_deviation},
-    tuning_frequency: unsafe{*tuning_frequency},
-    tuning_nontempered_tuning_ratio: unsafe{*tuning_nontempered_tuning_ratio},
+    chords_change_rate,
+    chords_number_rate,
+    key_strength,
+    tuning_diatonic_strength,
+    tuning_equal_tempered_deviation,
+    tuning_frequency,
+    tuning_nontempered_tuning_ratio,
     chords_strength: VecReal::from(chords_strength),
     chords_histogram: VecReal::from(chords_histogram),
     thpcp: VecReal::from(thpcp),
@@ -447,7 +458,7 @@ pub extern "C" fn mdb_tonal_features_free(ptr: *mut TonalFeatures) {
 #[no_mangle]
 pub extern "C" fn mdb_spectograms_new(mel_spec: CVecReal,
 				      log_spec: CVecReal,
-				      freq_spec:CVecReal) -> *mut Spectograms {
+				      freq_spec: CVecReal) -> *mut Spectograms {
   let specs = Spectograms {
     mel_spec: VecReal::from(mel_spec),
     log_spec: VecReal::from(log_spec),

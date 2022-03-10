@@ -92,8 +92,7 @@ proc rustTest() =
   
 proc ffiTest() =
   let ffi_test = "mpk_ffi_test"
-  exec "LD_RUN_PATH=" & '"' & build_dir & '"' & " gcc tests/mpk_ffi_test.c -I" & include_dir
-      & " -L" & build_dir & " -lmpk_ffi -o " & build_dir / ffi_test
+  exec "LD_RUN_PATH=" & '"' & build_dir & '"' & " gcc tests/mpk_ffi_test.c -I" & include_dir & " -L" & build_dir & " -lmpk_ffi -o " & build_dir / ffi_test
   cpFile("tests" / ffi_test & ".py", build_dir / ffi_test & ".py")
   exec "cd " & build_dir & " && python3 " & build_dir / ffi_test & ".py"
   exec build_dir / ffi_test
