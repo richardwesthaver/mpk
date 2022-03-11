@@ -1,7 +1,4 @@
-^vendor
-^out
-^.cache
-^target
-^build
-^Cargo.lock
+^vendor|^target|^build
+!^tests
+.lock$|.*.flac$|.*_mpk|.*.s?o$|.*.dylib$|.*.wav$
 ^mpk_ffi.h
