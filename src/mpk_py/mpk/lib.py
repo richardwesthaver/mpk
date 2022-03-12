@@ -3,23 +3,24 @@ try:
 except ImportError:
     print("mpk python bindings missing")
 
+import numpy as np
+
 NULL = ffi.NULL
 
 
 class Config:
-    def __init__(self):
-        self.fs = lib.mpk_fs_config_new(NULL)
-        self.db = lib.mpk_db_config_new()
-        self.jack = lib.mpk_jack_config_new()
-        self.cfg = lib.mpk_config_new(self.fs, self.db, self.jack)
+    def __init__(self, file=None):
+        if file:
+          self.cfg = lib.mpk_config_load(str(file).encode())
+          # TODO
+        else:
+          self.cfg = lib.mpk_config_new(NULL, NULL, NULL)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        lib.mpk_fs_config_free(self.fs)
-        lib.mpk_db_config_free(self.db)
-        lib.mpk_jack_config_free(self.jack)
+        lib.mpk_config_free(self.cfg)
 
     def write(self, file):
         print("writing config to " + file)
@@ -28,7 +29,7 @@ class Config:
     def load(self, file):
         print("loaded config from " + file)
         self.cfg = lib.mpk_config_load(file.encode())
-
+  
     def db_flags(self):
         return lib.mpk_db_config_flags(self.db)
 
@@ -37,8 +38,8 @@ class Config:
 
 
 class Mdb:
-    def __init__(self):
-        self.db = lib.mdb_new(NULL)
+    def __init__(self, file=NULL):
+        self.db = lib.mdb_new(str(file).encode())
 
     def __enter__(self):
         return self
@@ -77,7 +78,7 @@ class Mdb:
         return lib.mdb_insert_track_features_sfx(self.db, id, features)
 
     def insert_track_features_tonal(self, id, features, ptr=True):
-        print("inserting tags for track_id:", id)
+        print("inserting tonal_features for track_id:", id)
         return lib.mdb_insert_track_features_tonal(self.db, id, features)
 
     def insert_track_images(self, id, images, ptr=True):
@@ -86,6 +87,8 @@ class Mdb:
 
 
 def vectorize(arr):
+    if type(arr) is list:
+      arr = np.float32(arr)
     buf = ffi.from_buffer("float[]", arr)
     return lib.mdb_vecreal_new(ffi.cast("const float *", buf), len(buf))
 
@@ -101,12 +104,14 @@ def musicbrainz_tags(tags):
 
 
 def lowlevel_features(features):
-    features = [vectorize(x) for x in features[1:]]
+    features[1:] = [vectorize(x) for x in features[1:]]
     return lib.mdb_lowlevel_features_new(*features)
 
 
 def rhythm_features(features):
     features[3] = vectorize(features[3])
+
+    features[4:10] = [x[0] for x in features[4:10] if type(x) is list]
     features[10:] = [vectorize(x) for x in features[10:]]
     return lib.mdb_rhythm_features_new(*features)
 
@@ -118,7 +123,7 @@ def sfx_features(features):
 
 def tonal_features(features):
     features[7:11] = [vectorize(x) for x in features[7:11]]
-    features[11:16] = [x.encode() for x in features[11:16]]
+    features[11:16] = [x[0].encode() for x in features[11:16]]
     return lib.mdb_tonal_features_new(*features)
 
 

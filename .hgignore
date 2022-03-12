@@ -1,4 +1,5 @@
 ^vendor|^target|^build
 !^tests
+.*__pycache__
 .lock$|.*.flac$|.*_mpk|.*.s?o$|.*.dylib$|.*.wav$
 ^mpk_ffi.h

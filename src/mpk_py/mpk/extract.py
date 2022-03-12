@@ -73,8 +73,9 @@ def bulk_extract(files, sr=44100, mono=False):
 
 class AudioFile(object):
     def __init__(self, file, sr=44100, mono=False):
-        audio, sr = load(file, sr, mono)
-        self.path = os.path.expanduser(file)
+        path = os.path.expanduser(file)
+        audio, sr = load(path, sr, mono)
+        self.path = os.path.expanduser(path)
         self.sr = sr
         self.audio = audio
 

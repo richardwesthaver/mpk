@@ -10,4 +10,4 @@ from .lib import (
     tonal_features,
     spectograms,
 )
-from .extract import AudioFile, Extract, FILE_EXT
+from .extract import AudioFile, Extract, FILE_EXT, collect_files, bulk_extract
