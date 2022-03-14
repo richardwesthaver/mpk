@@ -1,7 +1,6 @@
 use rusqlite::{Connection, OpenFlags, ToSql};
 use std::path::Path;
 use mpk_config::DbConfig;
-
 mod err;
 pub use err::{Error, Result};
 
@@ -64,7 +63,8 @@ impl Mdb {
   }
 
   pub fn insert_track(&self, path: &str) -> Result<i64> {
-    self.exec("insert into tracks (path) values (?)", &[&path])?;
+    self.exec("insert into tracks (path) values (?)
+on conflict do nothing", &[&path])?;
     Ok(self.last_insert_rowid())
   }
 
@@ -187,7 +187,7 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     Ok(())
   }
 
-  pub fn insert_track_images(&self, id: i64, images: &Spectograms) -> Result<()> {
+  pub fn insert_track_images(&self, id: i64, images: &Spectrograms) -> Result<()> {
     self.exec("insert into track_images values (?,?,?,?)",
 	      &[&id, &images.mel_spec, &images.log_spec, &images.freq_spec])?;
     Ok(())
@@ -201,13 +201,15 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     Ok(())
   }
 
-  pub fn insert_sample(&self, path: &str) -> Result<()> {
-    self.exec("insert into samples (path) values (?)", &[&path])?;
-    Ok(())
+  pub fn insert_sample(&self, path: &str) -> Result<i64> {
+    self.exec("insert into samples (path) values (?)
+on conflict(path) do nothing", &[&path])?;
+    Ok(self.last_insert_rowid())
   }
 
-  pub fn insert_sample_features_lowlevel(&self, id: i64, features: LowlevelFeatures) -> Result<()> {
-    self.exec("insert into sample_features_lowlevel values (?)",
+  pub fn insert_sample_features_lowlevel(&self, id: i64, features: &LowlevelFeatures) -> Result<()> {
+    self.exec("insert into sample_features_lowlevel
+values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
 	      &[&id,
 		&features.average_loudness,
 		&features.barkbanks_kurtosis,
@@ -246,8 +248,8 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     Ok(())
   }
 
-  pub fn insert_sample_features_rhythm(&self, id: i64, features: RhythmFeatures) -> Result<()> {
-    self.exec("insert into sample_features_rhythm values (?)",
+  pub fn insert_sample_features_rhythm(&self, id: i64, features: &RhythmFeatures) -> Result<()> {
+    self.exec("insert into sample_features_rhythm values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
 	      &[&id,
 		&features.bpm,
 		&features.confidence,
@@ -268,8 +270,8 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     Ok(())
   }
 
-  pub fn insert_sample_features_sfx(&self, id: i64, features: SfxFeatures) -> Result<()> {
-    self.exec("insert into sample_features_sfx values (?)",
+  pub fn insert_sample_features_sfx(&self, id: i64, features: &SfxFeatures) -> Result<()> {
+    self.exec("insert into sample_features_sfx values (?,?,?,?,?,?,?,?)",
 	      &[&id,
 		&features.pitch_after_max_to_before_max_energy_ratio,
 		&features.pitch_centroid,
@@ -281,8 +283,8 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     Ok(())
   }
 
-  pub fn insert_sample_features_tonal(&self, id: i64, features: TonalFeatures) -> Result<()> {
-    self.exec("insert into sample_features_tonal (?)",
+  pub fn insert_sample_features_tonal(&self, id: i64, features: &TonalFeatures) -> Result<()> {
+    self.exec("insert into sample_features_tonal values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
 	      &[&id,
 		&features.chords_change_rate,
 		&features.chords_number_rate,
@@ -299,13 +301,13 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
 		&features.chords_scale,
 		&features.key_key,
 		&features.key_scale,
-//		&features.chord_progression
+		&features.chord_progression
 	      ])?;
     Ok(())
   }
 
-  pub fn insert_sample_images(&self, id: i64, images: Spectograms) -> Result<()> {
-    self.exec("insert into track_images values (?)",
+  pub fn insert_sample_images(&self, id: i64, images: &Spectrograms) -> Result<()> {
+    self.exec("insert into track_images values (?,?,?,?)",
 	      &[&id, &images.mel_spec, &images.log_spec, &images.freq_spec])?;
     Ok(())
   }
@@ -329,5 +331,81 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
 
   pub fn insert_project_user_tags(&self, tag: &str, append: bool) -> Result<()> {
     Ok(())
+  }
+
+  pub fn query_track(&self, id: i64) -> Result<AudioData> {
+    let res = self.conn.query_row("select * from tracks where id = ?", [id], |row| {
+      Ok(AudioData {
+	path: row.get(1)?,
+	format: row.get(2)?,
+	channels: row.get(3)?,
+	filesize: row.get(4)?,
+	bitrate: row.get(5)?,
+	bitdepth: row.get(6)?,
+	duration: row.get(7)?,
+	samplerate: row.get(8)?,
+      })
+    })?;
+    Ok(res)
+  }
+
+  pub fn query_track_tags(&self, id: i64) -> Result<TrackTags> {
+    let res = self.conn.query_row("select * from track_tags where track_id = ?", [id], |row| {
+      Ok(TrackTags {
+	artist: Some(row.get(1)?),
+	title: Some(row.get(2)?),	
+	album: Some(row.get(3)?),
+	genre: Some(row.get(4)?),
+	year: Some(row.get(5)?),
+      })
+    })?;
+    Ok(res)
+  }
+
+  pub fn query_track_tags_musicbrainz(&self, id: i64) -> Result<MusicbrainzTags> {
+    let res = self.conn.query_row("select * from track_tags_musicbrainz where track_id = ?", [id], |row| {
+      Ok(MusicbrainzTags {
+	albumartistid: row.get(1)?,
+	albumid: row.get(2)?,
+	albumstatus: row.get(3)?,
+	albumtype: row.get(4)?,
+	artistid: row.get(5)?,
+	releasegroupid: row.get(6)?,
+	releasetrackid: row.get(7)?,
+	trackid: row.get(8)?,
+      })
+    })?;
+    Ok(res)
+  }
+
+  pub fn query_track_images(&self, id: i64) -> Result<Spectrograms> {
+    let res = self.conn.query_row("select * from track_images where track_id = ?", [id], |row| {
+      Ok(Spectrograms {
+	mel_spec: row.get(1)?,
+	log_spec: row.get(2)?,
+	freq_spec: row.get(3)?,
+      })
+    })?;
+    Ok(res)
+  }
+
+  pub fn query_sample(&self, id: i64) -> Result<String> {
+    let res = self.conn.query_row("select * from samples where id = ?", [id], |row| row.get(0))?;
+    Ok(res)
+  }
+
+  pub fn query_sample_images(&self, id: i64) -> Result<Spectrograms> {
+    let res = self.conn.query_row("select * from sample_images where sample_id = ?", [id], |row| {
+      Ok(Spectrograms {
+	mel_spec: row.get(1)?,
+	log_spec: row.get(2)?,
+	freq_spec: row.get(3)?,
+      })
+    })?;
+    Ok(res)
+  }
+
+  pub fn close(self) {
+    self.conn.close().unwrap();
   }
 }

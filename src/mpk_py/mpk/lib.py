@@ -82,8 +82,31 @@ class Mdb:
         return lib.mdb_insert_track_features_tonal(self.db, id, features)
 
     def insert_track_images(self, id, images, ptr=True):
-        print("inserting spectograms for track_id:", id)
+        print("inserting spectrograms for track_id:", id)
         return lib.mdb_insert_track_images(self.db, id, images)
+
+    def insert_sample(self, sample):
+        return lib.mdb_insert_sample(self.db, sample.encode())
+
+    def insert_sample_featues_lowlevel(self, id, features, ptr=True):
+        print("inserting lowlevel_features for sample_id:", id)
+        return lib.mdb_insert_sample_features_lowlevel(self.db, id, features)
+
+    def insert_sample_features_rhythm(self, id, features, ptr=True):
+        print("inserting rhythm_features for sample_id:", id)
+        return lib.mdb_insert_sample_features_rhythm(self.db, id, features)
+
+    def insert_sample_features_sfx(self, id, features, ptr=True):
+        print("inserting sfx_features for sample_id:", id)
+        return lib.mdb_insert_sample_features_sfx(self.db, id, features)
+
+    def insert_sample_features_tonal(self, id, features, ptr=True):
+        print("inserting tonal_features for sample_id:", id)
+        return lib.mdb_insert_sample_features_tonal(self.db, id, features)
+
+    def insert_sample_images(self, id, images, ptr=True):
+        print("inserting spectrograms for sample_id:", id)
+        return lib.mdb_insert_sample_images(self.db, id, images)
 
 
 def vectorize(arr):
@@ -95,6 +118,7 @@ def vectorize(arr):
 
 def track_tags(tags):
     tags[0:4] = [x.encode() for x in tags[0:4]]
+    tags[4] = int(tags[4])
     return lib.mdb_track_tags_new(*tags)
 
 
@@ -109,9 +133,9 @@ def lowlevel_features(features):
 
 
 def rhythm_features(features):
+#    features[:3] = [x[0] for x in features[:3] if isinstance(x, (list, np.ndarray))]
     features[3] = vectorize(features[3])
-
-    features[4:10] = [x[0] for x in features[4:10] if type(x) is list]
+    features[4:10] = [x[0] for x in features[4:10] if isinstance(x, (list, np.ndarray))]
     features[10:] = [vectorize(x) for x in features[10:]]
     return lib.mdb_rhythm_features_new(*features)
 
@@ -127,6 +151,6 @@ def tonal_features(features):
     return lib.mdb_tonal_features_new(*features)
 
 
-def spectograms(specs):
+def spectrograms(specs):
     specs = [vectorize(x) for x in specs]
-    return lib.mdb_spectograms_new(*specs)
+    return lib.mdb_spectrograms_new(*specs)

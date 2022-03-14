@@ -107,16 +107,16 @@ class Extract(AudioFile):
         print("added features to pool.")
 
     def freq_spec(self):
-        windowing = es.Windowing(type="blackmanharris62", zeroPadding=2048)
+        windowing = es.Windowing(type="hann")
         spectrum = es.Spectrum()
         amp2db = es.UnaryOperator(type="lin2db", scale=2)
         for frame in es.FrameGenerator(self.mono(), frameSize=2048, hopSize=1024):
             frame_spec = spectrum(windowing(frame))
-        self.pool.add("freq_spec", amp2db(frame_spec))
+            self.pool.add("freq_spec", amp2db(frame_spec))
         print("added freq_spec to pool.")
 
     def mel_spec(self):
-        windowing = es.Windowing(type="blackmanharris62", zeroPadding=2048)
+        windowing = es.Windowing(type='hann')
         spectrum = es.Spectrum()
         melbands = es.MelBands(
             numberBands=96, lowFrequencyBound=0, highFrequencyBound=11000
@@ -125,18 +125,18 @@ class Extract(AudioFile):
         for frame in es.FrameGenerator(self.mono(), frameSize=2048, hopSize=1024):
             frame_spec = spectrum(windowing(frame))
             frame_mel = melbands(frame_spec)
-        self.pool.add("mel_spec", amp2db(frame_mel))
+            self.pool.add("mel_spec", amp2db(frame_mel))
         print("added mel_spec to pool.")
 
     def log_spec(self):
-        windowing = es.Windowing(type="blackmanharris62", zeroPadding=2048)
+        windowing = es.Windowing(type="hann")
         spectrum = es.Spectrum()
         logfreq = es.LogSpectrum(binsPerSemitone=1)
         amp2db = es.UnaryOperator(type="lin2db", scale=2)
         for frame in es.FrameGenerator(self.mono(), frameSize=2048, hopSize=1024):
             frame_spec = spectrum(windowing(frame))
             frame_logfreq, _, _ = logfreq(frame_spec)
-        self.pool.add("log_spec", amp2db(frame_logfreq))
+            self.pool.add("log_spec", amp2db(frame_logfreq))
         print("added log_spec to pool.")
 
     def inverse_spec(self):
@@ -185,7 +185,7 @@ class Extract(AudioFile):
     def rhythm(self):
         rhythm_extractor = es.RhythmExtractor2013(method="multifeature")
         bpm, beats, confidence, _, intervals = rhythm_extractor(self.mono())
-        self.pool.add("bpm", bpm[0])
+        self.pool.add("bpm", bpm)
         self.pool.add("beats", beats)
         self.pool.add("bpm_confidence", confidence)
         self.pool.add("bpm_intervals", intervals)

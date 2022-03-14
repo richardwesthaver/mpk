@@ -2,7 +2,7 @@ use std::path::{Path, MAIN_SEPARATOR, PathBuf};
 use clap::{Parser, Subcommand, AppSettings};
 
 use mpk_config::{Config, DEFAULT_PATH, CONFIG_FILE};
-use mpk_db::{Mdb, TrackTags};
+use mpk_db::{Mdb, TrackTags, QueryType};
 use mpk_id3::id3_walk;
 
 use mpk::Result;
@@ -35,7 +35,13 @@ enum Command {
   /// Save a session
   Save,
   /// Query MDB
-  Query,
+  Query {
+    query: QueryType,
+    #[clap(short, long)]
+    track: Option<i64>,
+    #[clap(short, long)]
+    sample: Option<i64>,
+  },
   /// Sync resources with DB
   Sync {
     #[clap(short, long)]
@@ -76,7 +82,7 @@ enum Runner {
   Metro {
     bpm: u16,
     time_sig: String,
-  }
+  },
 }
 
 fn ppln(i:&str,s:char) {
@@ -119,6 +125,42 @@ fn main() -> Result<()> {
       } else {
 	mpk_audio::info();
 	mpk_midi::list_midi_ports()?;
+      }
+    },
+    Command::Query { query, track, sample } => {
+      let conn = Mdb::new_with_config(cfg.db)?;
+      match query {
+	QueryType::Info => {
+	  if track.is_some() {
+	    println!("{:?}", conn.query_track(track.unwrap())?)
+	  }
+	  if sample.is_some() {
+	    println!("{:?}", conn.query_sample(sample.unwrap())?)
+	  }
+	},
+	QueryType::Tags => {
+	  if track.is_some() {
+	    println!("{:?}", conn.query_track_tags(track.unwrap())?)
+	  } else {
+	    eprintln!("query type not supported")
+	  }
+	},
+	QueryType::Musicbrainz => {
+	  if track.is_some() {
+	    println!("{:?}", conn.query_track_tags_musicbrainz(track.unwrap())?)
+	  } else {
+	    eprintln!("query type not supported");
+	  }
+	},
+	QueryType::Spectrograms => {
+	  if track.is_some() {
+	    println!("{:?}", conn.query_track_images(track.unwrap())?)
+	  }
+	  if sample.is_some() {
+	    println!("{:?}", conn.query_sample_images(sample.unwrap())?)
+	  }
+	},
+	_ => eprintln!("query type not supported")
       }
     },
     Command::Sync { tracks, samples, projects } => {

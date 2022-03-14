@@ -1,11 +1,11 @@
+use std::str::FromStr;
 use rusqlite::types::{ValueRef, FromSql, FromSqlResult, ToSql, ToSqlOutput};
-// use crate::err::Result;
+use crate::err::{Error, Result};
 pub use uuid::Uuid;
-
 mod id3;
 pub use self::id3::{Id3, id3_walk};
 
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct VecReal(pub Vec<f32>);
 
 impl FromSql for VecReal {
@@ -22,6 +22,7 @@ impl ToSql for VecReal {
   }
 }
 
+#[derive(Debug)]
 pub struct VecText(pub Vec<String>);
 
 impl FromSql for VecText {
@@ -39,6 +40,19 @@ impl ToSql for VecText {
   }
 }
 
+#[derive(Debug)]
+pub struct AudioData {
+  pub path: String,
+  pub format: Option<String>,
+  pub channels: Option<i16>,
+  pub filesize: Option<usize>,
+  pub bitrate: Option<u32>,
+  pub bitdepth: Option<u8>,
+  pub duration: Option<u32>,
+  pub samplerate: Option<u32>,
+}
+
+#[derive(Debug)]
 pub struct TrackTags {
   pub artist: Option<String>,
   pub title: Option<String>,
@@ -47,6 +61,7 @@ pub struct TrackTags {
   pub year: Option<i16>,
 }
 
+#[derive(Debug)]
 pub struct MusicbrainzTags {
   pub albumartistid: Uuid,
   pub albumid: Uuid,
@@ -58,6 +73,7 @@ pub struct MusicbrainzTags {
   pub trackid: Uuid,
 }
 
+#[derive(Debug)]
 pub struct LowlevelFeatures {
   pub average_loudness: f32,
   pub barkbanks_kurtosis: VecReal,
@@ -95,6 +111,7 @@ pub struct LowlevelFeatures {
   pub scvalleys: VecReal,
 }
 
+#[derive(Debug)]
 pub struct RhythmFeatures {
   pub bpm: f32,
   pub confidence: f32,
@@ -114,6 +131,7 @@ pub struct RhythmFeatures {
   pub histogram: VecReal,
 }
 
+#[derive(Debug)]
 pub struct SfxFeatures {
   pub pitch_after_max_to_before_max_energy_ratio: f32,
   pub pitch_centroid: f32,
@@ -124,6 +142,7 @@ pub struct SfxFeatures {
   pub tristimulus: VecReal,
 }
 
+#[derive(Debug)]
 pub struct TonalFeatures {
   pub chords_change_rate: f32,
   pub chords_number_rate: f32,
@@ -143,14 +162,51 @@ pub struct TonalFeatures {
   pub chord_progression: VecText,
 }
 
+#[derive(Debug)]
+pub struct Spectrograms {
+  pub mel_spec: VecReal,
+  pub log_spec: VecReal,
+  pub freq_spec: VecReal,
+}
+
+#[derive(Debug)]
 pub enum SpecType {
   Mel,
   Log,
   Freq,
 }
 
-pub struct Spectograms {
-  pub mel_spec: VecReal,
-  pub log_spec: VecReal,
-  pub freq_spec: VecReal,
+#[derive(Debug)]
+pub enum QueryBy {
+  Id,
+  Path,
+  Title,
+  Artist,
+  Album,
+  Genre,
+  Year,
+  SampleRate,
+}
+
+#[derive(Debug)]
+pub enum QueryType {
+  Info,
+  Tags,
+  Musicbrainz,
+  Spectrograms,
+  All,
+}
+
+impl FromStr for QueryType {
+  type Err = Error;
+  fn from_str(input: &str) -> Result<QueryType> {
+    match input {
+      "info" => Ok(QueryType::Info),
+      "tags" => Ok(QueryType::Tags),
+      "musicbrainz" | "mb" => Ok(QueryType::Musicbrainz),
+      "spectrograms" | "specs" => Ok(QueryType::Spectrograms),
+      "all" => Ok(QueryType::All),
+      e => Err(Error::BadQType(e.to_string())),
+    }
+  }
 }

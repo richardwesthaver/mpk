@@ -3,7 +3,7 @@ use std::os::unix::ffi::OsStrExt;
 use libc::{c_int, c_char, size_t};
 use std::slice;
 use std::path::Path;
-use mpk_db::{Mdb, TrackTags, MusicbrainzTags, LowlevelFeatures, SfxFeatures, TonalFeatures, RhythmFeatures, Spectograms, Uuid, VecText, VecReal};
+use mpk_db::{Mdb, TrackTags, MusicbrainzTags, LowlevelFeatures, SfxFeatures, TonalFeatures, RhythmFeatures, Spectrograms, Uuid, VecText, VecReal};
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 
 #[repr(C)]
@@ -464,10 +464,10 @@ pub extern "C" fn mdb_tonal_features_free(ptr: *mut TonalFeatures) {
 }
 
 #[no_mangle]
-pub extern "C" fn mdb_spectograms_new(mel_spec: CVecReal,
+pub extern "C" fn mdb_spectrograms_new(mel_spec: CVecReal,
 				      log_spec: CVecReal,
-				      freq_spec: CVecReal) -> *mut Spectograms {
-  let specs = Spectograms {
+				      freq_spec: CVecReal) -> *mut Spectrograms {
+  let specs = Spectrograms {
     mel_spec: VecReal::from(mel_spec),
     log_spec: VecReal::from(log_spec),
     freq_spec: VecReal::from(freq_spec),
@@ -477,7 +477,7 @@ pub extern "C" fn mdb_spectograms_new(mel_spec: CVecReal,
 }
 
 #[no_mangle]
-pub extern "C" fn mdb_spectograms_free(ptr: *mut Spectograms) {
+pub extern "C" fn mdb_spectrograms_free(ptr: *mut Spectrograms) {
   if ptr.is_null() {
     return;
   }
@@ -544,7 +544,7 @@ pub extern "C" fn mdb_insert_track_tags_musicbrainz(db: *const Mdb,
 						    tags: *const MusicbrainzTags) {
   let tags = unsafe{&*tags};
   let mdb = unsafe{&*db};
-  mdb.insert_track_tags_musicbrainz(id, tags).unwrap();
+  mdb.insert_track_tags_musicbrainz(id, &tags).unwrap();
 }
 
 #[no_mangle]
@@ -553,7 +553,7 @@ pub extern "C" fn mdb_insert_track_features_lowlevel(db: *const Mdb,
 						     features: *const LowlevelFeatures) {
   let features = unsafe{&*features};
   let mdb = unsafe{&*db};
-  mdb.insert_track_features_lowlevel(id, features).unwrap();
+  mdb.insert_track_features_lowlevel(id, &features).unwrap();
 }
 
 #[no_mangle]
@@ -562,7 +562,7 @@ pub extern "C" fn mdb_insert_track_features_rhythm(db: *const Mdb,
 						   features: *const RhythmFeatures) {
   let features = unsafe{&*features};
   let mdb = unsafe{&*db};
-  mdb.insert_track_features_rhythm(id, features).unwrap();
+  mdb.insert_track_features_rhythm(id, &features).unwrap();
 }
 
 #[no_mangle]
@@ -571,7 +571,7 @@ pub extern "C" fn mdb_insert_track_features_sfx(db: *const Mdb,
 						features: *const SfxFeatures) {
   let features = unsafe{&*features};
   let mdb = unsafe{&*db};
-  mdb.insert_track_features_sfx(id, features).unwrap();
+  mdb.insert_track_features_sfx(id, &features).unwrap();
 }
 
 #[no_mangle]
@@ -580,16 +580,74 @@ pub extern "C" fn mdb_insert_track_features_tonal(db: *const Mdb,
 						  features: *const TonalFeatures) {
   let features = unsafe{&*features};
   let mdb = unsafe{&*db};
-  mdb.insert_track_features_tonal(id, features).unwrap();
+  mdb.insert_track_features_tonal(id, &features).unwrap();
 }
 
 #[no_mangle]
 pub extern "C" fn mdb_insert_track_images(db: *const Mdb,
 					  id: i64,
-					  images: *const Spectograms) {
+					  images: *const Spectrograms) {
   let images = unsafe{&*images};
   let mdb = unsafe{&*db};
-  mdb.insert_track_images(id, images).unwrap();
+  mdb.insert_track_images(id, &images).unwrap();
+}
+
+#[no_mangle]
+pub extern "C" fn mdb_insert_sample(db: *const Mdb, path: *const c_char) -> i64 {
+    let c_str = unsafe {
+        assert!(!path.is_null());
+
+        CStr::from_ptr(path)
+    };
+  let str = c_str.to_str().unwrap();
+  let mdb = unsafe{&*db};
+
+  mdb.insert_sample(&str).unwrap()
+}
+
+#[no_mangle]
+pub extern "C" fn mdb_insert_sample_features_lowlevel(db: *const Mdb,
+						     id: i64,
+						     features: *const LowlevelFeatures) {
+  let features = unsafe{&*features};
+  let mdb = unsafe{&*db};
+  mdb.insert_sample_features_lowlevel(id, &features).unwrap();
+}
+
+#[no_mangle]
+pub extern "C" fn mdb_insert_sample_features_rhythm(db: *const Mdb,
+						   id: i64,
+						   features: *const RhythmFeatures) {
+  let features = unsafe{&*features};
+  let mdb = unsafe{&*db};
+  mdb.insert_sample_features_rhythm(id, &features).unwrap();
+}
+
+#[no_mangle]
+pub extern "C" fn mdb_insert_sample_features_sfx(db: *const Mdb,
+						id: i64,
+						features: *const SfxFeatures) {
+  let features = unsafe{&*features};
+  let mdb = unsafe{&*db};
+  mdb.insert_sample_features_sfx(id, &features).unwrap();
+}
+
+#[no_mangle]
+pub extern "C" fn mdb_insert_sample_features_tonal(db: *const Mdb,
+						  id: i64,
+						  features: *const TonalFeatures) {
+  let features = unsafe{&*features};
+  let mdb = unsafe{&*db};
+  mdb.insert_sample_features_tonal(id, &features).unwrap();
+}
+
+#[no_mangle]
+pub extern "C" fn mdb_insert_sample_images(db: *const Mdb,
+					  id: i64,
+					  images: *const Spectrograms) {
+  let images = unsafe{&*images};
+  let mdb = unsafe{&*db};
+  mdb.insert_sample_images(id, &images).unwrap();
 }
 
 #[no_mangle]

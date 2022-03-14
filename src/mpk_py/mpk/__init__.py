@@ -8,6 +8,6 @@ from .lib import (
     rhythm_features,
     sfx_features,
     tonal_features,
-    spectograms,
+    spectrograms,
 )
 from .extract import AudioFile, Extract, FILE_EXT, collect_files, bulk_extract

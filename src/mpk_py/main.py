@@ -2,6 +2,7 @@
 import argparse
 from pathlib import Path
 import numpy as np
+import json
 from mpk import *
 
 
@@ -14,11 +15,7 @@ def run():
         "-c", "--cfg", type=Path, help="config file", 
     )
     parser.add_argument(
-        "-t", help="input type of audio", default="track", choices=["track", "sample"]
-    )
-    parser.add_argument("--ext", help="extensions to include", choices=FILE_EXT)
-    parser.add_argument(
-        "--json", type=Path, help="write output to json", default="result.json"
+        "-t", "--type", help="input type of audio", default="track", choices=["track", "sample"]
     )
     parser.add_argument(
         "--db",
@@ -35,7 +32,7 @@ def run():
             "rhythm",
             "sfx",
             "tonal",
-            "spectograms",
+            "spectrograms",
             "metadata",
             "all",
         ],
@@ -48,31 +45,43 @@ def run():
 if __name__ == "__main__":
     args = run()
     cfg = Config(args.cfg)
-    db = Mdb("mdb.db")
-    db.init()
     files = [i for s in [collect_files(f) for f in args.input] for i in s]
     data = bulk_extract(files)
     
     for k,v in data.items():
-      id = db.insert_track(k)
-
+      if args.type == "track":
+        mb_tags = musicbrainz_tags([v['metadata']['tags'][k][0] for k in ('musicbrainz_albumartistid', 'musicbrainz_albumid',
+                                                             'musicbrainz_albumstatus', 'musicbrainz_albumtype',
+                                                             'musicbrainz_artistid', 'musicbrainz_releasegroupid',
+                                                                'musicbrainz_releasetrackid', 'musicbrainz_trackid')])
+        tags = track_tags([v['metadata']['tags'][k][0] for k in ('artist', 'title', 'album', 'genre', 'year')])
       lowlevel = lowlevel_features(list(v['lowLevel'].values()))
-      db.insert_track_featues_lowlevel(id, lowlevel)
-
       rhythm = rhythm_features(list(v['rhythm'].values()))
-      db.insert_track_features_rhythm(id, rhythm)
-
       sfx = sfx_features(list(v['sfx'].values()))
-      db.insert_track_features_sfx(id, sfx)
-
       tonal = tonal_features(list(v['tonal'].values()))
-      db.insert_track_features_tonal(id, tonal)
-
-      specs = spectograms([
+      specs = spectrograms([
         np.float32(v['mel_spec']),
         np.float32(v['log_spec']),
         np.float32(v['freq_spec'])
       ])
-      db.insert_track_images(id, specs)
-      
+      if args.db:
+        db = Mdb("mdb.db")
+        db.init()
+        if args.type == "track":
+          id = db.insert_track(k)
+          db.insert_track_tags(id, tags)
+          db.insert_track_tags_musicbrainz(id, mb_tags)
+          db.insert_track_featues_lowlevel(id, lowlevel)
+          db.insert_track_features_rhythm(id, rhythm)
+          db.insert_track_features_sfx(id, sfx)
+          db.insert_track_features_tonal(id, tonal)
+          db.insert_track_images(id, specs)
+        elif args.type == "sample":
+          id = db.insert_sample(k)
+          db.insert_sample_featues_lowlevel(id, lowlevel)
+          db.insert_sample_features_rhythm(id, rhythm)
+          db.insert_sample_features_sfx(id, sfx)
+          db.insert_sample_features_tonal(id, tonal)
+          db.insert_sample_images(id, specs)
+
     print("...Done")

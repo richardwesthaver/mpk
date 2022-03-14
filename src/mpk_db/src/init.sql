@@ -3,7 +3,7 @@ pragma foreign_keys = on;
 
 create table if not exists tracks (
 id integer primary key,
-path text not null,
+path text not null unique,
 format text,
 channels integer,
 filesize integer,
@@ -19,7 +19,7 @@ artist text,
 title text,
 album text,
 genre text,
-year text,
+year integer,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_tags_musicbrainz (
@@ -138,7 +138,7 @@ foreign key(track_id) references tracks(id));
 
 create table if not exists samples (
 id integer primary key,
-path text not null,
+path text not null unique,
 format text,
 channels integer,
 filesize integer,
@@ -217,8 +217,8 @@ oddtoevenharmonicenergyratio blob,
 tristimulus blob,
 foreign key(sample_id) references samples(id));
 
-create table if not exists track_features_tonal (
-track_id integer,
+create table if not exists sample_features_tonal (
+sample_id integer,
 chords_change_rate real,
 chords_number_rate real,
 key_strength real,

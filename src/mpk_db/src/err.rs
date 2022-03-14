@@ -6,6 +6,7 @@ pub enum Error {
   Sql(rusqlite::Error),
   Json(serde_json::Error),
   Io(std::io::Error),
+  BadQType(String),
 }
 
 impl std::error::Error for Error {
@@ -15,6 +16,7 @@ impl std::error::Error for Error {
       Error::Sql(ref err) => Some(err),
       Error::Json(ref err) => Some(err),
       Error::Io(ref err) => Some(err),
+      Error::BadQType(_) => None,
     }
   }
 }
@@ -26,6 +28,7 @@ impl std::fmt::Display for Error {
       Error::Sql(ref err) => err.fmt(f),
       Error::Json(ref err) => err.fmt(f),
       Error::Io(ref err) => err.fmt(f),
+      Error::BadQType(ref s) => f.write_str(&format!("Invalid Query Type: {}", s)),
     }
   }
 }
