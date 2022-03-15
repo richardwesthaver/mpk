@@ -56,6 +56,14 @@ impl Mdb {
     self.conn.last_insert_rowid()
   }
 
+  pub fn last_track_id(&self, path: &str) -> i64 {
+    self.conn.query_row("select id from tracks where path = ?", [path], |row| row.get(0)).unwrap()
+  }
+
+  pub fn last_sample_id(&self, path: &str) -> i64 {
+    self.conn.query_row("select id from samples where path = ?", [path], |row| row.get(0)).unwrap()
+  }
+
   pub fn init(&self) -> Result<()> {
     let sql = include_str!("init.sql");
 
@@ -63,19 +71,38 @@ impl Mdb {
   }
 
   pub fn insert_track(&self, path: &str) -> Result<i64> {
-    self.exec("insert into tracks (path) values (?)
-on conflict do nothing", &[&path])?;
-    Ok(self.last_insert_rowid())
+    self.exec("insert into tracks (path) values (?1)
+on conflict do update set path = ?1", &[&path])?;
+    Ok(self.last_track_id(path))
   }
 
   pub fn insert_track_tags(&self, id: i64, tags: &TrackTags) -> Result<()> {
-    self.exec("insert into track_tags values (?,?,?,?,?,?)",
+    self.exec("
+insert into track_tags values (?1,?2,?3,?4,?5,?6)
+on conflict do update
+set artist = ?2,
+    title = ?3,
+    album = ?4,
+    genre = ?5,
+    year =  ?6
+where track_id = ?1",
 	      &[&id, &tags.artist, &tags.title, &tags.album, &tags.genre, &tags.year])?;
     Ok(())
   }
 
   pub fn insert_track_tags_musicbrainz(&self, id: i64, tags: &MusicbrainzTags) -> Result<()> {
-    self.exec("insert into track_tags_musicbrainz values (?,?,?,?,?,?,?,?,?)",
+    self.exec("
+insert into track_tags_musicbrainz values (?1,?2,?3,?4,?5,?6,?7,?8,?9)
+on conflict do update
+set albumartistid = ?2,
+    albumid = ?3,
+    albumstatus = ?4,
+    albumtype = ?5,
+    artistid = ?6,
+    releasegroupid = ?7,
+    releasetrackid = ?8,
+    trackid = ?9
+where track_id = ?1",
 	      &[&id,
 		&tags.albumartistid,
 		&tags.albumid,
@@ -90,7 +117,43 @@ on conflict do nothing", &[&path])?;
 
   pub fn insert_track_features_lowlevel(&self, id: i64, features: &LowlevelFeatures) -> Result<()> {
     self.exec("insert into track_features_lowlevel
-values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+values (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,?29,?30,?31,?32,?33,?34,?35)
+on conflict do update
+set average_loudness = ?2,
+barkbands_kurtosis = ?3,
+barkbands_skewness = ?4,
+barkbands_spread = ?5,
+barkbands = ?6,
+dissonance = ?7,
+hfc = ?8,
+pitch = ?9,
+pitch_instantaneous_confidence = ?10,
+pitch_salience = ?11,
+silence_rate_20db = ?12,
+silence_rate_30db = ?13,
+silence_rate_60db = ?14,
+spectral_centroid = ?15,
+spectral_complexity = ?16,
+spectral_crest = ?17,
+spectral_decrease = ?18,
+spectral_energy = ?19,
+spectral_energyband_high = ?20,
+spectral_energyband_low = ?21,
+spectral_energyband_middle_high = ?22,
+spectral_energyband_middle_low = ?23,
+spectral_flatness_db = ?24,
+spectral_flux = ?25,
+spectral_kurtosis = ?26,
+spectral_rms = ?27,
+spectral_rolloff = ?28,
+spectral_skewness = ?29,
+spectral_spread = ?30,
+spectral_strongpeak = ?31,
+zerocrossingrate = ?32,
+mfcc = ?33,
+sccoeffs = ?34,
+scvalleys = ?35
+where track_id = ?1",
 	      &[&id,
 		&features.average_loudness,
 		&features.barkbanks_kurtosis,
@@ -130,7 +193,26 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
   }
 
   pub fn insert_track_features_rhythm(&self, id: i64, features: &RhythmFeatures) -> Result<()> {
-    self.exec("insert into track_features_rhythm values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    self.exec("insert into track_features_rhythm
+values (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)
+on conflict do update
+set bpm = ?2,
+confidence = ?3,
+onset_rate = ?4,
+beats_loudness = ?5,
+first_peak_bpm = ?6,
+first_peak_spread = ?7,
+first_peak_weight = ?8,
+second_peak_bpm = ?9,
+second_peak_spread = ?10,
+second_peak_weight = ?11,
+beats_position = ?12,
+bpm_estimates = ?13,
+bpm_intervals = ?14,
+onset_times = ?15,
+beats_loudness_band_ratio = ?16,
+histogram = ?17
+where track_id = ?1",
 	      &[&id,
 		&features.bpm,
 		&features.confidence,
@@ -152,7 +234,18 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
   }
 
   pub fn insert_track_features_sfx(&self, id: i64, features: &SfxFeatures) -> Result<()> {
-    self.exec("insert into track_features_sfx values (?,?,?,?,?,?,?,?)",
+    self.exec("insert into track_features_sfx
+values (?1,?2,?3,?4,?5,?6,?7,?8)
+on conflict do update
+set pitch_after_max_to_before_max_energy_ratio = ?2,
+pitch_centroid = ?3,
+pitch_max_to_total = ?4,
+pitch_min_to_total = ?5,
+inharmonicity = ?6,
+oddtoevenharmonicenergyratio = ?7,
+tristimulus = ?8
+where track_id = ?1
+",
 	      &[&id,
 		&features.pitch_after_max_to_before_max_energy_ratio,
 		&features.pitch_centroid,
@@ -165,7 +258,26 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
   }
 
   pub fn insert_track_features_tonal(&self, id: i64, features: &TonalFeatures) -> Result<()> {
-    self.exec("insert into track_features_tonal values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    self.exec("insert into track_features_tonal
+values (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)
+on conflict do update
+set chords_change_rate = ?2,
+chords_number_rate = ?3,
+key_strength = ?4,
+tuning_diatonic_strength = ?5,
+tuning_equal_tempered_deviation = ?6,
+tuning_frequency = ?7,
+tuning_nontempered_tuning_ratio = ?8,
+chords_strength = ?9,
+chords_histogram = ?10,
+thpcp = ?11,
+hpcp = ?12,
+chords_key = ?13,
+chords_scale = ?14,
+key_key = ?15,
+key_scale = ?16,
+chord_progression = ?17
+where track_id = ?1",
 	      &[&id,
 		&features.chords_change_rate,
 		&features.chords_number_rate,
@@ -188,7 +300,12 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
   }
 
   pub fn insert_track_images(&self, id: i64, images: &Spectrograms) -> Result<()> {
-    self.exec("insert into track_images values (?,?,?,?)",
+    self.exec("insert into track_images values (?,?,?,?)
+on conflict do update
+set mel_spec = ?2,
+log_spec = ?3,
+freq_spec = ?4
+where track_id = ?1",
 	      &[&id, &images.mel_spec, &images.log_spec, &images.freq_spec])?;
     Ok(())
   }
@@ -202,14 +319,50 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
   }
 
   pub fn insert_sample(&self, path: &str) -> Result<i64> {
-    self.exec("insert into samples (path) values (?)
-on conflict(path) do nothing", &[&path])?;
-    Ok(self.last_insert_rowid())
+    self.exec("insert into samples (path) values (?1)
+on conflict(path) do update set path = ?1", &[&path])?;
+    Ok(self.last_sample_id(path))
   }
 
   pub fn insert_sample_features_lowlevel(&self, id: i64, features: &LowlevelFeatures) -> Result<()> {
     self.exec("insert into sample_features_lowlevel
-values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+values (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,?29,?30,?31,?32,?33,?34,?35)
+on conflict do update
+set average_loudness = ?2,
+barkbands_kurtosis = ?3,
+barkbands_skewness = ?4,
+barkbands_spread = ?5,
+barkbands = ?6,
+dissonance = ?7,
+hfc = ?8,
+pitch = ?9,
+pitch_instantaneous_confidence = ?10,
+pitch_salience = ?11,
+silence_rate_20db = ?12,
+silence_rate_30db = ?13,
+silence_rate_60db = ?14,
+spectral_centroid = ?15,
+spectral_complexity = ?16,
+spectral_crest = ?17,
+spectral_decrease = ?18,
+spectral_energy = ?19,
+spectral_energyband_high = ?20,
+spectral_energyband_low = ?21,
+spectral_energyband_middle_high = ?22,
+spectral_energyband_middle_low = ?23,
+spectral_flatness_db = ?24,
+spectral_flux = ?25,
+spectral_kurtosis = ?26,
+spectral_rms = ?27,
+spectral_rolloff = ?28,
+spectral_skewness = ?29,
+spectral_spread = ?30,
+spectral_strongpeak = ?31,
+zerocrossingrate = ?32,
+mfcc = ?33,
+sccoeffs = ?34,
+scvalleys = ?35
+where sample_id = ?1",
 	      &[&id,
 		&features.average_loudness,
 		&features.barkbanks_kurtosis,
@@ -249,7 +402,26 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
   }
 
   pub fn insert_sample_features_rhythm(&self, id: i64, features: &RhythmFeatures) -> Result<()> {
-    self.exec("insert into sample_features_rhythm values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    self.exec("insert into sample_features_rhythm
+values (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)
+on conflict do update
+set bpm = ?2,
+confidence = ?3,
+onset_rate = ?4,
+beats_loudness = ?5,
+first_peak_bpm = ?6,
+first_peak_spread = ?7,
+first_peak_weight = ?8,
+second_peak_bpm = ?9,
+second_peak_spread = ?10,
+second_peak_weight = ?11,
+beats_position = ?12,
+bpm_estimates = ?13,
+bpm_intervals = ?14,
+onset_times = ?15,
+beats_loudness_band_ratio = ?16,
+histogram = ?17
+where sample_id = ?1",
 	      &[&id,
 		&features.bpm,
 		&features.confidence,
@@ -271,7 +443,18 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
   }
 
   pub fn insert_sample_features_sfx(&self, id: i64, features: &SfxFeatures) -> Result<()> {
-    self.exec("insert into sample_features_sfx values (?,?,?,?,?,?,?,?)",
+    self.exec("insert into sample_features_sfx
+values (?1,?2,?3,?4,?5,?6,?7,?8)
+on conflict do update
+set pitch_after_max_to_before_max_energy_ratio = ?2,
+pitch_centroid = ?3,
+pitch_max_to_total = ?4,
+pitch_min_to_total = ?5,
+inharmonicity = ?6,
+oddtoevenharmonicenergyratio = ?7,
+tristimulus = ?8
+where sample_id = ?1
+",
 	      &[&id,
 		&features.pitch_after_max_to_before_max_energy_ratio,
 		&features.pitch_centroid,
@@ -284,7 +467,26 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
   }
 
   pub fn insert_sample_features_tonal(&self, id: i64, features: &TonalFeatures) -> Result<()> {
-    self.exec("insert into sample_features_tonal values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    self.exec("insert into sample_features_tonal
+values (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)
+on conflict do update
+set chords_change_rate = ?2,
+chords_number_rate = ?3,
+key_strength = ?4,
+tuning_diatonic_strength = ?5,
+tuning_equal_tempered_deviation = ?6,
+tuning_frequency = ?7,
+tuning_nontempered_tuning_ratio = ?8,
+chords_strength = ?9,
+chords_histogram = ?10,
+thpcp = ?11,
+hpcp = ?12,
+chords_key = ?13,
+chords_scale = ?14,
+key_key = ?15,
+key_scale = ?16,
+chord_progression = ?17
+where sample_id = ?1",
 	      &[&id,
 		&features.chords_change_rate,
 		&features.chords_number_rate,
@@ -307,7 +509,12 @@ values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
   }
 
   pub fn insert_sample_images(&self, id: i64, images: &Spectrograms) -> Result<()> {
-    self.exec("insert into track_images values (?,?,?,?)",
+    self.exec("insert into track_images values (?1,?2,?3,?4)
+on conflict do update
+set mel_spec = ?2,
+log_spec = ?3,
+freq_spec = ?4
+where sample_id = ?1",
 	      &[&id, &images.mel_spec, &images.log_spec, &images.freq_spec])?;
     Ok(())
   }
