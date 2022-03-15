@@ -11,10 +11,10 @@ NULL = ffi.NULL
 class Config:
     def __init__(self, file=None):
         if file:
-          self.cfg = lib.mpk_config_load(str(file).encode())
-          # TODO
+            self.cfg = lib.mpk_config_load(str(file).encode())
+            # TODO
         else:
-          self.cfg = lib.mpk_config_new(NULL, NULL, NULL)
+            self.cfg = lib.mpk_config_new(NULL, NULL, NULL)
 
     def __enter__(self):
         return self
@@ -29,7 +29,7 @@ class Config:
     def load(self, file):
         print("loaded config from " + file)
         self.cfg = lib.mpk_config_load(file.encode())
-  
+
     def db_flags(self):
         return lib.mpk_db_config_flags(self.db)
 
@@ -111,7 +111,7 @@ class Mdb:
 
 def vectorize(arr):
     if type(arr) is list:
-      arr = np.float32(arr)
+        arr = np.float32(arr)
     buf = ffi.from_buffer("float[]", arr)
     return lib.mdb_vecreal_new(ffi.cast("const float *", buf), len(buf))
 
@@ -133,7 +133,7 @@ def lowlevel_features(features):
 
 
 def rhythm_features(features):
-#    features[:3] = [x[0] for x in features[:3] if isinstance(x, (list, np.ndarray))]
+    #    features[:3] = [x[0] for x in features[:3] if isinstance(x, (list, np.ndarray))]
     features[3] = vectorize(features[3])
     features[4:10] = [x[0] for x in features[4:10] if isinstance(x, (list, np.ndarray))]
     features[10:] = [vectorize(x) for x in features[10:]]

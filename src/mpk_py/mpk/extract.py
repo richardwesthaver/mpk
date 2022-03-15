@@ -116,7 +116,7 @@ class Extract(AudioFile):
         print("added freq_spec to pool.")
 
     def mel_spec(self):
-        windowing = es.Windowing(type='hann')
+        windowing = es.Windowing(type="hann")
         spectrum = es.Spectrum()
         melbands = es.MelBands(
             numberBands=96, lowFrequencyBound=0, highFrequencyBound=11000

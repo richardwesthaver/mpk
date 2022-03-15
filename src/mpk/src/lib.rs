@@ -1,2 +1,2 @@
 mod err;
-pub use err::{Result, Error};
+pub use err::{Error, Result};

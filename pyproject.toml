@@ -22,9 +22,6 @@ python = ">=3.9,<3.11"
 [tool.poetry.dev-dependencies]
 black = {version = ">=21", python = ">=3.9"}
 
-[tool.poetry.scripts]
-main = "main:run"
-
 [build-system]
 requires = ["poetry_core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"

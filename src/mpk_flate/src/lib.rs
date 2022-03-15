@@ -40,7 +40,8 @@ pub fn pack<P: AsRef<Path>>(src: P, dst: P, level: Option<Level>) {
   let tar = tar.into_inner().unwrap();
   let dst = dst.as_ref();
   let file = fs::File::create(dst).expect("failed to create output path");
-  zstd::stream::copy_encode(&tar[..], file, level.unwrap_or(Level::Best).into_zstd()).unwrap();
+  zstd::stream::copy_encode(&tar[..], file, level.unwrap_or(Level::Best).into_zstd())
+    .unwrap();
 }
 
 /// unpack a tar.zst compressed archive or zst file

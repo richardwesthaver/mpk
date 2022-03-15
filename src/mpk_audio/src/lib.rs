@@ -1,5 +1,5 @@
-use rodio::cpal::{ALL_HOSTS, available_hosts, host_from_id};
 pub use rodio::cpal::traits::{DeviceTrait, HostTrait};
+use rodio::cpal::{available_hosts, host_from_id, ALL_HOSTS};
 
 pub mod gen;
 
@@ -96,8 +96,8 @@ fn sample_chain() {
 
 #[test]
 fn metro() {
-  use gen::Metro;
   use gen::metro::MetroMsg::Stop;
+  use gen::Metro;
   let metro = Metro::new(128, 4, 4).start();
   std::thread::sleep(std::time::Duration::from_secs(1));
   metro.send(Stop).unwrap();

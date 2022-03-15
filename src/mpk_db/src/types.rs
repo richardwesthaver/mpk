@@ -1,24 +1,24 @@
-use std::str::FromStr;
-use rusqlite::types::{ValueRef, FromSql, FromSqlResult, ToSql, ToSqlOutput};
 use crate::err::{Error, Result};
+use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
+use std::str::FromStr;
 pub use uuid::Uuid;
 mod id3;
-pub use self::id3::{Id3, id3_walk};
+pub use self::id3::{id3_walk, Id3};
 
 #[derive(Debug)]
 pub struct VecReal(pub Vec<f32>);
 
 impl FromSql for VecReal {
   fn column_result(value: ValueRef) -> FromSqlResult<Self> {
-    value.as_blob().and_then(|blob| {
-      Ok(VecReal(unsafe {blob.align_to::<f32>().1.to_vec()}))
-    })
+    value
+      .as_blob()
+      .and_then(|blob| Ok(VecReal(unsafe { blob.align_to::<f32>().1.to_vec() })))
   }
 }
 
 impl ToSql for VecReal {
   fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
-    Ok(ToSqlOutput::from(unsafe {self.0.align_to::<u8>().1}))
+    Ok(ToSqlOutput::from(unsafe { self.0.align_to::<u8>().1 }))
   }
 }
 
@@ -28,8 +28,14 @@ pub struct VecText(pub Vec<String>);
 impl FromSql for VecText {
   fn column_result(value: ValueRef) -> FromSqlResult<Self> {
     value.as_str().and_then(|text| {
-      Ok(VecText(text.split("|").collect::<Vec<_>>()
-		 .iter().map(|s| s.to_string()).collect()))
+      Ok(VecText(
+        text
+          .split("|")
+          .collect::<Vec<_>>()
+          .iter()
+          .map(|s| s.to_string())
+          .collect(),
+      ))
     })
   }
 }

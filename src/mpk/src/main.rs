@@ -1,8 +1,8 @@
-use std::path::{Path, MAIN_SEPARATOR, PathBuf};
-use clap::{Parser, Subcommand, AppSettings};
+use clap::{AppSettings, Parser, Subcommand};
+use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 
-use mpk_config::{Config, DEFAULT_PATH, CONFIG_FILE};
-use mpk_db::{Mdb, TrackTags, QueryType};
+use mpk_config::{Config, CONFIG_FILE, DEFAULT_PATH};
+use mpk_db::{Mdb, QueryType, TrackTags};
 use mpk_id3::id3_walk;
 
 use mpk::Result;
@@ -55,7 +55,7 @@ enum Command {
   Info {
     #[clap(short, long)]
     audio: bool,
-    #[clap(short,long)]
+    #[clap(short, long)]
     midi: bool,
   },
   /// Package resources [.tar.zst]
@@ -85,7 +85,7 @@ enum Runner {
   },
 }
 
-fn ppln(i:&str,s:char) {
+fn ppln(i: &str, s: char) {
   match s {
     // progress
     'p' => eprint!("  \x1b[1m{}\x1b[0m ... ", i),
@@ -116,100 +116,108 @@ fn main() -> Result<()> {
       let db_path = cfg.db.path();
       Mdb::new(db_path.as_deref())?.init()?;
       ppln("[DONE]", 'd');
-    },
-    Command::Info{audio, midi} => {
+    }
+    Command::Info { audio, midi } => {
       if audio {
-	mpk_audio::info();
+        mpk_audio::info();
       } else if midi {
-	mpk_midi::list_midi_ports()?;
+        mpk_midi::list_midi_ports()?;
       } else {
-	mpk_audio::info();
-	mpk_midi::list_midi_ports()?;
+        mpk_audio::info();
+        mpk_midi::list_midi_ports()?;
       }
-    },
-    Command::Query { query, track, sample } => {
+    }
+    Command::Query {
+      query,
+      track,
+      sample,
+    } => {
       let conn = Mdb::new_with_config(cfg.db)?;
       match query {
-	QueryType::Info => {
-	  if track.is_some() {
-	    println!("{:?}", conn.query_track(track.unwrap())?)
-	  }
-	  if sample.is_some() {
-	    println!("{:?}", conn.query_sample(sample.unwrap())?)
-	  }
-	},
-	QueryType::Tags => {
-	  if track.is_some() {
-	    println!("{:?}", conn.query_track_tags(track.unwrap())?)
-	  } else {
-	    eprintln!("query type not supported")
-	  }
-	},
-	QueryType::Musicbrainz => {
-	  if track.is_some() {
-	    println!("{:?}", conn.query_track_tags_musicbrainz(track.unwrap())?)
-	  } else {
-	    eprintln!("query type not supported");
-	  }
-	},
-	QueryType::Spectrograms => {
-	  if track.is_some() {
-	    println!("{:?}", conn.query_track_images(track.unwrap())?)
-	  }
-	  if sample.is_some() {
-	    println!("{:?}", conn.query_sample_images(sample.unwrap())?)
-	  }
-	},
-	_ => eprintln!("query type not supported")
+        QueryType::Info => {
+          if track.is_some() {
+            println!("{:?}", conn.query_track(track.unwrap())?)
+          }
+          if sample.is_some() {
+            println!("{:?}", conn.query_sample(sample.unwrap())?)
+          }
+        }
+        QueryType::Tags => {
+          if track.is_some() {
+            println!("{:?}", conn.query_track_tags(track.unwrap())?)
+          } else {
+            eprintln!("query type not supported")
+          }
+        }
+        QueryType::Musicbrainz => {
+          if track.is_some() {
+            println!("{:?}", conn.query_track_tags_musicbrainz(track.unwrap())?)
+          } else {
+            eprintln!("query type not supported");
+          }
+        }
+        QueryType::Spectrograms => {
+          if track.is_some() {
+            println!("{:?}", conn.query_track_images(track.unwrap())?)
+          }
+          if sample.is_some() {
+            println!("{:?}", conn.query_sample_images(sample.unwrap())?)
+          }
+        }
+        _ => eprintln!("query type not supported"),
       }
-    },
-    Command::Sync { tracks, samples, projects } => {
+    }
+    Command::Sync {
+      tracks,
+      samples,
+      projects,
+    } => {
       let conn = Mdb::new_with_config(cfg.db)?;
 
       if tracks {
-	let ts = cfg.fs.get_path("tracks")?;
-	let mut coll = Vec::new();
-	id3_walk(&ts, &mut coll)?;
-	for i in coll {
-	  let path = i.path.strip_prefix(&ts).unwrap().to_str().unwrap();
-	  let title = i.get_tag("TIT2");
-	  let artist = i.get_tag("TPE1");
-	  let album = i.get_tag("TALB");
-	  let genre = i.get_tag("TCON");
-	  let year = i.get_tag("TDRC").map(|y| y.parse::<i16>().unwrap());
+        let ts = cfg.fs.get_path("tracks")?;
+        let mut coll = Vec::new();
+        id3_walk(&ts, &mut coll)?;
+        for i in coll {
+          let path = i.path.strip_prefix(&ts).unwrap().to_str().unwrap();
+          let title = i.get_tag("TIT2");
+          let artist = i.get_tag("TPE1");
+          let album = i.get_tag("TALB");
+          let genre = i.get_tag("TCON");
+          let year = i.get_tag("TDRC").map(|y| y.parse::<i16>().unwrap());
 
-	  conn.insert_track(&path)?;
-	  let track_id = conn.last_insert_rowid();
-	  let tags = TrackTags {
-	    artist,
-	    title,
-	    album,
-	    genre,
-	    year
-	  };
-	  conn.insert_track_tags(track_id, &tags)?;
-	}
+          conn.insert_track(&path)?;
+          let track_id = conn.last_insert_rowid();
+          let tags = TrackTags {
+            artist,
+            title,
+            album,
+            genre,
+            year,
+          };
+          conn.insert_track_tags(track_id, &tags)?;
+        }
       }
       if samples {
-	let _ss = cfg.fs.get_path("samples")?;
+        let _ss = cfg.fs.get_path("samples")?;
       }
       if projects {
-	let _ps = cfg.fs.get_path("projects")?;
-      }
-    },
-    Command::Run{runner} => {
-      match runner {
-	Runner::Metro{bpm, time_sig} => {
-	  let sig: Vec<u8> = time_sig.trim().split("/")
-	    .map(|x| x.parse().unwrap())
-	    .collect();
-	  let metro = mpk_audio::gen::Metro::new(bpm, sig[0], sig[1]);
-	  metro.start();
-	  loop {}
-	}
-	_ => println!("starting jack server"),
+        let _ps = cfg.fs.get_path("projects")?;
       }
     }
+    Command::Run { runner } => match runner {
+      Runner::Metro { bpm, time_sig } => {
+        let sig: Vec<u8> = time_sig
+          .trim()
+          .split("/")
+          .map(|x| x.parse().unwrap())
+          .collect();
+        let metro = mpk_audio::gen::Metro::new(bpm, sig[0], sig[1]);
+        metro.start();
+        loop {}
+      }
+      _ => println!("starting jack server"),
+    },
     _ => ppln("Invalid command", 'E'),
   }
 

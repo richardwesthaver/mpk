@@ -1,12 +1,12 @@
-use std::path::{PathBuf, Path, MAIN_SEPARATOR};
-use std::fs;
-use std::str::FromStr;
 use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf, MAIN_SEPARATOR};
+use std::str::FromStr;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 mod err;
-pub use err::{Result, Error};
+pub use err::{Error, Result};
 
 pub const DEFAULT_PATH: &str = "~/mpk";
 pub const CONFIG_FILE: &str = "mpk.toml";
@@ -49,18 +49,11 @@ impl Default for Config {
 }
 impl Config {
   pub fn new(fs: FsConfig, db: DbConfig, jack: JackConfig) -> Result<Config> {
-    Ok(
-      Config {
-	fs,
-	db,
-	jack,
-      }
-    )
+    Ok(Config { fs, db, jack })
   }
 
   pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-    let toml_string = toml::to_string_pretty(self)
-      .expect("TOML serialization failed");
+    let toml_string = toml::to_string_pretty(self).expect("TOML serialization failed");
     let path = expand_tilde(path.as_ref()).unwrap();
 
     if path.is_dir() {
@@ -71,7 +64,7 @@ impl Config {
     } else if !path.exists() {
       let prefix = path.parent().unwrap();
       if !prefix.exists() {
-	fs::create_dir_all(prefix)?;
+        fs::create_dir_all(prefix)?;
       }
       fs::write(path, toml_string)?;
     }
@@ -89,9 +82,11 @@ impl Config {
     if !root.exists() {
       fs::create_dir(&root)?;
     }
-    for i in ["samples", "projects", "plugins", "patches", "tracks"].map(|x| root.join(x)) {
+    for i in
+      ["samples", "projects", "plugins", "patches", "tracks"].map(|x| root.join(x))
+    {
       if !i.exists() {
-	fs::create_dir(root.join(i))?;
+        fs::create_dir(root.join(i))?;
       }
     }
     Ok(())
@@ -124,12 +119,10 @@ impl Default for FsConfig {
 impl FsConfig {
   pub fn new<P: AsRef<Path>>(root: P) -> Result<Self> {
     let root = root.as_ref().to_str().unwrap().to_string();
-    Ok(
-      FsConfig {
-	root,
-	..Default::default()
-      }
-    )
+    Ok(FsConfig {
+      root,
+      ..Default::default()
+    })
   }
 
   pub fn root(&self) -> PathBuf {
@@ -139,11 +132,21 @@ impl FsConfig {
   pub fn get_path(&self, path: &str) -> Result<PathBuf> {
     match path {
       "root" => Ok(expand_tilde(PathBuf::from(&self.root)).unwrap()),
-      "samples" => Ok(expand_tilde([&self.root, "samples"].iter().collect::<PathBuf>()).unwrap()),
-      "tracks" => Ok(expand_tilde([&self.root, "tracks"].iter().collect::<PathBuf>()).unwrap()),
-      "projects" => Ok(expand_tilde([&self.root, "projects"].iter().collect::<PathBuf>()).unwrap()),
-      "plugins" => Ok(expand_tilde([&self.root, "plugins"].iter().collect::<PathBuf>()).unwrap()),
-      "patches" => Ok(expand_tilde([&self.root, "patches"].iter().collect::<PathBuf>()).unwrap()),
+      "samples" => {
+        Ok(expand_tilde([&self.root, "samples"].iter().collect::<PathBuf>()).unwrap())
+      }
+      "tracks" => {
+        Ok(expand_tilde([&self.root, "tracks"].iter().collect::<PathBuf>()).unwrap())
+      }
+      "projects" => {
+        Ok(expand_tilde([&self.root, "projects"].iter().collect::<PathBuf>()).unwrap())
+      }
+      "plugins" => {
+        Ok(expand_tilde([&self.root, "plugins"].iter().collect::<PathBuf>()).unwrap())
+      }
+      "patches" => {
+        Ok(expand_tilde([&self.root, "patches"].iter().collect::<PathBuf>()).unwrap())
+      }
       e => Err(Error::NotFound(e.to_string())),
     }
   }
@@ -151,40 +154,40 @@ impl FsConfig {
   pub fn get_ext_paths(&self, path: &str) -> Option<Vec<PathBuf>> {
     match path {
       "samples" => {
-	if let Some(ps) = &self.ext_samples {
-	  Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
-	} else {
-	  None
-	}
-      },
+        if let Some(ps) = &self.ext_samples {
+          Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
+        } else {
+          None
+        }
+      }
       "tracks" => {
-	if let Some(ps) = &self.ext_tracks {
-	  Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
-	} else {
-	  None
-	}
-      },
+        if let Some(ps) = &self.ext_tracks {
+          Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
+        } else {
+          None
+        }
+      }
       "projects" => {
-	if let Some(ps) = &self.ext_projects {
-	  Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
-	} else {
-	  None
-	}
-      },
+        if let Some(ps) = &self.ext_projects {
+          Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
+        } else {
+          None
+        }
+      }
       "plugins" => {
-	if let Some(ps) = &self.ext_plugins {
-	  Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
-	} else {
-	  None
-	}
-      },
+        if let Some(ps) = &self.ext_plugins {
+          Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
+        } else {
+          None
+        }
+      }
       "patches" => {
-	if let Some(ps) = &self.ext_patches {
-	  Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
-	} else {
-	  None
-	}
-      },
+        if let Some(ps) = &self.ext_patches {
+          Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
+        } else {
+          None
+        }
+      }
       _ => None,
     }
   }
@@ -295,12 +298,11 @@ pub struct DbConfig {
 impl DbConfig {
   pub fn flags(&self) -> Option<std::os::raw::c_int> {
     match &self.flags {
-      Some(fs) => {
-	Some(
-	  fs.into_iter()
-	    .map(|f| Flags::from_str(&f).expect("invalid flag").to_int()).sum()
-	)
-      },
+      Some(fs) => Some(
+        fs.into_iter()
+          .map(|f| Flags::from_str(&f).expect("invalid flag").to_int())
+          .sum(),
+      ),
       None => None,
     }
   }
@@ -318,7 +320,12 @@ impl Default for DbConfig {
     DbConfig {
       path: Some([DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), DB_FILE].concat()),
       log_file: None,
-      flags: Some(vec!["readwrite", "create", "nomutex", "uri"].iter().map(|x| x.to_string()).collect()),
+      flags: Some(
+        vec!["readwrite", "create", "nomutex", "uri"]
+          .iter()
+          .map(|x| x.to_string())
+          .collect(),
+      ),
       limits: None,
     }
   }
@@ -367,11 +374,9 @@ impl Default for JackConfig {
 
 impl JackConfig {
   pub fn new() -> Result<Self> {
-    Ok(
-      JackConfig {
-	..Default::default()
-      }
-    )
+    Ok(JackConfig {
+      ..Default::default()
+    })
   }
 }
 
