@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+import os
 import argparse
 from pathlib import Path
 import numpy as np
-import json
+
 from mpk import *
 
 
@@ -52,8 +53,15 @@ def run():
 if __name__ == "__main__":
     args = run()
     cfg = Config(args.cfg)
+    if args.db:
+        db = Mdb(cfg.db_path())
+        db.init()
+
     files = [i for s in [collect_files(f) for f in args.input] for i in s]
-    data = bulk_extract(files)
+    if args.type == "track":
+      data = bulk_extract(files, track=True)
+    else if args.type == "sample":
+      data = bulk_extract(files, track=False)
 
     for k, v in data.items():
         if args.type == "track":
@@ -107,10 +115,8 @@ if __name__ == "__main__":
         )
 
         if args.db:
-            db = Mdb("mpk.db")
-            db.init()
             if args.type == "track":
-                id = db.insert_track(k)
+                id = db.insert_track(os.path.realpath(k))
                 if tags is not None:
                     try:
                         db.insert_track_tags(id, tags)
@@ -142,7 +148,7 @@ if __name__ == "__main__":
                 db.insert_track_images(id, specs)
 
             elif args.type == "sample":
-                id = db.insert_sample(k)
+                id = db.insert_sample(os.path.realpath(k))
                 db.insert_sample_featues_lowlevel(id, lowlevel)
 
                 if rhythm is not None:
