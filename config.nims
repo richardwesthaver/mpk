@@ -121,7 +121,7 @@ task run, "run MPK binary":
   exec "cargo run" & args.join
 
 task install, "install MPK":
-  exec "cargo install --release --path " & MPK_BIN
+  exec "cargo install --path " & MPK_BIN
 
 task clean, "clean build artifacts":
   exec "cargo clean"
@@ -146,3 +146,9 @@ task info, "print system, dependency, and project info":
 
 task ci, "add changes and commit":
   var root = getVcRoot()
+
+task fmt, "format code":
+  withDir getVcRoot():
+    exec "cargo fmt"
+    exec "black ."
+  

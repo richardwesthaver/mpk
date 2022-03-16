@@ -1,5 +1,5 @@
 use mpk_config::DbConfig;
-use rusqlite::{Connection, OpenFlags, ToSql};
+use rusqlite::{types::Value, Connection, OpenFlags, ToSql};
 use std::path::Path;
 mod err;
 pub use err::{Error, Result};
@@ -181,10 +181,10 @@ scvalleys = ?35
 where track_id = ?1",
 	      &[&id,
 		&features.average_loudness,
-		&features.barkbanks_kurtosis,
-		&features.barkbanks_skewness,
-		&features.barkbanks_spread,
-		&features.barkbanks,
+		&features.barkbands_kurtosis,
+		&features.barkbands_skewness,
+		&features.barkbands_spread,
+		&features.barkbands,
 		&features.dissonance,
 		&features.hfc,
 		&features.pitch,
@@ -422,10 +422,10 @@ scvalleys = ?35
 where sample_id = ?1",
 	      &[&id,
 		&features.average_loudness,
-		&features.barkbanks_kurtosis,
-		&features.barkbanks_skewness,
-		&features.barkbanks_spread,
-		&features.barkbanks,
+		&features.barkbands_kurtosis,
+		&features.barkbands_skewness,
+		&features.barkbands_spread,
+		&features.barkbands,
 		&features.dissonance,
 		&features.hfc,
 		&features.pitch,
@@ -681,6 +681,80 @@ where sample_id = ?1",
     Ok(res)
   }
 
+  pub fn query_track_features_lowlevel(&self, id: i64) -> Result<LowlevelFeatures> {
+    let res = self.conn.query_row(
+      "select * from track_features_lowlevel where track_id = ?",
+      [id],
+      |row| {
+        Ok(LowlevelFeatures {
+          average_loudness: row.get(1)?,
+          barkbands_kurtosis: row.get(2)?,
+          barkbands_skewness: row.get(3)?,
+          barkbands_spread: row.get(4)?,
+          barkbands: row.get(5)?,
+          dissonance: row.get(6)?,
+          hfc: row.get(7)?,
+          pitch: row.get(8)?,
+          pitch_instantaneous_confidence: row.get(9)?,
+          pitch_salience: row.get(10)?,
+          silence_rate_20db: row.get(11)?,
+          silence_rate_30db: row.get(12)?,
+          silence_rate_60db: row.get(13)?,
+          spectral_centroid: row.get(14)?,
+          spectral_complexity: row.get(15)?,
+          spectral_crest: row.get(16)?,
+          spectral_decrease: row.get(17)?,
+          spectral_energy: row.get(18)?,
+          spectral_energyband_high: row.get(19)?,
+          spectral_energyband_low: row.get(20)?,
+          spectral_energyband_middle_high: row.get(21)?,
+          spectral_energyband_middle_low: row.get(22)?,
+          spectral_flatness_db: row.get(23)?,
+          spectral_flux: row.get(24)?,
+          spectral_kurtosis: row.get(25)?,
+          spectral_rms: row.get(26)?,
+          spectral_rolloff: row.get(27)?,
+          spectral_skewness: row.get(28)?,
+          spectral_spread: row.get(29)?,
+          spectral_strongpeak: row.get(30)?,
+          zerocrossingrate: row.get(31)?,
+          mfcc: row.get(32)?,
+          sccoeffs: row.get(33)?,
+          scvalleys: row.get(34)?,
+        })
+      },
+    )?;
+    Ok(res)
+  }
+
+  pub fn query_track_features_rhythm(&self, id: i64) -> Result<RhythmFeatures> {
+    let res = self.conn.query_row(
+      "select * from track_features_rhythm where track_id = ?",
+      [id],
+      |row| {
+        Ok(RhythmFeatures {
+          bpm: row.get(1)?,
+          confidence: row.get(2)?,
+          onset_rate: row.get(3)?,
+          beats_loudness: row.get(4)?,
+          first_peak_bpm: row.get(5)?,
+          first_peak_spread: row.get(6)?,
+          first_peak_weight: row.get(7)?,
+          second_peak_bpm: row.get(8)?,
+          second_peak_spread: row.get(9)?,
+          second_peak_weight: row.get(10)?,
+          beats_position: row.get(11)?,
+          bpm_estimates: row.get(12)?,
+          bpm_intervals: row.get(13)?,
+          onset_times: row.get(14)?,
+          beats_loudness_band_ratio: row.get(15)?,
+          histogram: row.get(16)?,
+        })
+      },
+    )?;
+    Ok(res)
+  }
+
   pub fn query_track_images(&self, id: i64) -> Result<Spectrograms> {
     let res = self.conn.query_row(
       "select * from track_images where track_id = ?",
@@ -696,11 +770,96 @@ where sample_id = ?1",
     Ok(res)
   }
 
-  pub fn query_sample(&self, id: i64) -> Result<String> {
+  pub fn query_sample(&self, id: i64) -> Result<AudioData> {
     let res =
       self
         .conn
-        .query_row("select * from samples where id = ?", [id], |row| row.get(0))?;
+        .query_row("select * from samples where id = ?", [id], |row| {
+          Ok(AudioData {
+            path: row.get(1)?,
+            format: row.get(2)?,
+            channels: row.get(3)?,
+            filesize: row.get(4)?,
+            bitrate: row.get(5)?,
+            bitdepth: row.get(6)?,
+            duration: row.get(7)?,
+            samplerate: row.get(8)?,
+          })
+        })?;
+    Ok(res)
+  }
+
+  pub fn query_sample_features_lowlevel(&self, id: i64) -> Result<LowlevelFeatures> {
+    let res = self.conn.query_row(
+      "select * from sample_features_lowlevel where sample_id = ?",
+      [id],
+      |row| {
+        Ok(LowlevelFeatures {
+          average_loudness: row.get(1)?,
+          barkbands_kurtosis: row.get(2)?,
+          barkbands_skewness: row.get(3)?,
+          barkbands_spread: row.get(4)?,
+          barkbands: row.get(5)?,
+          dissonance: row.get(6)?,
+          hfc: row.get(7)?,
+          pitch: row.get(8)?,
+          pitch_instantaneous_confidence: row.get(9)?,
+          pitch_salience: row.get(10)?,
+          silence_rate_20db: row.get(11)?,
+          silence_rate_30db: row.get(12)?,
+          silence_rate_60db: row.get(13)?,
+          spectral_centroid: row.get(14)?,
+          spectral_complexity: row.get(15)?,
+          spectral_crest: row.get(16)?,
+          spectral_decrease: row.get(17)?,
+          spectral_energy: row.get(18)?,
+          spectral_energyband_high: row.get(19)?,
+          spectral_energyband_low: row.get(20)?,
+          spectral_energyband_middle_high: row.get(21)?,
+          spectral_energyband_middle_low: row.get(22)?,
+          spectral_flatness_db: row.get(23)?,
+          spectral_flux: row.get(24)?,
+          spectral_kurtosis: row.get(25)?,
+          spectral_rms: row.get(26)?,
+          spectral_rolloff: row.get(27)?,
+          spectral_skewness: row.get(28)?,
+          spectral_spread: row.get(29)?,
+          spectral_strongpeak: row.get(30)?,
+          zerocrossingrate: row.get(31)?,
+          mfcc: row.get(32)?,
+          sccoeffs: row.get(33)?,
+          scvalleys: row.get(34)?,
+        })
+      },
+    )?;
+    Ok(res)
+  }
+
+  pub fn query_sample_features_rhythm(&self, id: i64) -> Result<RhythmFeatures> {
+    let res = self.conn.query_row(
+      "select * from sample_features_rhythm where sample_id = ?",
+      [id],
+      |row| {
+        Ok(RhythmFeatures {
+          bpm: row.get(1)?,
+          confidence: row.get(2)?,
+          onset_rate: row.get(3)?,
+          beats_loudness: row.get(4)?,
+          first_peak_bpm: row.get(5)?,
+          first_peak_spread: row.get(6)?,
+          first_peak_weight: row.get(7)?,
+          second_peak_bpm: row.get(8)?,
+          second_peak_spread: row.get(9)?,
+          second_peak_weight: row.get(10)?,
+          beats_position: row.get(11)?,
+          bpm_estimates: row.get(12)?,
+          bpm_intervals: row.get(13)?,
+          onset_times: row.get(14)?,
+          beats_loudness_band_ratio: row.get(15)?,
+          histogram: row.get(16)?,
+        })
+      },
+    )?;
     Ok(res)
   }
 
@@ -716,6 +875,33 @@ where sample_id = ?1",
         })
       },
     )?;
+    Ok(res)
+  }
+
+  pub fn query_raw(&self, sql: &str) -> Result<DbValues> {
+    let mut stmt = self.conn.prepare(sql)?;
+    let count = stmt.column_count();
+    let mut rows = stmt.query([])?;
+    let mut res = Vec::new();
+    while let Some(r) = rows.next()? {
+      for i in 0..count {
+        res.push(DbValue(r.get(i)?));
+      }
+    }
+    Ok(DbValues(res))
+  }
+
+  pub fn track_count(&self) -> Result<usize> {
+    let res = self
+      .conn
+      .query_row("select count(*) from tracks", [], |row| row.get(0))?;
+    Ok(res)
+  }
+
+  pub fn sample_count(&self) -> Result<usize> {
+    let res = self
+      .conn
+      .query_row("select count(*) from samples", [], |row| row.get(0))?;
     Ok(res)
   }
 

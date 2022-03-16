@@ -2,8 +2,7 @@ use clap::{AppSettings, Parser, Subcommand};
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 
 use mpk_config::{Config, CONFIG_FILE, DEFAULT_PATH};
-use mpk_db::{Mdb, QueryType, TrackTags};
-use mpk_id3::id3_walk;
+use mpk_db::{Mdb, QueryType};
 
 use mpk::Result;
 
@@ -34,13 +33,14 @@ enum Command {
   },
   /// Save a session
   Save,
-  /// Query MDB
+  /// Query DB
   Query {
     query: QueryType,
     #[clap(short, long)]
     track: Option<i64>,
     #[clap(short, long)]
     sample: Option<i64>,
+    raw: Option<String>,
   },
   /// Sync resources with DB
   Sync {
@@ -57,6 +57,8 @@ enum Command {
     audio: bool,
     #[clap(short, long)]
     midi: bool,
+    #[clap(short, long)]
+    db: bool,
   },
   /// Package resources [.tar.zst]
   Pack,
@@ -68,21 +70,19 @@ enum Command {
 
 #[derive(Subcommand)]
 enum Runner {
-  // start the jack server
+  /// start the jack server
   Jack,
-  // start a network server
+  /// start a network server
   Net,
-  // create a sample chain
+  /// create a sample chain
   Chain {
     #[clap(parse(from_os_str))]
     input: Vec<PathBuf>,
     #[clap(parse(from_os_str))]
     output: PathBuf,
   },
-  Metro {
-    bpm: u16,
-    time_sig: String,
-  },
+  /// start the metronome
+  Metro { bpm: u16, time_sig: String },
 }
 
 fn ppln(i: &str, s: char) {
@@ -117,13 +117,33 @@ fn main() -> Result<()> {
       Mdb::new(db_path.as_deref())?.init()?;
       ppln("[DONE]", 'd');
     }
-    Command::Info { audio, midi } => {
+    Command::Info { audio, midi, db } => {
       if audio {
+        println!("\x1b[1mAUDIO INFO\x1b[0m");
         mpk_audio::info();
-      } else if midi {
+      }
+      if midi {
+        println!("\x1b[1mMIDI INFO\x1b[0m");
         mpk_midi::list_midi_ports()?;
-      } else {
+      }
+      if db {
+        println!("\x1b[1mDB INFO\x1b[0m");
+        let db = Mdb::new_with_config(cfg.db.to_owned())?;
+        let ts = db.track_count()?;
+        let ss = db.sample_count()?;
+        println!("{} tracks", ts);
+        println!("{} samples", ss);
+      }
+      if !(audio || midi || db) {
+        println!("\x1b[1mDB INFO\x1b[0m");
+        let db = Mdb::new_with_config(cfg.db)?;
+        let ts = db.track_count()?;
+        let ss = db.sample_count()?;
+        println!("{} tracks", ts);
+        println!("{} samples", ss);
+        println!("\x1b[1mAUDIO INFO\x1b[0m");
         mpk_audio::info();
+        println!("\x1b[1mMIDI INFO\x1b[0m");
         mpk_midi::list_midi_ports()?;
       }
     }
@@ -131,38 +151,55 @@ fn main() -> Result<()> {
       query,
       track,
       sample,
+      raw,
     } => {
       let conn = Mdb::new_with_config(cfg.db)?;
       match query {
         QueryType::Info => {
           if track.is_some() {
-            println!("{:?}", conn.query_track(track.unwrap())?)
-          }
-          if sample.is_some() {
-            println!("{:?}", conn.query_sample(sample.unwrap())?)
+            println!("{}", conn.query_track(track.unwrap())?)
+          } else if sample.is_some() {
+            println!("{}", conn.query_sample(sample.unwrap())?)
           }
         }
         QueryType::Tags => {
           if track.is_some() {
-            println!("{:?}", conn.query_track_tags(track.unwrap())?)
+            println!("{}", conn.query_track_tags(track.unwrap())?)
           } else {
             eprintln!("query type not supported")
           }
         }
         QueryType::Musicbrainz => {
           if track.is_some() {
-            println!("{:?}", conn.query_track_tags_musicbrainz(track.unwrap())?)
+            println!("{}", conn.query_track_tags_musicbrainz(track.unwrap())?)
           } else {
             eprintln!("query type not supported");
           }
         }
-        QueryType::Spectrograms => {
+        QueryType::Lowlevel => {
           if track.is_some() {
-            println!("{:?}", conn.query_track_images(track.unwrap())?)
+            println!("{}", conn.query_track_features_lowlevel(track.unwrap())?)
+          } else if sample.is_some() {
+            println!("{}", conn.query_sample_features_lowlevel(sample.unwrap())?)
+          }
+        }
+        QueryType::Rhythm => {
+          if track.is_some() {
+            println!("{}", conn.query_track_features_rhythm(track.unwrap())?)
           }
           if sample.is_some() {
-            println!("{:?}", conn.query_sample_images(sample.unwrap())?)
+            println!("{}", conn.query_sample_features_rhythm(sample.unwrap())?)
           }
+        }
+        QueryType::Spectrograms => {
+          if track.is_some() {
+            println!("{}", conn.query_track_images(track.unwrap())?)
+          } else if sample.is_some() {
+            println!("{}", conn.query_sample_images(sample.unwrap())?)
+          }
+        }
+        QueryType::Raw => {
+          println!("{}", conn.query_raw(&raw.unwrap())?)
         }
         _ => eprintln!("query type not supported"),
       }
@@ -172,31 +209,10 @@ fn main() -> Result<()> {
       samples,
       projects,
     } => {
-      let conn = Mdb::new_with_config(cfg.db)?;
+      //      let conn = Mdb::new_with_config(cfg.db)?;
 
       if tracks {
-        let ts = cfg.fs.get_path("tracks")?;
-        let mut coll = Vec::new();
-        id3_walk(&ts, &mut coll)?;
-        for i in coll {
-          let path = i.path.strip_prefix(&ts).unwrap().to_str().unwrap();
-          let title = i.get_tag("TIT2");
-          let artist = i.get_tag("TPE1");
-          let album = i.get_tag("TALB");
-          let genre = i.get_tag("TCON");
-          let year = i.get_tag("TDRC").map(|y| y.parse::<i16>().unwrap());
-
-          conn.insert_track(&path)?;
-          let track_id = conn.last_insert_rowid();
-          let tags = TrackTags {
-            artist,
-            title,
-            album,
-            genre,
-            year,
-          };
-          conn.insert_track_tags(track_id, &tags)?;
-        }
+        let _ts = cfg.fs.get_path("tracks")?;
       }
       if samples {
         let _ss = cfg.fs.get_path("samples")?;

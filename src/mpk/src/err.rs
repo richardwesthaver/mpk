@@ -4,7 +4,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
   Db(mpk_db::Error),
   Cfg(mpk_config::Error),
-  Id3(mpk_id3::Error),
   Midi(mpk_midi::Error),
   Io(std::io::Error),
 }
@@ -14,7 +13,6 @@ impl std::error::Error for Error {
     match *self {
       Error::Db(ref err) => Some(err),
       Error::Cfg(ref err) => Some(err),
-      Error::Id3(ref err) => Some(err),
       Error::Midi(ref err) => Some(err),
       Error::Io(ref err) => Some(err),
     }
@@ -26,7 +24,6 @@ impl std::fmt::Display for Error {
     match *self {
       Error::Db(ref err) => err.fmt(f),
       Error::Cfg(ref err) => err.fmt(f),
-      Error::Id3(ref err) => err.fmt(f),
       Error::Midi(ref err) => err.fmt(f),
       Error::Io(ref err) => err.fmt(f),
     }
@@ -48,12 +45,6 @@ impl From<mpk_db::Error> for Error {
 impl From<mpk_config::Error> for Error {
   fn from(err: mpk_config::Error) -> Error {
     Error::Cfg(err)
-  }
-}
-
-impl From<mpk_id3::Error> for Error {
-  fn from(err: mpk_id3::Error) -> Error {
-    Error::Id3(err)
   }
 }
 

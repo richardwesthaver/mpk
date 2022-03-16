@@ -9,8 +9,8 @@ repository = "https://hg.rwest.io/mpk"
 keywords = ["media", "Rust", "FFI", "audio"]
 include = ["README.org"]
 packages = [
-	 { include = "mpk", from = "src/mpk_py/mpk" },
-	 { include = "mpk_extract", from = "src/mpk_py/main.py" },
+	 { include = "mpk", from = "src/mpk_py" },
+	 { include = "mpk_extract.py", from = "src/mpk_py" },
 	 ]
 
 [tool.poetry.dependencies]

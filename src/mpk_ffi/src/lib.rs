@@ -143,7 +143,7 @@ pub extern "C" fn mpk_fs_config_free(ptr: *mut FsConfig) {
 
 #[no_mangle]
 pub extern "C" fn mpk_fs_config_get_path(
-  cfg: *const FsConfig,
+  cfg: *const Config,
   path: *const c_char,
 ) -> *mut c_char {
   let p = &unsafe {
@@ -154,7 +154,7 @@ pub extern "C" fn mpk_fs_config_get_path(
   .unwrap();
 
   let cfg = unsafe { &*cfg };
-  let res = cfg.get_path(p).unwrap();
+  let res = cfg.fs.get_path(p).unwrap();
   CString::new(res.as_os_str().as_bytes()).unwrap().into_raw()
 }
 
@@ -174,9 +174,16 @@ pub extern "C" fn mpk_db_config_free(ptr: *mut DbConfig) {
 }
 
 #[no_mangle]
-pub extern "C" fn mpk_db_config_flags(cfg: *const DbConfig) -> c_int {
+pub extern "C" fn mpk_db_config_flags(cfg: *const Config) -> c_int {
   let cfg = unsafe { cfg.as_ref().unwrap() };
-  cfg.flags().unwrap()
+  cfg.db.flags().unwrap()
+}
+
+#[no_mangle]
+pub extern "C" fn mpk_db_config_path(cfg: *const Config) -> *mut c_char {
+  let cfg = unsafe {&*cfg};
+  let res = cfg.db.path().unwrap();
+  CString::new(res.as_os_str().as_bytes()).unwrap().into_raw()
 }
 
 #[no_mangle]
@@ -299,10 +306,10 @@ pub extern "C" fn mdb_musicbrainz_tags_free(ptr: *mut MusicbrainzTags) {
 #[no_mangle]
 pub extern "C" fn mdb_lowlevel_features_new(
   average_loudness: f32,
-  barkbanks_kurtosis: CVecReal,
-  barkbanks_skewness: CVecReal,
-  barkbanks_spread: CVecReal,
-  barkbanks: CVecReal,
+  barkbands_kurtosis: CVecReal,
+  barkbands_skewness: CVecReal,
+  barkbands_spread: CVecReal,
+  barkbands: CVecReal,
   dissonance: CVecReal,
   hfc: CVecReal,
   pitch: CVecReal,
@@ -335,10 +342,10 @@ pub extern "C" fn mdb_lowlevel_features_new(
 ) -> *mut LowlevelFeatures {
   let features = LowlevelFeatures {
     average_loudness,
-    barkbanks_kurtosis: VecReal::from(barkbanks_kurtosis),
-    barkbanks_skewness: VecReal::from(barkbanks_skewness),
-    barkbanks_spread: VecReal::from(barkbanks_spread),
-    barkbanks: VecReal::from(barkbanks),
+    barkbands_kurtosis: VecReal::from(barkbands_kurtosis),
+    barkbands_skewness: VecReal::from(barkbands_skewness),
+    barkbands_spread: VecReal::from(barkbands_spread),
+    barkbands: VecReal::from(barkbands),
     dissonance: VecReal::from(dissonance),
     hfc: VecReal::from(hfc),
     pitch: VecReal::from(pitch),

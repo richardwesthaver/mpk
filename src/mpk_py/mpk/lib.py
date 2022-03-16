@@ -12,7 +12,6 @@ class Config:
     def __init__(self, file=None):
         if file:
             self.cfg = lib.mpk_config_load(str(file).encode())
-            # TODO
         else:
             self.cfg = lib.mpk_config_new(NULL, NULL, NULL)
 
@@ -31,10 +30,13 @@ class Config:
         self.cfg = lib.mpk_config_load(file.encode())
 
     def db_flags(self):
-        return lib.mpk_db_config_flags(self.db)
+        return lib.mpk_db_config_flags(self.cfg)
+
+    def db_path(self):
+        return ffi.string(lib.mpk_db_config_path(self.cfg)).decode()
 
     def get_path(self, path):
-        return ffi.string(lib.mpk_fs_config_get_path(self.fs, path.encode())).decode()
+        return ffi.string(lib.mpk_fs_config_get_path(self.cfg, path.encode())).decode()
 
 
 class Mdb:

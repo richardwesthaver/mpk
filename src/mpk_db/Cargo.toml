@@ -6,7 +6,4 @@ edition = "2021"
 [dependencies]
 mpk_config = { path = "../mpk_config" }
 rusqlite = { version = "0.26", features = ["blob", "trace", "uuid", "hooks", "chrono"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-id3 = "1.0.2"
 uuid = "0.8"

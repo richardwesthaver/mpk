@@ -23,46 +23,10 @@ pub fn info() {
       if let Ok(conf) = device.default_input_config() {
         println!("    Default input stream config:\n      {:?}", conf);
       }
-      let input_configs = match device.supported_input_configs() {
-        Ok(f) => f.collect(),
-        Err(e) => {
-          println!("    Error getting supported input configs: {:?}", e);
-          Vec::new()
-        }
-      };
-      if !input_configs.is_empty() {
-        println!("    All supported input stream configs:");
-        for (config_index, config) in input_configs.into_iter().enumerate() {
-          println!(
-            "      {}.{}. {:?}",
-            device_index + 1,
-            config_index + 1,
-            config
-          );
-        }
-      }
 
       // Output configs
       if let Ok(conf) = device.default_output_config() {
         println!("    Default output stream config:\n      {:?}", conf);
-      }
-      let output_configs = match device.supported_output_configs() {
-        Ok(f) => f.collect(),
-        Err(e) => {
-          println!("    Error getting supported output configs: {:?}", e);
-          Vec::new()
-        }
-      };
-      if !output_configs.is_empty() {
-        println!("    All supported output stream configs:");
-        for (config_index, config) in output_configs.into_iter().enumerate() {
-          println!(
-            "      {}.{}. {:?}",
-            device_index + 1,
-            config_index + 1,
-            config
-          );
-        }
       }
     }
   }

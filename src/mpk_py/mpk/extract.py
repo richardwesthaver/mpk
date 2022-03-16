@@ -53,13 +53,14 @@ def pool_to_dict(pool, include_descs=None, ignore_descs=None):
     return result
 
 
-def bulk_extract(files, sr=44100, mono=False):
+def bulk_extract(files, sr=44100, mono=False, track=True):
     result = {}
     for f in files:
         try:
             with Extract(f, sr, mono) as extractor:
                 print("extracting:", f)
-                extractor.metadata()
+                if track:
+                  extractor.metadata()
                 extractor.features()
                 extractor.mel_spec()
                 extractor.freq_spec()
@@ -74,7 +75,7 @@ def bulk_extract(files, sr=44100, mono=False):
 class AudioFile(object):
     def __init__(self, file, sr=44100, mono=False):
         path = os.path.expanduser(file)
-        audio, sr = load(path, sr, mono)
+        audio, sr = load(path, sr=sr, mono=mono)
         self.path = os.path.expanduser(path)
         self.sr = sr
         self.audio = audio

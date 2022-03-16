@@ -1,87 +1,102 @@
 #+TITLE: mpk
-#+DATE: 2022-03-14
+#+DATE: 2022-03-16
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
 * Overview
-=mpk= is my /Media Programming Kit/. It provides a development kit for
-digital media. Batteries are *not* included -- =mpk= is a flexible
-ecosystem designed to organize your creative workflow which may
-include your own hardware, software, and digital assets.
+=mpk= is my /Media Programming Kit/ -- a development kit for digital
+media, taking lessons learned from the software industry and applying
+them to creative pursuits. =mpk= is a flexible ecosystem designed to
+organize my workflow involving hardware, software, and data. Batteries
+are *not* included.
 
 This project is quite young and will only deal with audio for quite
-some time since that's the medium I'm most interested in. Emacs is the
-only GUI available for =mpk=, but a CLI is also provided.
+some time since that's the medium I'm most interested in. There are
+future plans for image/video support followed by VR/AR. The core APIs
+are written in Rust but there are bindings for C and Python (see
+=mpk_ffi=).
 
-The =mpk= APIs and programs are primarily written in Rust but there
-are a number of other langs involved including C, Nim, and Python.
+Right now my focus is on the SQLite[fn:5] database and cataloging
+libraries of audio tracks and samples. There is only one database,
+stored in a single file, and the libraries have a fairly flat
+directory structure -- a far cry from most music library programs
+which encourage a deeply nested structure (=Tracks -> Artist -> Album
+-> track.wav=). It is designed to capture as much information as
+possible with minimal user configuration and input.
 
-** Features
-- Resource Management
-  - SQLite DB
-  - index tracks, samples, sessions, patches, plugins, MIDI
-  - query metadata and audio features
-- JACK
-  - Session/Patch support
-  - Utility clients
-  - Network Audio
-- HTTP Clients
-  - freesound.org
-  - musicbrainz.org
-- Emacs Frontend
-  - JACK patching and session manager
-  - EMMS playlists
-  - Supercollider/Lilypond IDE
-  - MIDI/OSC keymaps
-  - Org-mode notes/tasks
-- Hardware Support
-  - build and upload sample chains for Elektron devices
-  - send/receive SysEx
-- Configuration
-  - global config =mpk.toml=
-  - session config =session.toml=
-- Distribution
-  - Compress(zst)/Archive(tar) support
-  - backup/dump/restore DB
+The MIR[fn:1] tool (=mpk_py/mpk_extract.py=) uses Python as a bridge
+between Essentia[fn:2] for feature extraction and the MPK
+database. There are a huge amount of features stored in the database
+(/97/ at time of writing), but the feature set will be reduced in
+future iterations as I find the features which are most useful to
+me. As for the extraction algorithms, My plan is to RiiR[fn:3] and
+reduce DB size by applying zstd[fn:4] compression.
+
+Once I'm happy with the database I'll work on the MIDI module
+(=mpk_midi=), add playback/record/transcode capabilities
+(=mpk_audio=/=mpk_codec=), and then get started on session management
+functionality (=mpk_sesh=).
+
+=mpk_audio= also includes a metronome and sample chainer[fn:6] which I
+plan to tweak over the next few weeks since they have well-defined
+requirements.
+
+[fn:1]  [[https://en.wikipedia.org/wiki/Music_information_retrieval][Music information retrieval - Wikipedia]]
+
+[fn:2] [[https://essentia.upf.edu/][Essentia - Music Technology Group - Universitat Pompeu Fabra]] 
+
+[fn:3] [[https://transitiontech.ca/random/RIIR][ansuz - /random/RIIR]]
+
+[fn:4] [[http://facebook.github.io/zstd/][Zstandard - Real-time data compression algorithm]] 
+
+[fn:5] [[https://www.sqlite.org/index.html][SQLite Home Page]] 
+
+[fn:6] [[https://github.com/KaiDrange/OctaChainer][GitHub - KaiDrange/OctaChainer]] 
+
 ** Dependencies
-- Rust
-- Python
-  - essentia
-  - gaia
-  - tensorflow
-  - numpy
-  - sklearn
-  - libyaml
-- Emacs
-  - lilypond-mode
-  - emms
-- Jack
-- NSM
-- FFmpeg
-- snd
-- Ecasound
+- [[https://www.rust-lang.org/tools/install][Rust]] :: use =cargo= to install =mpk=
+- Python3 :: use =pip= to install =mpk_extract= and =mpk= python package.
+  - your mileage may vary on Py3.10. If installation fails try it on 3.9.
+- _Dev Dependencies_
+  - essentia :: try a =pip install= from the [[https://github.com/MTG/essentia][github repo]], if that
+    doesn't work you will need to [[https://essentia.upf.edu/installing.html][install from source]]. If you have
+    issues just contact me.
+  - numpy :: you will need a version <1.22, for example =pip install numpy==1.21.5=.
+  - poetry :: =pip= or OS package manager
+  - black :: =pip= or OS package manager
+  - Nim :: OS package manager
+    - used as a build tool via [[https://nim-lang.org/docs/nims.html][NimScript]].
+  - C Compiler :: GCC or LLVM
+    - Valgrind :: OS package manager
+      - used to detect issues with FFI memory management.
+  - SQLite :: OS package manager
+    - required by =mpk_db=
+  - JACK :: OS package manager
+    - required by =mpk_jack=
+
 * COMMENT notes
-#+begin_comment
-Local variables:
-mode: org
-end:
-#+end_comment
 ** tasks
-*** TODO finish mpk_extract [1/5]
+*** TODO finish mpk_extract [4/6]
 **** DONE debug CStrings                                                :ffi:
 some strings fields are broken when inserting to db - UUIDs, VecText, and VecReal
 - test DB blob insert with floats. if these are ok then they can be ignored
 - check CStrings and make sure they're handled correctly
-**** TODO upserts                                                     :db:
+**** DONE upserts                                                        :db:
 add update functionality with =WHERE= clauses
-**** TODO retrieve sample_id correctly
+**** DONE retrieve sample_id correctly
 should never insert id of 0 when duplicate found, update or noop instead
-**** TODO account for missing values in essentia
+**** DONE account for missing values in essentia
 essentia will miss fields if sample is too short
 **** TODO get paths from config                                   :config:
 input else tracks/samples from config else current path
-*** TODO mpk_config updates [0/3]
-**** TODO add support for external paths
+**** TODO incremental batch extractor
+- this will likely require a threadpool
+- extractor segfaults when working with large directories, need to
+  insert into db after each extraction
+**** TODO populate all columns in tracks table
+Currently only inserting path
+*** TODO mpk_config updates [1/3]
+**** DONE add support for external paths
 add external track/sample locations
 **** TODO add support for Elektron USB mode                         :gear:
 add external drive locations
@@ -91,10 +106,19 @@ add external drive locations
 - =MPK_SAMPLES=
 - =MPK_TRACKS=
 - =MPK_LOG= ?
-*** TODO mpk_midi init [0/0]
+
+- use enum?
+- macros only return value at compile-time. need to use std::env functions directly
+**** TODO metro and chain config
+- both subsections in audio section - [audio.chain] and [audio.metro]?
+  - audio.chain default output
+  - audio.metro default bpm/sig tic/toc
+*** TODO mpk_midi init [0/1]
 just need enough to make emacs integration - =mpk-midi.el=
 can start with terminal process then move to C dynamic module
 check [[https://github.com/jnykopp/emaccordion][jnykopp/emaccordion]]
+**** TODO MIDI config                                                :config:
+
 ** notes
 *** Background
 Over the years I've seen many popular creative tools implement
@@ -258,3 +282,10 @@ SELECT substr(hex(artistid), 1, 8)
 FROM [track_tags_musicbrainz]
   #+end_src
 
+
+** local_vars
+#+begin_comment
+Local variables:
+mode: org
+end:
+#+end_comment

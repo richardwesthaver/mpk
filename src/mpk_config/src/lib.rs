@@ -1,9 +1,8 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 use std::str::FromStr;
-
-use serde::{Deserialize, Serialize};
 
 mod err;
 pub use err::{Error, Result};
@@ -12,6 +11,7 @@ pub const DEFAULT_PATH: &str = "~/mpk";
 pub const CONFIG_FILE: &str = "mpk.toml";
 pub const DB_FILE: &str = "mpk.db";
 
+/// expand `~` in PATH.
 fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
   let p = path.as_ref();
   if !p.starts_with("~") {

@@ -1,9 +1,35 @@
 use crate::err::{Error, Result};
-use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
+use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, Value, ValueRef};
+use std::fmt;
 use std::str::FromStr;
 pub use uuid::Uuid;
-mod id3;
-pub use self::id3::{id3_walk, Id3};
+
+#[derive(Debug)]
+pub struct DbValue(pub Value);
+
+impl fmt::Display for DbValue {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match self.0 {
+      Value::Null => write!(f, "NULL"),
+      Value::Integer(i) => write!(f, "{}", i),
+      Value::Real(i) => write!(f, "{}", i),
+      Value::Text(ref i) => write!(f, "{}", i),
+      Value::Blob(ref x) => write!(f, "<Blob[u8;{}]>", x.len()),
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct DbValues(pub Vec<DbValue>);
+
+impl fmt::Display for DbValues {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    for i in &self.0 {
+      write!(f, "| {} ", i)?;
+    }
+    write!(f, "|")
+  }
+}
 
 #[derive(Debug)]
 pub struct VecReal(pub Vec<f32>);
@@ -21,6 +47,29 @@ impl ToSql for VecReal {
     Ok(ToSqlOutput::from(unsafe { self.0.align_to::<u8>().1 }))
   }
 }
+
+impl fmt::Display for VecReal {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    let mut iter = self.0.iter();
+    let mut riter = self.0.iter().rev();
+    write!(
+      f,
+      "vec([{0}, {1}, {2}, {3} ... {7}, {6}, {5}, {4}], len={8})",
+      iter.next().unwrap(),
+      iter.next().unwrap(),
+      iter.next().unwrap(),
+      iter.next().unwrap(),
+      riter.next().unwrap(),
+      riter.next().unwrap(),
+      riter.next().unwrap(),
+      riter.next().unwrap(),
+      self.0.len()
+    )
+  }
+}
+
+#[derive(Debug)]
+pub struct MatrixReal(pub Vec<VecReal>);
 
 #[derive(Debug)]
 pub struct VecText(pub Vec<String>);
@@ -58,6 +107,48 @@ pub struct AudioData {
   pub samplerate: Option<u32>,
 }
 
+impl fmt::Display for AudioData {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    let format = self.format.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let channels = self
+      .channels
+      .map(|n| n.to_string())
+      .unwrap_or("NULL".to_string());
+    let filesize = self
+      .filesize
+      .map(|n| n.to_string())
+      .unwrap_or("NULL".to_string());
+    let bitrate = self
+      .bitrate
+      .map(|n| n.to_string())
+      .unwrap_or("NULL".to_string());
+    let bitdepth = self
+      .bitdepth
+      .map(|n| n.to_string())
+      .unwrap_or("NULL".to_string());
+    let duration = self
+      .duration
+      .map(|n| n.to_string())
+      .unwrap_or("NULL".to_string());
+    let samplerate = self
+      .samplerate
+      .map(|n| n.to_string())
+      .unwrap_or("NULL".to_string());
+    write!(
+      f,
+      "path: {}
+format: {}
+channels: {}
+filesize: {}
+bitrate: {}
+bitdepth: {}
+duration: {}
+samplerate: {}",
+      self.path, format, channels, filesize, bitrate, bitdepth, duration, samplerate
+    )
+  }
+}
+
 #[derive(Debug)]
 pub struct TrackTags {
   pub artist: Option<String>,
@@ -65,6 +156,28 @@ pub struct TrackTags {
   pub album: Option<String>,
   pub genre: Option<String>,
   pub year: Option<i16>,
+}
+
+impl fmt::Display for TrackTags {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    let artist = self.artist.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let title = self.title.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let album = self.album.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let genre = self.genre.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let year = self
+      .year
+      .map(|n| n.to_string())
+      .unwrap_or("NULL".to_string());
+    write!(
+      f,
+      "artist: {}
+title: {}
+album: {}
+genre: {}
+year: {}",
+      artist, title, album, genre, year
+    )
+  }
 }
 
 #[derive(Debug)]
@@ -79,13 +192,37 @@ pub struct MusicbrainzTags {
   pub trackid: Uuid,
 }
 
+impl fmt::Display for MusicbrainzTags {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(
+      f,
+      "albumartistid: {}
+albumid: {}
+albumstatus: {}
+albumtype: {}
+artistid: {}
+releasegroupid: {}
+releasetrackid: {}
+trackid: {}",
+      self.albumartistid,
+      self.albumid,
+      self.albumstatus,
+      self.albumtype,
+      self.artistid,
+      self.releasegroupid,
+      self.releasetrackid,
+      self.trackid
+    )
+  }
+}
+
 #[derive(Debug)]
 pub struct LowlevelFeatures {
   pub average_loudness: f32,
-  pub barkbanks_kurtosis: VecReal,
-  pub barkbanks_skewness: VecReal,
-  pub barkbanks_spread: VecReal,
-  pub barkbanks: VecReal,
+  pub barkbands_kurtosis: VecReal,
+  pub barkbands_skewness: VecReal,
+  pub barkbands_spread: VecReal,
+  pub barkbands: VecReal,
   pub dissonance: VecReal,
   pub hfc: VecReal,
   pub pitch: VecReal,
@@ -117,6 +254,82 @@ pub struct LowlevelFeatures {
   pub scvalleys: VecReal,
 }
 
+impl fmt::Display for LowlevelFeatures {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(
+      f,
+      "average_loudness: {}
+barkbands_kurtosis: {}
+barkbands_skewness: {}
+barkbands_spread: {}
+barkbands: {}
+dissonance: {}
+hfc: {}
+pitch: {}
+pitch_instantaneous_confidence: {}
+pitch_salience: {}
+silence_rate_20db: {}
+silence_rate_30db: {}
+silence_rate_60db: {}
+spectral_centroid: {}
+spectral_complexity: {}
+spectral_crest: {}
+spectral_decrease: {}
+spectral_energy: {}
+spectral_energyband_high: {}
+spectral_energyband_low: {}
+spectral_energyband_middle_high: {}
+spectral_energyband_middle_low: {}
+spectral_flatness_db: {}
+spectral_flux: {}
+spectral_kurtosis: {}
+spectral_rms: {}
+spectral_rolloff: {}
+spectral_skewness: {}
+spectral_spread: {}
+spectral_strongpeak: {}
+zerocrossingrate: {}
+mfcc: {}
+sccoeffs: {}
+scvalleys: {}",
+      self.average_loudness,
+      self.barkbands_kurtosis,
+      self.barkbands_skewness,
+      self.barkbands_spread,
+      self.barkbands,
+      self.dissonance,
+      self.hfc,
+      self.pitch,
+      self.pitch_instantaneous_confidence,
+      self.pitch_salience,
+      self.silence_rate_20db,
+      self.silence_rate_30db,
+      self.silence_rate_60db,
+      self.spectral_centroid,
+      self.spectral_complexity,
+      self.spectral_crest,
+      self.spectral_decrease,
+      self.spectral_energy,
+      self.spectral_energyband_high,
+      self.spectral_energyband_low,
+      self.spectral_energyband_middle_high,
+      self.spectral_energyband_middle_low,
+      self.spectral_flatness_db,
+      self.spectral_flux,
+      self.spectral_kurtosis,
+      self.spectral_rms,
+      self.spectral_rolloff,
+      self.spectral_skewness,
+      self.spectral_spread,
+      self.spectral_strongpeak,
+      self.zerocrossingrate,
+      self.mfcc,
+      self.sccoeffs,
+      self.scvalleys
+    )
+  }
+}
+
 #[derive(Debug)]
 pub struct RhythmFeatures {
   pub bpm: f32,
@@ -137,6 +350,46 @@ pub struct RhythmFeatures {
   pub histogram: VecReal,
 }
 
+impl fmt::Display for RhythmFeatures {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(
+      f,
+      "bpm: {},
+confidence: {}
+onset_rate: {}
+beats_loudness: {}
+first_peak_bpm: {}
+first_peak_spread: {}
+first_peak_weight: {}
+second_peak_bpm: {}
+second_peak_spread: {}
+second_peak_weight: {}
+beats_position: {}
+bpm_estimates: {}
+bpm_intervals: {}
+onset_times: {}
+beats_loudness_band_ratio: {}
+histogram: {}",
+      self.bpm,
+      self.confidence,
+      self.onset_rate,
+      self.beats_loudness,
+      self.first_peak_bpm,
+      self.first_peak_spread,
+      self.first_peak_weight,
+      self.second_peak_bpm,
+      self.second_peak_spread,
+      self.second_peak_weight,
+      self.beats_position,
+      self.bpm_estimates,
+      self.bpm_intervals,
+      self.onset_times,
+      self.beats_loudness_band_ratio,
+      self.histogram
+    )
+  }
+}
+
 #[derive(Debug)]
 pub struct SfxFeatures {
   pub pitch_after_max_to_before_max_energy_ratio: f32,
@@ -148,6 +401,27 @@ pub struct SfxFeatures {
   pub tristimulus: VecReal,
 }
 
+impl fmt::Display for SfxFeatures {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(
+      f,
+      "pitch_after_max_to_before_max_energy_ratio: {}
+pitch_centroid: {}
+pitch_max_to_total: {}
+pitch_min_to_total: {}
+inharmonicity: {}
+oddtoevenharmonicenergyratio: {}
+tristimulus: {}",
+      self.pitch_after_max_to_before_max_energy_ratio,
+      self.pitch_centroid,
+      self.pitch_max_to_total,
+      self.pitch_min_to_total,
+      self.inharmonicity,
+      self.oddtoevenharmonicenergyratio,
+      self.tristimulus
+    )
+  }
+}
 #[derive(Debug)]
 pub struct TonalFeatures {
   pub chords_change_rate: f32,
@@ -175,6 +449,18 @@ pub struct Spectrograms {
   pub freq_spec: VecReal,
 }
 
+impl fmt::Display for Spectrograms {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(
+      f,
+      "mel_spec: {}
+log_spec: {}
+freq_spec: {}",
+      self.mel_spec, self.log_spec, self.freq_spec
+    )
+  }
+}
+
 #[derive(Debug)]
 pub enum SpecType {
   Mel,
@@ -199,8 +485,13 @@ pub enum QueryType {
   Info,
   Tags,
   Musicbrainz,
+  Lowlevel,
+  Rhythm,
+  Sfx,
+  Tonal,
   Spectrograms,
   All,
+  Raw,
 }
 
 impl FromStr for QueryType {
@@ -210,8 +501,13 @@ impl FromStr for QueryType {
       "info" => Ok(QueryType::Info),
       "tags" => Ok(QueryType::Tags),
       "musicbrainz" | "mb" => Ok(QueryType::Musicbrainz),
+      "lowlevel" => Ok(QueryType::Lowlevel),
+      "rhythm" => Ok(QueryType::Rhythm),
+      "sfx" => Ok(QueryType::Sfx),
+      "tonal" => Ok(QueryType::Tonal),
       "spectrograms" | "specs" => Ok(QueryType::Spectrograms),
       "all" => Ok(QueryType::All),
+      "raw" => Ok(QueryType::Raw),
       e => Err(Error::BadQType(e.to_string())),
     }
   }
