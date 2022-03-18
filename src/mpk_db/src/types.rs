@@ -31,8 +31,14 @@ impl fmt::Display for DbValues {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VecReal(pub Vec<f32>);
+
+impl VecReal {
+  pub fn len(&self) -> usize {
+    self.0.len()
+  }
+}
 
 impl FromSql for VecReal {
   fn column_result(value: ValueRef) -> FromSqlResult<Self> {
@@ -68,8 +74,82 @@ impl fmt::Display for VecReal {
   }
 }
 
+impl Iterator for VecReal {
+  type Item = f32;
+  fn next(&mut self) -> Option<Self::Item> {
+    self.into_iter().next()
+  }
+}
+
+impl From<MatrixReal> for VecReal {
+  fn from(m: MatrixReal) -> Self {
+    let data: Vec<f32> = m.into_iter().flatten().collect();
+    VecReal(data)
+  }
+}
+
+impl<'a> From<&'a MatrixReal> for VecReal {
+  fn from(m: &'a MatrixReal) -> Self {
+    m.to_vec()
+  }
+}
+
 #[derive(Debug)]
 pub struct MatrixReal(pub Vec<VecReal>);
+
+impl MatrixReal {
+  pub fn new(v: VecReal, s: usize) -> Self {
+    let data = v.0.chunks_exact(s).collect::<MatrixReal>();
+    data
+  }
+  pub fn to_vec(&self) -> VecReal {
+    self.into()
+  }
+  pub fn frame_len(&self) -> usize {
+    self.0.first().unwrap().len()
+  }
+}
+
+impl Iterator for MatrixReal {
+  type Item = VecReal;
+  fn next(&mut self) -> Option<Self::Item> {
+    self.into_iter().next()
+  }
+}
+
+impl FromIterator<VecReal> for MatrixReal {
+  fn from_iter<I: IntoIterator<Item=VecReal>>(iter: I) -> Self {
+    let mut mtx = MatrixReal(Vec::new());
+    for i in iter {
+      mtx.0.push(i);
+    }
+    mtx
+  }
+}
+
+impl<'a> FromIterator<&'a [f32]> for MatrixReal {
+  fn from_iter<I: IntoIterator<Item=&'a [f32]>>(iter: I) -> Self {
+    let mut mtx = MatrixReal(Vec::new());
+    for i in iter {
+      mtx.0.push(VecReal(i.into()));
+    }
+    mtx
+  }
+}
+
+impl fmt::Display for MatrixReal {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    let first = self.0.first().unwrap();
+    let last = self.0.last().unwrap();
+    write!(
+      f,
+      "matrix([{0} ... {1}], len={2})",
+      first,
+      last,
+      self.0.len()
+    )
+  }
+}
 
 #[derive(Debug)]
 pub struct VecText(pub Vec<String>);
@@ -98,36 +178,29 @@ impl ToSql for VecText {
 #[derive(Debug)]
 pub struct AudioData {
   pub path: String,
-  pub format: Option<String>,
-  pub channels: Option<i16>,
   pub filesize: Option<usize>,
+  pub duration: Option<f64>,
+  pub channels: Option<u8>,
   pub bitrate: Option<u32>,
-  pub bitdepth: Option<u8>,
-  pub duration: Option<u32>,
   pub samplerate: Option<u32>,
 }
 
 impl fmt::Display for AudioData {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let format = self.format.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
-    let channels = self
-      .channels
-      .map(|n| n.to_string())
-      .unwrap_or("NULL".to_string());
     let filesize = self
       .filesize
       .map(|n| n.to_string())
       .unwrap_or("NULL".to_string());
-    let bitrate = self
-      .bitrate
-      .map(|n| n.to_string())
-      .unwrap_or("NULL".to_string());
-    let bitdepth = self
-      .bitdepth
-      .map(|n| n.to_string())
-      .unwrap_or("NULL".to_string());
     let duration = self
       .duration
+      .map(|n| n.to_string())
+      .unwrap_or("NULL".to_string());
+    let channels = self
+      .channels
+      .map(|n| n.to_string())
+      .unwrap_or("NULL".to_string());
+    let bitrate = self
+      .bitrate
       .map(|n| n.to_string())
       .unwrap_or("NULL".to_string());
     let samplerate = self
@@ -137,14 +210,12 @@ impl fmt::Display for AudioData {
     write!(
       f,
       "path: {}
-format: {}
-channels: {}
 filesize: {}
-bitrate: {}
-bitdepth: {}
 duration: {}
+channels: {}
+bitrate: {}
 samplerate: {}",
-      self.path, format, channels, filesize, bitrate, bitdepth, duration, samplerate
+      self.path, filesize, duration, channels, bitrate, samplerate
     )
   }
 }
@@ -218,11 +289,11 @@ trackid: {}",
 
 #[derive(Debug)]
 pub struct LowlevelFeatures {
-  pub average_loudness: f32,
+  pub average_loudness: f64,
   pub barkbands_kurtosis: VecReal,
   pub barkbands_skewness: VecReal,
   pub barkbands_spread: VecReal,
-  pub barkbands: VecReal,
+  pub barkbands: MatrixReal,
   pub dissonance: VecReal,
   pub hfc: VecReal,
   pub pitch: VecReal,
@@ -249,9 +320,9 @@ pub struct LowlevelFeatures {
   pub spectral_spread: VecReal,
   pub spectral_strongpeak: VecReal,
   pub zerocrossingrate: VecReal,
-  pub mfcc: VecReal,
-  pub sccoeffs: VecReal,
-  pub scvalleys: VecReal,
+  pub mfcc: MatrixReal,
+  pub sccoeffs: MatrixReal,
+  pub scvalleys: MatrixReal,
 }
 
 impl fmt::Display for LowlevelFeatures {
@@ -332,21 +403,21 @@ scvalleys: {}",
 
 #[derive(Debug)]
 pub struct RhythmFeatures {
-  pub bpm: f32,
-  pub confidence: f32,
-  pub onset_rate: f32,
+  pub bpm: f64,
+  pub confidence: f64,
+  pub onset_rate: f64,
   pub beats_loudness: VecReal,
-  pub first_peak_bpm: f32,
-  pub first_peak_spread: f32,
-  pub first_peak_weight: f32,
-  pub second_peak_bpm: f32,
-  pub second_peak_spread: f32,
-  pub second_peak_weight: f32,
+  pub first_peak_bpm: f64,
+  pub first_peak_spread: f64,
+  pub first_peak_weight: f64,
+  pub second_peak_bpm: f64,
+  pub second_peak_spread: f64,
+  pub second_peak_weight: f64,
   pub beats_position: VecReal,
   pub bpm_estimates: VecReal,
   pub bpm_intervals: VecReal,
   pub onset_times: VecReal,
-  pub beats_loudness_band_ratio: VecReal,
+  pub beats_loudness_band_ratio: MatrixReal,
   pub histogram: VecReal,
 }
 
@@ -392,13 +463,13 @@ histogram: {}",
 
 #[derive(Debug)]
 pub struct SfxFeatures {
-  pub pitch_after_max_to_before_max_energy_ratio: f32,
-  pub pitch_centroid: f32,
-  pub pitch_max_to_total: f32,
-  pub pitch_min_to_total: f32,
+  pub pitch_after_max_to_before_max_energy_ratio: f64,
+  pub pitch_centroid: f64,
+  pub pitch_max_to_total: f64,
+  pub pitch_min_to_total: f64,
   pub inharmonicity: VecReal,
   pub oddtoevenharmonicenergyratio: VecReal,
-  pub tristimulus: VecReal,
+  pub tristimulus: MatrixReal,
 }
 
 impl fmt::Display for SfxFeatures {
@@ -424,29 +495,29 @@ tristimulus: {}",
 }
 #[derive(Debug)]
 pub struct TonalFeatures {
-  pub chords_change_rate: f32,
-  pub chords_number_rate: f32,
-  pub key_strength: f32,
-  pub tuning_diatonic_strength: f32,
-  pub tuning_equal_tempered_deviation: f32,
-  pub tuning_frequency: f32,
-  pub tuning_nontempered_tuning_ratio: f32,
+  pub chords_changes_rate: f64,
+  pub chords_number_rate: f64,
+  pub key_strength: f64,
+  pub tuning_diatonic_strength: f64,
+  pub tuning_equal_tempered_deviation: f64,
+  pub tuning_frequency: f64,
+  pub tuning_nontempered_energy_ratio: f64,
   pub chords_strength: VecReal,
   pub chords_histogram: VecReal,
   pub thpcp: VecReal,
-  pub hpcp: VecReal,
+  pub hpcp: MatrixReal,
   pub chords_key: String,
   pub chords_scale: String,
   pub key_key: String,
   pub key_scale: String,
-  pub chord_progression: VecText,
+  pub chords_progression: VecText,
 }
 
 #[derive(Debug)]
 pub struct Spectrograms {
-  pub mel_spec: VecReal,
-  pub log_spec: VecReal,
-  pub freq_spec: VecReal,
+  pub mel_spec: MatrixReal,
+  pub log_spec: MatrixReal,
+  pub freq_spec: MatrixReal,
 }
 
 impl fmt::Display for Spectrograms {

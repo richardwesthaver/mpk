@@ -2,6 +2,8 @@ from .lib import (
     Config,
     Mdb,
     vectorize,
+    matrixize,
+    audio_data,
     track_tags,
     musicbrainz_tags,
     lowlevel_features,

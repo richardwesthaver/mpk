@@ -56,8 +56,8 @@ class Mdb:
     def exec_batch(self, sql):
         return lib.mdb_exec_batch(self.db, sql.encode())
 
-    def insert_track(self, track):
-        return lib.mdb_insert_track(self.db, track.encode())
+    def insert_track(self, data):
+        return lib.mdb_insert_track(self.db, data)
 
     def insert_track_tags(self, id, tags, ptr=True):
         print("inserting tags:", tags, "for track_id:", id)
@@ -68,27 +68,27 @@ class Mdb:
         return lib.mdb_insert_track_tags_musicbrainz(self.db, id, tags)
 
     def insert_track_featues_lowlevel(self, id, features, ptr=True):
-        print("inserting lowlevel_features for track_id:", id)
+        print("inserting lowlevel_features:", features, "for track_id:", id)
         return lib.mdb_insert_track_features_lowlevel(self.db, id, features)
 
     def insert_track_features_rhythm(self, id, features, ptr=True):
-        print("inserting rhythm_features for track_id:", id)
+        print("inserting rhythm_features:", features, "for track_id:", id)
         return lib.mdb_insert_track_features_rhythm(self.db, id, features)
 
     def insert_track_features_sfx(self, id, features, ptr=True):
-        print("inserting sfx_features for track_id:", id)
+        print("inserting sfx_features:", features, "for track_id:", id)
         return lib.mdb_insert_track_features_sfx(self.db, id, features)
 
     def insert_track_features_tonal(self, id, features, ptr=True):
-        print("inserting tonal_features for track_id:", id)
+        print("inserting tonal_features:", features, "for track_id:", id)
         return lib.mdb_insert_track_features_tonal(self.db, id, features)
 
     def insert_track_images(self, id, images, ptr=True):
-        print("inserting spectrograms for track_id:", id)
+        print("inserting spectrograms:", images, "for track_id:", id)
         return lib.mdb_insert_track_images(self.db, id, images)
 
-    def insert_sample(self, sample):
-        return lib.mdb_insert_sample(self.db, sample.encode())
+    def insert_sample(self, data):
+        return lib.mdb_insert_sample(self.db, data)
 
     def insert_sample_featues_lowlevel(self, id, features, ptr=True):
         print("inserting lowlevel_features for sample_id:", id)
@@ -113,10 +113,18 @@ class Mdb:
 
 def vectorize(arr):
     if type(arr) is list:
-        arr = np.float32(arr)
+      arr = np.float32(arr)
     buf = ffi.from_buffer("float[]", arr)
     return lib.mdb_vecreal_new(ffi.cast("const float *", buf), len(buf))
 
+def matrixize(mtx):
+  if type(mtx) is list:
+    mtx = np.float32(mtx).flatten()  
+  buf = ffi.from_buffer("float[]", mtx)
+  return lib.mdb_matrixreal_new(ffi.cast("const float *", buf), len(buf))
+
+def audio_data(path, filesize, duration, channels, bitrate, samplerate):
+  return lib.mdb_audio_data_new(path.encode(), filesize, duration, channels, bitrate, samplerate)
 
 def track_tags(tags):
     tags[0:4] = [x.encode() for x in tags[0:4]]
@@ -130,7 +138,12 @@ def musicbrainz_tags(tags):
 
 
 def lowlevel_features(features):
-    features[1:] = [vectorize(x) for x in features[1:]]
+    features[1:4] = [vectorize(x) for x in features[1:4]]
+    features[5] = matrixize(features[5])
+    features[6:32] = [vectorize(x) for x in features[6:32]]
+    features[33] = matrixize(features[33])
+    features[35] = matrixize(features[35])
+    features[37] = matrixize(features[37])
     return lib.mdb_lowlevel_features_new(*features)
 
 
@@ -138,21 +151,29 @@ def rhythm_features(features):
     #    features[:3] = [x[0] for x in features[:3] if isinstance(x, (list, np.ndarray))]
     features[3] = vectorize(features[3])
     features[4:10] = [x[0] for x in features[4:10] if isinstance(x, (list, np.ndarray))]
-    features[10:] = [vectorize(x) for x in features[10:]]
+    features[10:14] = [vectorize(x) for x in features[10:14]]
+    features[15] = matrixize(features[15])
+    features[16] = vectorize(features[16])
     return lib.mdb_rhythm_features_new(*features)
 
 
 def sfx_features(features):
-    features[4:] = [vectorize(x) for x in features[4:]]
+    features[4:6] = [vectorize(x) for x in features[4:6]]
+    features[6] = matrixize(features[6])
     return lib.mdb_sfx_features_new(*features)
 
 
 def tonal_features(features):
-    features[7:11] = [vectorize(x) for x in features[7:11]]
-    features[11:16] = [x[0].encode() for x in features[11:16]]
+    features[7:10] = [vectorize(x) for x in features[7:10]]
+    features[11] = matrixize(features[11])
+    features[12:16] = [x.encode() for x in features[12:16]]
+    features[16] = '|'.join(features[16]).encode()
     return lib.mdb_tonal_features_new(*features)
 
 
 def spectrograms(specs):
-    specs = [vectorize(x) for x in specs]
+    specs[1] = vectorize(specs[1])
+    specs[3] = vectorize(specs[3])
+    specs[5] = vectorize(specs[5])
+    print(specs)
     return lib.mdb_spectrograms_new(*specs)

@@ -10,6 +10,7 @@ const
   v {.booldefine.} = false # verbose
   p {.strdefine.}: string = "" # package
   m {.strdefine.}: string = ""
+  dev {.booldefine.} = false
   ffi {.booldefine.} = false
   all {.booldefine.} = false
   MPK_BIN = "src/mpk"
@@ -113,6 +114,8 @@ task build, "build MPK":
   if fileExists(mpk_py):
     mvFile(mpk_py, build_dir / mpk_py)
     exec "cd " & build_dir & " && " & "python3 " & mpk_py
+  when defined(dev):
+    exec "cp build/_mpk* build/libmpk_ffi* src/mpk_py/mpk/"
 
 task run, "run MPK binary":
   var args: seq[string]

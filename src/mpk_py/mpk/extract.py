@@ -1,6 +1,6 @@
 import essentia
 import essentia.standard as es
-from librosa import load, to_mono
+import librosa as lr
 import numpy as np
 import os
 import fnmatch
@@ -53,19 +53,17 @@ def pool_to_dict(pool, include_descs=None, ignore_descs=None):
     return result
 
 
-def bulk_extract(files, sr=44100, mono=False, track=True):
+def bulk_extract(files, sr=44100, mono=False):
     result = {}
     for f in files:
         try:
             with Extract(f, sr, mono) as extractor:
                 print("extracting:", f)
-                if track:
-                  extractor.metadata()
+                extractor.metadata()
                 extractor.features()
                 extractor.mel_spec()
                 extractor.freq_spec()
                 extractor.log_spec()
-                extractor.inverse_spec()
                 result.update({f: pool_to_dict(extractor.pool)})
         except Exception as e:
             print(str(e))
@@ -75,13 +73,16 @@ def bulk_extract(files, sr=44100, mono=False, track=True):
 class AudioFile(object):
     def __init__(self, file, sr=44100, mono=False):
         path = os.path.expanduser(file)
-        audio, sr = load(path, sr=sr, mono=mono)
-        self.path = os.path.expanduser(path)
+        audio, sr = lr.load(path, sr=sr, mono=mono)
+        self.path = os.path.realpath(path)
+        self.filesize = os.path.getsize(file)
+        self.duration = lr.get_duration(y=audio, sr=sr)
+        self.original_sr = lr.get_samplerate(file)
         self.sr = sr
         self.audio = audio
 
     def mono(self):
-        return to_mono(self.audio)
+        return lr.to_mono(self.audio)
 
 
 class Extract(AudioFile):
@@ -99,7 +100,14 @@ class Extract(AudioFile):
             print(f"exc_traceback: {exc_traceback}")
 
     def metadata(self):
-        self.pool.merge(es.MetadataReader(filename=self.path)()[7])
+        metadata = es.MetadataReader(filename=self.path)()
+        self.pool.merge(metadata[7])
+        self.pool.add("metadata.tags.filesize", self.filesize)
+        self.pool.add("metadata.tags.duration", metadata[8])
+        self.pool.add("metadata.tags.bitrate", metadata[9])
+        self.pool.add("metadata.tags.samplerate", metadata[10])
+        self.pool.add("metadata.tags.channels", metadata[11])
+        self.pool.add("metadata.tags.path", self.path)
         print("added metadata to pool.")
 
     def features(self):
@@ -107,81 +115,38 @@ class Extract(AudioFile):
         self.pool.merge(extractor(self.mono()))
         print("added features to pool.")
 
-    def freq_spec(self):
-        windowing = es.Windowing(type="hann")
-        spectrum = es.Spectrum()
-        amp2db = es.UnaryOperator(type="lin2db", scale=2)
-        for frame in es.FrameGenerator(self.mono(), frameSize=2048, hopSize=1024):
-            frame_spec = spectrum(windowing(frame))
-            self.pool.add("freq_spec", amp2db(frame_spec))
-        print("added freq_spec to pool.")
-
-    def mel_spec(self):
-        windowing = es.Windowing(type="hann")
+    def mel_spec(self, bands=96, lfbound=0, hfbound=11000, window='hann', framesize=2048, hopsize=1024):
+        windowing = es.Windowing(type=window)
         spectrum = es.Spectrum()
         melbands = es.MelBands(
-            numberBands=96, lowFrequencyBound=0, highFrequencyBound=11000
+            numberBands=bands, lowFrequencyBound=lfbound, highFrequencyBound=hfbound
         )
         amp2db = es.UnaryOperator(type="lin2db", scale=2)
-        for frame in es.FrameGenerator(self.mono(), frameSize=2048, hopSize=1024):
+        for frame in es.FrameGenerator(self.mono(), frameSize=framesize, hopSize=hopsize):
             frame_spec = spectrum(windowing(frame))
             frame_mel = melbands(frame_spec)
             self.pool.add("mel_spec", amp2db(frame_mel))
         print("added mel_spec to pool.")
 
-    def log_spec(self):
-        windowing = es.Windowing(type="hann")
+    def log_spec(self, window='hann', framesize=2048, hopsize=1024):
+        windowing = es.Windowing(type=window)
         spectrum = es.Spectrum()
         logfreq = es.LogSpectrum(binsPerSemitone=1)
         amp2db = es.UnaryOperator(type="lin2db", scale=2)
-        for frame in es.FrameGenerator(self.mono(), frameSize=2048, hopSize=1024):
+        for frame in es.FrameGenerator(self.mono(), frameSize=framesize, hopSize=hopsize):
             frame_spec = spectrum(windowing(frame))
             frame_logfreq, _, _ = logfreq(frame_spec)
             self.pool.add("log_spec", amp2db(frame_logfreq))
         print("added log_spec to pool.")
 
-    def inverse_spec(self):
-        frameSize = 1024
-        hopSize = 512
-        fs = 44100
-        w = es.Windowing(type="hamming", normalized=False)
-        # make sure these are same for MFCC and IDCT computation
-        NUM_BANDS = 26
-        DCT_TYPE = 2
-        LIFTERING = 0
-        NUM_MFCCs = 13
+    def freq_spec(self, window='hann', framesize=2048, hopsize=1024):
+        windowing = es.Windowing(type=window)
         spectrum = es.Spectrum()
-        mfcc = es.MFCC(
-            numberBands=NUM_BANDS,
-            numberCoefficients=NUM_MFCCs,  # make sure you specify first N mfcc: the less, the more lossy (blurry) the smoothed mel spectrum will be
-            weighting="linear",  # computation of filter weights done in Hz domain (optional)
-            normalize="unit_max",  #  htk filter normaliation to have constant height = 1 (optional)
-            dctType=DCT_TYPE,
-            logType="log",
-            liftering=LIFTERING,
-        )  # corresponds to htk default CEPLIFTER = 22
-        idct = es.IDCT(
-            inputSize=NUM_MFCCs,
-            outputSize=NUM_BANDS,
-            dctType=DCT_TYPE,
-            liftering=LIFTERING,
-        )
-        all_melbands_smoothed = []
-        for frame in es.FrameGenerator(
-            self.mono(), frameSize=frameSize, hopSize=hopSize
-        ):
-            spect = spectrum(w(frame))
-            melbands, mfcc_coeffs = mfcc(spect)
-            melbands_smoothed = np.exp(
-                idct(mfcc_coeffs)
-            )  # inverse the log taken in MFCC computation
-            all_melbands_smoothed.append(melbands_smoothed)
-        # transpose to have it in a better shape
-        # we need to convert the list to an essentia.array first (== numpy.array of floats)
-        # mfccs = essentia.array(pool['MFCC']).T
-
-        self.pool.add("inverse_spec", essentia.array(all_melbands_smoothed).T)
-        print("added inverse_spec to pool.")
+        amp2db = es.UnaryOperator(type="lin2db", scale=2)
+        for frame in es.FrameGenerator(self.mono(), frameSize=framesize, hopSize=hopsize):
+            frame_spec = spectrum(windowing(frame))
+            self.pool.add("freq_spec", amp2db(frame_spec))
+        print("added freq_spec to pool.")
 
     def rhythm(self):
         rhythm_extractor = es.RhythmExtractor2013(method="multifeature")
@@ -192,21 +157,21 @@ class Extract(AudioFile):
         self.pool.add("bpm_intervals", intervals)
         print("added rhythm descriptors to pool.")
 
-    def loudness(self):
-        windowing = es.Windowing(type="blackmanharris62", zeroPadding=2048)
+    def loudness(self, window='blackmanharris62', padding=2048, framesize=2048, hopsize=1024):
+        windowing = es.Windowing(type=window, zeroPadding=padding)
         spectrum = es.Spectrum()
         rms = es.RMS()
         hfc = es.HFC()
-        for frame in es.FrameGenerator(self.mono(), frameSize=2048, hopSize=1024):
+        for frame in es.FrameGenerator(self.mono(), frameSize=framesize, hopSize=hopsize):
             frame_spectrum = spectrum(windowing(frame))
             self.pool.add("rms", rms(frame))
             self.pool.add("rms_spectrum", rms(frame_spectrum))
             self.pool.add("hfc", hfc(frame_spectrum))
         print("added loudness descriptors to pool.")
 
-    def write_json(self, out_file, format="json"):
+    def write_json(self, out_file):
         print("writing to file: ", out_file)
-        es.YamlOutput(filename=out_file, format=format, writeVersion=False)(self.pool)
+        es.YamlOutput(filename=out_file, format='json', writeVersion=False)(self.pool)
 
     def descriptors(self):
         return self.pool.descriptorNames()

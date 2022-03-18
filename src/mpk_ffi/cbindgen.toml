@@ -5,4 +5,4 @@ language = "C"
 cpp_compat = true
 [parse]
 parse_deps = true
-include = ["mpk_db", "mpk_id3", "mpk_config", "mpk_sesh", "mpk_jack", "mpk_dsp", "mpk_midi", "mpk_gear", "mpk_flate"]
+include = ["mpk_db", "mpk_config", "mpk_sesh", "mpk_jack", "mpk_midi", "mpk_gear", "mpk_flate"]

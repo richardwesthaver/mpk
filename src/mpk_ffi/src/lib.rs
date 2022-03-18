@@ -2,7 +2,7 @@ use libc::{c_char, c_int, size_t};
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 use mpk_db::{
   LowlevelFeatures, Mdb, MusicbrainzTags, RhythmFeatures, SfxFeatures, Spectrograms,
-  TonalFeatures, TrackTags, Uuid, VecReal, VecText,
+  TonalFeatures, TrackTags, Uuid, VecReal, MatrixReal, VecText, AudioData
 };
 use std::ffi::{CStr, CString, OsStr};
 use std::os::unix::ffi::OsStrExt;
@@ -15,20 +15,6 @@ pub struct CVecReal {
   pub ptr: *const f32,
   pub len: size_t,
 }
-
-// impl std::ops::Deref for CVecReal {
-//     type Target = [f32];
-
-//     fn deref(&self) -> &[f32] {
-//         unsafe { slice::from_raw_parts(self.ptr, self.len) }
-//     }
-// }
-
-// impl Drop for CVecReal {
-//     fn drop(&mut self) {
-//       unsafe { Box::from_raw(&mut self.ptr) };
-//     }
-// }
 
 impl From<VecReal> for CVecReal {
   fn from(v: VecReal) -> Self {
@@ -45,11 +31,27 @@ impl From<CVecReal> for VecReal {
   }
 }
 
+#[repr(C)]
+#[derive(Clone)]
+pub struct CMatrixReal {
+  pub ptr: *const f32,
+  pub len: size_t,
+}
+
+impl From<CMatrixReal> for VecReal {
+  fn from(m: CMatrixReal) -> Self {
+    VecReal(unsafe { slice::from_raw_parts(m.ptr, m.len) }.to_vec())
+  }
+}
+
 #[no_mangle]
 pub extern "C" fn mdb_vecreal_new(ptr: *const f32, len: size_t) -> CVecReal {
   CVecReal { ptr, len }
-  //  let box_vec = Box::new(vec);
-  //  Box::into_raw(box_vec)
+}
+
+#[no_mangle]
+pub extern "C" fn mdb_matrixreal_new(ptr: *const f32, len: size_t) -> CMatrixReal {
+  CMatrixReal { ptr, len }
 }
 
 #[no_mangle]
@@ -202,6 +204,36 @@ pub extern "C" fn mpk_jack_config_free(ptr: *mut JackConfig) {
 }
 
 #[no_mangle]
+pub extern "C" fn mdb_audio_data_new(
+  path: *const c_char,
+  filesize: usize,
+  duration: f64,
+  channels: u8,
+  bitrate: u32,
+  samplerate: u32) -> *mut AudioData {
+  let data = AudioData {
+    path: unsafe { CStr::from_ptr(path).to_str().unwrap().to_string() },
+    filesize: Some(filesize),
+    duration: Some(duration),
+    channels: Some(channels),
+    bitrate: Some(bitrate),
+    samplerate: Some(samplerate),
+  };
+  let box_data = Box::new(data);
+  Box::into_raw(box_data)
+}
+
+#[no_mangle]
+pub extern "C" fn mdb_audio_data_free(ptr: *mut AudioData) {
+  if ptr.is_null() {
+    return;
+  }
+  unsafe {
+    Box::from_raw(ptr);
+  }
+}
+
+#[no_mangle]
 pub extern "C" fn mdb_track_tags_new(
   artist: *const c_char,
   title: *const c_char,
@@ -305,11 +337,12 @@ pub extern "C" fn mdb_musicbrainz_tags_free(ptr: *mut MusicbrainzTags) {
 
 #[no_mangle]
 pub extern "C" fn mdb_lowlevel_features_new(
-  average_loudness: f32,
+  average_loudness: f64,
   barkbands_kurtosis: CVecReal,
   barkbands_skewness: CVecReal,
   barkbands_spread: CVecReal,
-  barkbands: CVecReal,
+  barkbands_frame_size: usize,
+  barkbands: CMatrixReal,
   dissonance: CVecReal,
   hfc: CVecReal,
   pitch: CVecReal,
@@ -336,16 +369,19 @@ pub extern "C" fn mdb_lowlevel_features_new(
   spectral_spread: CVecReal,
   spectral_strongpeak: CVecReal,
   zerocrossingrate: CVecReal,
-  mfcc: CVecReal,
-  sccoeffs: CVecReal,
-  scvalleys: CVecReal,
+  mfcc_frame_size: usize,
+  mfcc: CMatrixReal,
+  sccoeffs_frame_size: usize,
+  sccoeffs: CMatrixReal,
+  scvalleys_frame_size: usize,
+  scvalleys: CMatrixReal,
 ) -> *mut LowlevelFeatures {
   let features = LowlevelFeatures {
     average_loudness,
     barkbands_kurtosis: VecReal::from(barkbands_kurtosis),
     barkbands_skewness: VecReal::from(barkbands_skewness),
     barkbands_spread: VecReal::from(barkbands_spread),
-    barkbands: VecReal::from(barkbands),
+    barkbands: MatrixReal::new(barkbands.into(), barkbands_frame_size),
     dissonance: VecReal::from(dissonance),
     hfc: VecReal::from(hfc),
     pitch: VecReal::from(pitch),
@@ -372,9 +408,9 @@ pub extern "C" fn mdb_lowlevel_features_new(
     spectral_spread: VecReal::from(spectral_spread),
     spectral_strongpeak: VecReal::from(spectral_strongpeak),
     zerocrossingrate: VecReal::from(zerocrossingrate),
-    mfcc: VecReal::from(mfcc),
-    sccoeffs: VecReal::from(sccoeffs),
-    scvalleys: VecReal::from(scvalleys),
+    mfcc: MatrixReal::new(mfcc.into(), mfcc_frame_size),
+    sccoeffs: MatrixReal::new(sccoeffs.into(), sccoeffs_frame_size),
+    scvalleys: MatrixReal::new(scvalleys.into(), scvalleys_frame_size),
   };
   let features_box = Box::new(features);
   Box::into_raw(features_box)
@@ -392,21 +428,22 @@ pub extern "C" fn mdb_lowlevel_features_free(ptr: *mut LowlevelFeatures) {
 
 #[no_mangle]
 pub extern "C" fn mdb_rhythm_features_new(
-  bpm: f32,
-  confidence: f32,
-  onset_rate: f32,
+  bpm: f64,
+  confidence: f64,
+  onset_rate: f64,
   beats_loudness: CVecReal,
-  first_peak_bpm: f32,
-  first_peak_spread: f32,
-  first_peak_weight: f32,
-  second_peak_bpm: f32,
-  second_peak_spread: f32,
-  second_peak_weight: f32,
+  first_peak_bpm: f64,
+  first_peak_spread: f64,
+  first_peak_weight: f64,
+  second_peak_bpm: f64,
+  second_peak_spread: f64,
+  second_peak_weight: f64,
   beats_position: CVecReal,
   bpm_estimates: CVecReal,
   bpm_intervals: CVecReal,
   onset_times: CVecReal,
-  beats_loudness_band_ratio: CVecReal,
+  beats_loudness_band_ratio_frame_size: usize,
+  beats_loudness_band_ratio: CMatrixReal,
   histogram: CVecReal,
 ) -> *mut RhythmFeatures {
   let features = RhythmFeatures {
@@ -424,7 +461,7 @@ pub extern "C" fn mdb_rhythm_features_new(
     bpm_estimates: VecReal::from(bpm_estimates),
     bpm_intervals: VecReal::from(bpm_intervals),
     onset_times: VecReal::from(onset_times),
-    beats_loudness_band_ratio: VecReal::from(beats_loudness_band_ratio),
+    beats_loudness_band_ratio: MatrixReal::new(beats_loudness_band_ratio.into(), beats_loudness_band_ratio_frame_size),
     histogram: VecReal::from(histogram),
   };
   let features_box = Box::new(features);
@@ -443,13 +480,13 @@ pub extern "C" fn mdb_rhythm_features_free(ptr: *mut RhythmFeatures) {
 
 #[no_mangle]
 pub extern "C" fn mdb_sfx_features_new(
-  pitch_after_max_to_before_max_energy_ratio: f32,
-  pitch_centroid: f32,
-  pitch_max_to_total: f32,
-  pitch_min_to_total: f32,
+  pitch_after_max_to_before_max_energy_ratio: f64,
+  pitch_centroid: f64,
+  pitch_max_to_total: f64,
+  pitch_min_to_total: f64,
   inharmonicity: CVecReal,
   oddtoevenharmonicenergyratio: CVecReal,
-  tristimulus: CVecReal,
+  tristimulus: CMatrixReal,
 ) -> *mut SfxFeatures {
   let features = SfxFeatures {
     pitch_after_max_to_before_max_energy_ratio,
@@ -458,7 +495,7 @@ pub extern "C" fn mdb_sfx_features_new(
     pitch_min_to_total,
     inharmonicity: VecReal::from(inharmonicity),
     oddtoevenharmonicenergyratio: VecReal::from(oddtoevenharmonicenergyratio),
-    tristimulus: VecReal::from(tristimulus),
+    tristimulus: MatrixReal::new(tristimulus.into(), 3),
   };
   let features_box = Box::new(features);
   Box::into_raw(features_box)
@@ -476,41 +513,42 @@ pub extern "C" fn mdb_sfx_features_free(ptr: *mut SfxFeatures) {
 
 #[no_mangle]
 pub extern "C" fn mdb_tonal_features_new(
-  chords_change_rate: f32,
-  chords_number_rate: f32,
-  key_strength: f32,
-  tuning_diatonic_strength: f32,
-  tuning_equal_tempered_deviation: f32,
-  tuning_frequency: f32,
-  tuning_nontempered_tuning_ratio: f32,
+  chords_changes_rate: f64,
+  chords_number_rate: f64,
+  key_strength: f64,
+  tuning_diatonic_strength: f64,
+  tuning_equal_tempered_deviation: f64,
+  tuning_frequency: f64,
+  tuning_nontempered_energy_ratio: f64,
   chords_strength: CVecReal,
   chords_histogram: CVecReal,
   thpcp: CVecReal,
-  hpcp: CVecReal,
+  hpcp_frame_size: usize,
+  hpcp: CMatrixReal,
   chords_key: *const c_char,
   chords_scale: *const c_char,
   key_key: *const c_char,
   key_scale: *const c_char,
-  chord_progression: *const c_char,
+  chords_progression: *const c_char,
 ) -> *mut TonalFeatures {
   let features = TonalFeatures {
-    chords_change_rate,
+    chords_changes_rate,
     chords_number_rate,
     key_strength,
     tuning_diatonic_strength,
     tuning_equal_tempered_deviation,
     tuning_frequency,
-    tuning_nontempered_tuning_ratio,
+    tuning_nontempered_energy_ratio,
     chords_strength: VecReal::from(chords_strength),
     chords_histogram: VecReal::from(chords_histogram),
     thpcp: VecReal::from(thpcp),
-    hpcp: VecReal::from(hpcp),
+    hpcp: MatrixReal::new(hpcp.into(), hpcp_frame_size),
     chords_key: unsafe { CStr::from_ptr(chords_key).to_str().unwrap() }.to_string(),
     chords_scale: unsafe { CStr::from_ptr(chords_scale).to_str().unwrap() }.to_string(),
     key_key: unsafe { CStr::from_ptr(key_key).to_str().unwrap() }.to_string(),
     key_scale: unsafe { CStr::from_ptr(key_scale).to_str().unwrap() }.to_string(),
-    chord_progression: VecText(
-      unsafe { CStr::from_ptr(chord_progression).to_str().unwrap() }
+    chords_progression: VecText(
+      unsafe { CStr::from_ptr(chords_progression).to_str().unwrap() }
         .split("|")
         .collect::<Vec<_>>()
         .iter()
@@ -534,14 +572,20 @@ pub extern "C" fn mdb_tonal_features_free(ptr: *mut TonalFeatures) {
 
 #[no_mangle]
 pub extern "C" fn mdb_spectrograms_new(
+  mel_frame_size: usize,
   mel_spec: CVecReal,
+  log_frame_size: usize,
   log_spec: CVecReal,
+  freq_frame_size: usize,
   freq_spec: CVecReal,
 ) -> *mut Spectrograms {
+  let mel_spec = MatrixReal::new(VecReal::from(mel_spec), mel_frame_size);
+  let log_spec = MatrixReal::new(VecReal::from(log_spec), log_frame_size);
+  let freq_spec = MatrixReal::new(VecReal::from(freq_spec), freq_frame_size);
   let specs = Spectrograms {
-    mel_spec: VecReal::from(mel_spec),
-    log_spec: VecReal::from(log_spec),
-    freq_spec: VecReal::from(freq_spec),
+    mel_spec,
+    log_spec,
+    freq_spec,
   };
   let specs_box = Box::new(specs);
   Box::into_raw(specs_box)
@@ -588,16 +632,10 @@ pub unsafe extern "C" fn mdb_init(db: *const Mdb) {
 }
 
 #[no_mangle]
-pub extern "C" fn mdb_insert_track(db: *const Mdb, path: *const c_char) -> i64 {
-  let c_str = unsafe {
-    assert!(!path.is_null());
-
-    CStr::from_ptr(path)
-  };
-  let str = c_str.to_str().unwrap();
+pub extern "C" fn mdb_insert_track(db: *const Mdb, data: *const AudioData) -> i64 {
+  let data = unsafe{&*data};
   let mdb = unsafe { &*db };
-
-  mdb.insert_track(&str).unwrap()
+  mdb.insert_track(data).unwrap()
 }
 
 #[no_mangle]
@@ -608,7 +646,7 @@ pub extern "C" fn mdb_insert_track_tags(
 ) {
   let tags = unsafe { &*tags };
   let mdb = unsafe { &*db };
-  mdb.insert_track_tags(id, &tags).unwrap();
+  mdb.insert_track_tags(id, tags).unwrap();
 }
 
 #[no_mangle]
@@ -619,7 +657,7 @@ pub extern "C" fn mdb_insert_track_tags_musicbrainz(
 ) {
   let tags = unsafe { &*tags };
   let mdb = unsafe { &*db };
-  mdb.insert_track_tags_musicbrainz(id, &tags).unwrap();
+  mdb.insert_track_tags_musicbrainz(id, tags).unwrap();
 }
 
 #[no_mangle]
@@ -630,7 +668,7 @@ pub extern "C" fn mdb_insert_track_features_lowlevel(
 ) {
   let features = unsafe { &*features };
   let mdb = unsafe { &*db };
-  mdb.insert_track_features_lowlevel(id, &features).unwrap();
+  mdb.insert_track_features_lowlevel(id, features).unwrap();
 }
 
 #[no_mangle]
@@ -641,7 +679,7 @@ pub extern "C" fn mdb_insert_track_features_rhythm(
 ) {
   let features = unsafe { &*features };
   let mdb = unsafe { &*db };
-  mdb.insert_track_features_rhythm(id, &features).unwrap();
+  mdb.insert_track_features_rhythm(id, features).unwrap();
 }
 
 #[no_mangle]
@@ -652,7 +690,7 @@ pub extern "C" fn mdb_insert_track_features_sfx(
 ) {
   let features = unsafe { &*features };
   let mdb = unsafe { &*db };
-  mdb.insert_track_features_sfx(id, &features).unwrap();
+  mdb.insert_track_features_sfx(id, features).unwrap();
 }
 
 #[no_mangle]
@@ -663,7 +701,7 @@ pub extern "C" fn mdb_insert_track_features_tonal(
 ) {
   let features = unsafe { &*features };
   let mdb = unsafe { &*db };
-  mdb.insert_track_features_tonal(id, &features).unwrap();
+  mdb.insert_track_features_tonal(id, features).unwrap();
 }
 
 #[no_mangle]
@@ -674,20 +712,14 @@ pub extern "C" fn mdb_insert_track_images(
 ) {
   let images = unsafe { &*images };
   let mdb = unsafe { &*db };
-  mdb.insert_track_images(id, &images).unwrap();
+  mdb.insert_track_images(id, images).unwrap();
 }
 
 #[no_mangle]
-pub extern "C" fn mdb_insert_sample(db: *const Mdb, path: *const c_char) -> i64 {
-  let c_str = unsafe {
-    assert!(!path.is_null());
-
-    CStr::from_ptr(path)
-  };
-  let str = c_str.to_str().unwrap();
-  let mdb = unsafe { &*db };
-
-  mdb.insert_sample(&str).unwrap()
+pub extern "C" fn mdb_insert_sample(db: *const Mdb, data: *const AudioData) -> i64 {
+  let data = unsafe{&*data};
+  let mdb = unsafe{&*db};
+  mdb.insert_sample(&data).unwrap()
 }
 
 #[no_mangle]
@@ -698,7 +730,7 @@ pub extern "C" fn mdb_insert_sample_features_lowlevel(
 ) {
   let features = unsafe { &*features };
   let mdb = unsafe { &*db };
-  mdb.insert_sample_features_lowlevel(id, &features).unwrap();
+  mdb.insert_sample_features_lowlevel(id, features).unwrap();
 }
 
 #[no_mangle]
@@ -709,7 +741,7 @@ pub extern "C" fn mdb_insert_sample_features_rhythm(
 ) {
   let features = unsafe { &*features };
   let mdb = unsafe { &*db };
-  mdb.insert_sample_features_rhythm(id, &features).unwrap();
+  mdb.insert_sample_features_rhythm(id, features).unwrap();
 }
 
 #[no_mangle]
@@ -720,7 +752,7 @@ pub extern "C" fn mdb_insert_sample_features_sfx(
 ) {
   let features = unsafe { &*features };
   let mdb = unsafe { &*db };
-  mdb.insert_sample_features_sfx(id, &features).unwrap();
+  mdb.insert_sample_features_sfx(id, features).unwrap();
 }
 
 #[no_mangle]
@@ -731,7 +763,7 @@ pub extern "C" fn mdb_insert_sample_features_tonal(
 ) {
   let features = unsafe { &*features };
   let mdb = unsafe { &*db };
-  mdb.insert_sample_features_tonal(id, &features).unwrap();
+  mdb.insert_sample_features_tonal(id, features).unwrap();
 }
 
 #[no_mangle]
@@ -742,7 +774,7 @@ pub extern "C" fn mdb_insert_sample_images(
 ) {
   let images = unsafe { &*images };
   let mdb = unsafe { &*db };
-  mdb.insert_sample_images(id, &images).unwrap();
+  mdb.insert_sample_images(id, images).unwrap();
 }
 
 #[no_mangle]
