@@ -1,9 +1,12 @@
+//! MPK_MIDI
+//!
+//! MIDI functions and types for MPK.
 use midir::{Ignore, MidiInput, MidiOutput};
 
 mod err;
 pub use err::{Error, Result};
 
-/// detect available midi devices and print a summary
+/// Detect available midi devices and print a summary.
 pub fn list_midi_ports() -> Result<()> {
   let mut midi_in = MidiInput::new("list_midi_input")?;
   midi_in.ignore(Ignore::None);

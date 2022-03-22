@@ -1,3 +1,5 @@
+//! MPK FFI
+//!
 use libc::{c_char, c_int, size_t};
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 use mpk_db::{
@@ -10,7 +12,6 @@ use std::path::Path;
 use std::slice;
 
 #[repr(C)]
-#[derive(Clone)]
 pub struct CVecReal {
   pub ptr: *const f32,
   pub len: size_t,
@@ -32,7 +33,6 @@ impl From<CVecReal> for VecReal {
 }
 
 #[repr(C)]
-#[derive(Clone)]
 pub struct CMatrixReal {
   pub ptr: *const f32,
   pub len: size_t,
@@ -572,16 +572,16 @@ pub extern "C" fn mdb_tonal_features_free(ptr: *mut TonalFeatures) {
 
 #[no_mangle]
 pub extern "C" fn mdb_spectrograms_new(
-  mel_frame_size: usize,
-  mel_spec: CVecReal,
-  log_frame_size: usize,
-  log_spec: CVecReal,
-  freq_frame_size: usize,
-  freq_spec: CVecReal,
+  mel_frame_size: size_t,
+  mel_spec: CMatrixReal,
+  log_frame_size: size_t,
+  log_spec: CMatrixReal,
+  freq_frame_size: size_t,
+  freq_spec: CMatrixReal,
 ) -> *mut Spectrograms {
-  let mel_spec = MatrixReal::new(VecReal::from(mel_spec), mel_frame_size);
-  let log_spec = MatrixReal::new(VecReal::from(log_spec), log_frame_size);
-  let freq_spec = MatrixReal::new(VecReal::from(freq_spec), freq_frame_size);
+  let mel_spec = MatrixReal::new(mel_spec.into(), mel_frame_size);
+  let log_spec = MatrixReal::new(log_spec.into(), log_frame_size);
+  let freq_spec = MatrixReal::new(freq_spec.into(), freq_frame_size);
   let specs = Spectrograms {
     mel_spec,
     log_spec,
@@ -726,9 +726,9 @@ pub extern "C" fn mdb_insert_sample(db: *const Mdb, data: *const AudioData) -> i
 pub extern "C" fn mdb_insert_sample_features_lowlevel(
   db: *const Mdb,
   id: i64,
-  features: *const LowlevelFeatures,
+  features: *mut LowlevelFeatures,
 ) {
-  let features = unsafe { &*features };
+  let features = unsafe { &mut *features };
   let mdb = unsafe { &*db };
   mdb.insert_sample_features_lowlevel(id, features).unwrap();
 }
@@ -737,9 +737,9 @@ pub extern "C" fn mdb_insert_sample_features_lowlevel(
 pub extern "C" fn mdb_insert_sample_features_rhythm(
   db: *const Mdb,
   id: i64,
-  features: *const RhythmFeatures,
+  features: *mut RhythmFeatures,
 ) {
-  let features = unsafe { &*features };
+  let features = unsafe { &mut *features };
   let mdb = unsafe { &*db };
   mdb.insert_sample_features_rhythm(id, features).unwrap();
 }
@@ -748,9 +748,9 @@ pub extern "C" fn mdb_insert_sample_features_rhythm(
 pub extern "C" fn mdb_insert_sample_features_sfx(
   db: *const Mdb,
   id: i64,
-  features: *const SfxFeatures,
+  features: *mut SfxFeatures,
 ) {
-  let features = unsafe { &*features };
+  let features = unsafe { &mut *features };
   let mdb = unsafe { &*db };
   mdb.insert_sample_features_sfx(id, features).unwrap();
 }
@@ -759,9 +759,9 @@ pub extern "C" fn mdb_insert_sample_features_sfx(
 pub extern "C" fn mdb_insert_sample_features_tonal(
   db: *const Mdb,
   id: i64,
-  features: *const TonalFeatures,
+  features: *mut TonalFeatures,
 ) {
-  let features = unsafe { &*features };
+  let features = unsafe { &mut *features };
   let mdb = unsafe { &*db };
   mdb.insert_sample_features_tonal(id, features).unwrap();
 }
@@ -770,9 +770,9 @@ pub extern "C" fn mdb_insert_sample_features_tonal(
 pub extern "C" fn mdb_insert_sample_images(
   db: *const Mdb,
   id: i64,
-  images: *const Spectrograms,
+  images: *mut Spectrograms,
 ) {
-  let images = unsafe { &*images };
+  let images = unsafe { &mut *images };
   let mdb = unsafe { &*db };
   mdb.insert_sample_images(id, images).unwrap();
 }

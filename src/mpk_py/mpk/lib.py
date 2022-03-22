@@ -113,7 +113,7 @@ class Mdb:
 
 def vectorize(arr):
     if type(arr) is list:
-      arr = np.float32(arr)
+      arr = np.float32(arr).flatten()
     buf = ffi.from_buffer("float[]", arr)
     return lib.mdb_vecreal_new(ffi.cast("const float *", buf), len(buf))
 
@@ -172,8 +172,7 @@ def tonal_features(features):
 
 
 def spectrograms(specs):
-    specs[1] = vectorize(specs[1])
-    specs[3] = vectorize(specs[3])
-    specs[5] = vectorize(specs[5])
-    print(specs)
+    specs[1] = matrixize(specs[1])
+    specs[3] = matrixize(specs[3])
+    specs[5] = matrixize(specs[5])
     return lib.mdb_spectrograms_new(*specs)

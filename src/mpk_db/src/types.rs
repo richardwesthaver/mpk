@@ -1,9 +1,36 @@
+//! MPK_DB TYPES
+//!
+//! SQLite accepts only TEXT, INTEGER, REAL, NULL, or BLOB where BLOB is a
+//! byte-array.  the rusqlite crate handles conversions for common
+//! types (String, usize, f64, [u8], Option<>) as well as a few custom types
+//! (UUID) via feature flags. The FromSql and ToSql traits allow
+//! querying/insertion with SQLite so our custom types to implement
+//! these traits as well or be converted to a more primitive type.
+//!
+//! The low-level types which we need to use with SQLite are VecReal
+//! and MatrixReal, which are 1D and 2D float-arrays respectively,
+//! stored as BLOBs. MatrixReals are actually VecReals but with some
+//! additional indexing information stored in the struct (frame_size
+//! AKA column count).
+//!
+//! The high-level types are AudioData, TrackTags, MusicbrainzTags,
+//! LowlevelFeatures, RhythmFeatures, SfxFeatures, TonalFeatures, and
+//! Spectrograms. AudioData and TrackTags are the simplest, containing
+//! only primitives. MusicbrainzTags is similar but includes Uuids
+//! which are stored in the DB as BLOBs. The remaining types contain
+//! our custom low-level types.
+//!
+//!  There are also some auxiliary types: DbValue, DbValues, QueryBy,
+//!  and QueryType. These are all used to simplify Interactions with
+//!  the DB.
 use crate::err::{Error, Result};
 use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, Value, ValueRef};
 use std::fmt;
 use std::str::FromStr;
+use std::ops::{Index, Range};
 pub use uuid::Uuid;
 
+/// Display wrapper for SQLite Value
 #[derive(Debug)]
 pub struct DbValue(pub Value);
 
@@ -19,6 +46,7 @@ impl fmt::Display for DbValue {
   }
 }
 
+/// Display wrapper for a Vec of SQLite Values
 #[derive(Debug)]
 pub struct DbValues(pub Vec<DbValue>);
 
@@ -31,7 +59,8 @@ impl fmt::Display for DbValues {
   }
 }
 
-#[derive(Debug, Clone)]
+/// A Vec<f32> for SQLite
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct VecReal(pub Vec<f32>);
 
 impl VecReal {
@@ -74,6 +103,12 @@ impl fmt::Display for VecReal {
   }
 }
 
+impl From::<Vec<f32>> for VecReal {
+  fn from(v: Vec<f32>) -> Self {
+    VecReal(v)
+  }
+}
+
 impl Iterator for VecReal {
   type Item = f32;
   fn next(&mut self) -> Option<Self::Item> {
@@ -81,77 +116,70 @@ impl Iterator for VecReal {
   }
 }
 
+impl Index<usize> for VecReal {
+  type Output = f32;
+  fn index(&self, idx: usize) -> &Self::Output {
+    &self.0[idx]
+  }
+}
+
+impl Index<Range<usize>> for VecReal {
+  type Output = [f32];
+  fn index(&self, idx: Range<usize>) -> &Self::Output {
+    &self.0[idx]
+  }
+}
+
 impl From<MatrixReal> for VecReal {
   fn from(m: MatrixReal) -> Self {
-    let data: Vec<f32> = m.into_iter().flatten().collect();
-    VecReal(data)
+    m.vec
   }
 }
 
-impl<'a> From<&'a MatrixReal> for VecReal {
-  fn from(m: &'a MatrixReal) -> Self {
-    m.to_vec()
-  }
+// TODO
+/// A Matrix of f32s for SQLite. Implemented as a flat Vec with a frame_size
+#[derive(Debug, Default, Clone)]
+pub struct MatrixReal{
+  pub vec: VecReal,
+  pub frame_size: usize,
 }
-
-#[derive(Debug)]
-pub struct MatrixReal(pub Vec<VecReal>);
 
 impl MatrixReal {
-  pub fn new(v: VecReal, s: usize) -> Self {
-    let data = v.0.chunks_exact(s).collect::<MatrixReal>();
-    data
+  pub fn new(vec: VecReal, frame_size: usize) -> Self {
+    MatrixReal {
+      vec,
+      frame_size,
+    }
   }
   pub fn to_vec(&self) -> VecReal {
-    self.into()
+    self.clone().into()
   }
-  pub fn frame_len(&self) -> usize {
-    self.0.first().unwrap().len()
-  }
-}
-
-impl Iterator for MatrixReal {
-  type Item = VecReal;
-  fn next(&mut self) -> Option<Self::Item> {
-    self.into_iter().next()
+  pub fn frames(&self) -> usize {
+    self.vec.len()/self.frame_size
   }
 }
 
-impl FromIterator<VecReal> for MatrixReal {
-  fn from_iter<I: IntoIterator<Item=VecReal>>(iter: I) -> Self {
-    let mut mtx = MatrixReal(Vec::new());
-    for i in iter {
-      mtx.0.push(i);
-    }
-    mtx
-  }
-}
-
-impl<'a> FromIterator<&'a [f32]> for MatrixReal {
-  fn from_iter<I: IntoIterator<Item=&'a [f32]>>(iter: I) -> Self {
-    let mut mtx = MatrixReal(Vec::new());
-    for i in iter {
-      mtx.0.push(VecReal(i.into()));
-    }
-    mtx
+impl Index<usize> for MatrixReal {
+  type Output = [f32];
+  fn index(&self, idx: usize) -> &Self::Output {
+    &self.vec[idx * self.frame_size .. idx+1 * self.frame_size]
   }
 }
 
 impl fmt::Display for MatrixReal {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let first = self.0.first().unwrap();
-    let last = self.0.last().unwrap();
     write!(
       f,
-      "matrix([{0} ... {1}], len={2})",
-      first,
-      last,
-      self.0.len()
+      "matrix([{}, ...], frame_size={}, frames={})",
+      VecReal::from(self[0].to_vec()),
+//      VecReal::from(self[1].to_vec()),
+      self.frame_size,
+      self.frames()
     )
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct VecText(pub Vec<String>);
 
 impl FromSql for VecText {
@@ -175,7 +203,9 @@ impl ToSql for VecText {
   }
 }
 
-#[derive(Debug)]
+/// Generic audio file information
+/// tables: [tracks, samples]
+#[derive(Debug, Default)]
 pub struct AudioData {
   pub path: String,
   pub filesize: Option<usize>,
@@ -220,7 +250,9 @@ samplerate: {}",
   }
 }
 
-#[derive(Debug)]
+/// Track tags retrieved from file headers (i.e. ID3).
+/// tables: [track_tags]
+#[derive(Debug, Default)]
 pub struct TrackTags {
   pub artist: Option<String>,
   pub title: Option<String>,
@@ -251,7 +283,10 @@ year: {}",
   }
 }
 
-#[derive(Debug)]
+/// Track tags specific to musicbrainz.org. Used for looking up tracks
+/// on the internet.
+/// tables: [track_tags_musicbrainz]
+#[derive(Debug, Default)]
 pub struct MusicbrainzTags {
   pub albumartistid: Uuid,
   pub albumid: Uuid,
@@ -287,7 +322,9 @@ trackid: {}",
   }
 }
 
-#[derive(Debug)]
+/// Lowlevel features containg a variety of spectral features.
+/// tables: [track_features_lowlevel, sample_features_lowlevel]
+#[derive(Debug, Default)]
 pub struct LowlevelFeatures {
   pub average_loudness: f64,
   pub barkbands_kurtosis: VecReal,
@@ -401,7 +438,9 @@ scvalleys: {}",
   }
 }
 
-#[derive(Debug)]
+/// Rhythm features for audio including bpm and onsets
+/// tables: [track_features_rhythm, sample_features_rhythm]
+#[derive(Debug, Default)]
 pub struct RhythmFeatures {
   pub bpm: f64,
   pub confidence: f64,
@@ -461,7 +500,9 @@ histogram: {}",
   }
 }
 
-#[derive(Debug)]
+/// SFX features
+/// tables: [track_features_sfx, sample_features_sfx]
+#[derive(Debug, Default)]
 pub struct SfxFeatures {
   pub pitch_after_max_to_before_max_energy_ratio: f64,
   pub pitch_centroid: f64,
@@ -493,7 +534,10 @@ tristimulus: {}",
     )
   }
 }
-#[derive(Debug)]
+
+/// Tonal features including key and chord progression estimates
+/// tables: [track_features_tonal, sample_features_tonal]
+#[derive(Debug, Default)]
 pub struct TonalFeatures {
   pub chords_changes_rate: f64,
   pub chords_number_rate: f64,
@@ -513,7 +557,10 @@ pub struct TonalFeatures {
   pub chords_progression: VecText,
 }
 
-#[derive(Debug)]
+/// Audio spectrograms. Mel-weighted spectrogram is particularly
+/// useful for analysis.
+/// tables: [track_images, sample_images]
+#[derive(Debug, Default)]
 pub struct Spectrograms {
   pub mel_spec: MatrixReal,
   pub log_spec: MatrixReal,
@@ -532,6 +579,7 @@ freq_spec: {}",
   }
 }
 
+/// An identifier for spectrograms. Currently unused.
 #[derive(Debug)]
 pub enum SpecType {
   Mel,
@@ -539,6 +587,7 @@ pub enum SpecType {
   Freq,
 }
 
+/// Columns to query by.
 #[derive(Debug)]
 pub enum QueryBy {
   Id,
@@ -551,6 +600,7 @@ pub enum QueryBy {
   SampleRate,
 }
 
+/// The type of query. Determines which tables are returned by a query.
 #[derive(Debug)]
 pub enum QueryType {
   Info,

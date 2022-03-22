@@ -1,3 +1,6 @@
+//! MPK CONFIG
+//!
+//! Configuration types
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -11,7 +14,7 @@ pub const DEFAULT_PATH: &str = "~/mpk";
 pub const CONFIG_FILE: &str = "mpk.toml";
 pub const DB_FILE: &str = "mpk.db";
 
-/// expand `~` in PATH.
+/// utility function to expand `~` in PATH.
 fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
   let p = path.as_ref();
   if !p.starts_with("~") {
@@ -93,6 +96,8 @@ impl Config {
   }
 }
 
+/// Files/Folders Config. Internal directories are contained in
+/// ROOT. External directories are optional and user-defined.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct FsConfig {
   pub root: String,
@@ -287,6 +292,8 @@ impl FromStr for Flags {
   }
 }
 
+/// Database Configuration.
+/// Allow configuration of the MPK DB.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DbConfig {
   pub path: Option<String>,
@@ -337,6 +344,7 @@ impl From<Config> for DbConfig {
   }
 }
 
+/// JACK Configuration.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct JackConfig {
   name: String,
@@ -386,11 +394,14 @@ impl From<Config> for JackConfig {
   }
 }
 
+/// Configurations for Sets.
 #[derive(Serialize, Deserialize)]
 pub struct SetConfig {}
 
+/// Configuration for Projects.
 #[derive(Serialize, Deserialize)]
 pub struct ProjectConfig {}
 
+/// Configuration for Patches.
 #[derive(Serialize, Deserialize)]
 pub struct PatchConfig {}

@@ -1,3 +1,6 @@
+//! MPK_DB
+//!
+//! Types for interacting with the SQLite DB. The schema is defined in 'init.sql'.
 use mpk_config::DbConfig;
 use rusqlite::{Connection, OpenFlags, ToSql};
 use std::path::Path;
@@ -194,7 +197,7 @@ where track_id = ?1",
 		&features.barkbands_kurtosis,
 		&features.barkbands_skewness,
 		&features.barkbands_spread,
-		&features.barkbands.frame_len(),
+		&features.barkbands.frame_size,
 		&features.barkbands.to_vec(),
 		&features.dissonance,
 		&features.hfc,
@@ -222,11 +225,11 @@ where track_id = ?1",
 		&features.spectral_spread,
 		&features.spectral_strongpeak,
 		&features.zerocrossingrate,
-		&features.mfcc.frame_len(),
+		&features.mfcc.frame_size,
 		&features.mfcc.to_vec(),
-		&features.sccoeffs.frame_len(),
+		&features.sccoeffs.frame_size,
 		&features.sccoeffs.to_vec(),
-		&features.scvalleys.frame_len(),
+		&features.scvalleys.frame_size,
 		&features.scvalleys.to_vec()])?;
     Ok(())
   }
@@ -274,7 +277,7 @@ where track_id = ?1",
         &features.bpm_estimates,
         &features.bpm_intervals,
         &features.onset_times,
-        &features.beats_loudness_band_ratio.frame_len(),
+        &features.beats_loudness_band_ratio.frame_size,
         &features.beats_loudness_band_ratio.to_vec(),
         &features.histogram,
       ],
@@ -329,7 +332,7 @@ key_strength = ?4,
 tuning_diatonic_strength = ?5,
 tuning_equal_tempered_deviation = ?6,
 tuning_frequency = ?7,
-tuning_nontempered_tuning_ratio = ?8,
+tuning_nontempered_energy_ratio = ?8,
 chords_strength = ?9,
 chords_histogram = ?10,
 thpcp = ?11,
@@ -353,7 +356,7 @@ where track_id = ?1",
         &features.chords_strength,
         &features.chords_histogram,
         &features.thpcp,
-        &features.hpcp.frame_len(),
+        &features.hpcp.frame_size,
         &features.hpcp.to_vec(),
         &features.chords_key,
         &features.chords_scale,
@@ -369,15 +372,15 @@ where track_id = ?1",
     self.exec(
       "insert into track_images values (?,?,?,?,?,?,?)
 on conflict do update
-set mel_frame_size = ?1,
-mel_spec = ?2,
-log_frame_size = ?3
-log_spec = ?4,
-freq_frame_size = ?5,
-freq_spec = ?6
+set mel_frame_size = ?2,
+mel_spec = ?3,
+log_frame_size = ?4,
+log_spec = ?5,
+freq_frame_size = ?6,
+freq_spec = ?7
 where track_id = ?1",
-      &[&id, &images.mel_spec.frame_len(), &images.mel_spec.to_vec(), &images.log_spec.frame_len(), &images.log_spec.to_vec(), &images.freq_spec.frame_len(), &images.freq_spec.to_vec()],
-    )?;
+      &[&id, &images.mel_spec.frame_size, &images.mel_spec.to_vec(), &images.log_spec.frame_size, &images.log_spec.to_vec(), &images.freq_spec.frame_size, &images.freq_spec.to_vec()],
+   )?;
     Ok(())
   }
 
@@ -455,7 +458,7 @@ where sample_id = ?1",
 		&features.barkbands_kurtosis,
 		&features.barkbands_skewness,
 		&features.barkbands_spread,
-		&features.barkbands.frame_len(),
+		&features.barkbands.frame_size,
 		&features.barkbands.to_vec(),
 		&features.dissonance,
 		&features.hfc,
@@ -483,11 +486,11 @@ where sample_id = ?1",
 		&features.spectral_spread,
 		&features.spectral_strongpeak,
 		&features.zerocrossingrate,
-		&features.mfcc.frame_len(),
+		&features.mfcc.frame_size,
 		&features.mfcc.to_vec(),
-		&features.sccoeffs.frame_len(),
+		&features.sccoeffs.frame_size,
 		&features.sccoeffs.to_vec(),
-		&features.scvalleys.frame_len(),
+		&features.scvalleys.frame_size,
 		&features.scvalleys.to_vec()])?;
     Ok(())
   }
@@ -535,7 +538,7 @@ where sample_id = ?1",
         &features.bpm_estimates,
         &features.bpm_intervals,
         &features.onset_times,
-	&features.beats_loudness_band_ratio.frame_len(),
+	&features.beats_loudness_band_ratio.frame_size,
         &features.beats_loudness_band_ratio.to_vec(),
         &features.histogram,
       ],
@@ -590,7 +593,7 @@ key_strength = ?4,
 tuning_diatonic_strength = ?5,
 tuning_equal_tempered_deviation = ?6,
 tuning_frequency = ?7,
-tuning_nontempered_tuning_ratio = ?8,
+tuning_nontempered_energy_ratio = ?8,
 chords_strength = ?9,
 chords_histogram = ?10,
 thpcp = ?11,
@@ -614,7 +617,7 @@ where sample_id = ?1",
         &features.chords_strength,
         &features.chords_histogram,
         &features.thpcp,
-        &features.hpcp.frame_len(),
+        &features.hpcp.frame_size,
         &features.hpcp.to_vec(),
         &features.chords_key,
         &features.chords_scale,
@@ -637,7 +640,7 @@ log_spec = ?4,
 freq_frame_size = ?5,
 freq_spec = ?6
 where sample_id = ?1",
-      &[&id, &images.mel_spec.frame_len(), &images.mel_spec.to_vec(), &images.log_spec.frame_len(), &images.log_spec.to_vec(), &images.freq_spec.frame_len(), &images.freq_spec.to_vec()],
+      &[&id, &images.mel_spec.frame_size, &images.mel_spec.to_vec(), &images.log_spec.frame_size, &images.log_spec.to_vec(), &images.freq_spec.frame_size, &images.freq_spec.to_vec()],
     )?;
     Ok(())
   }
@@ -725,12 +728,13 @@ where sample_id = ?1",
       "select * from track_features_lowlevel where track_id = ?",
       [id],
       |row| {
+	let barkbands = MatrixReal::new(row.get(6)?, row.get(5)?);
         Ok(LowlevelFeatures {
           average_loudness: row.get(1)?,
           barkbands_kurtosis: row.get(2)?,
           barkbands_skewness: row.get(3)?,
           barkbands_spread: row.get(4)?,
-          barkbands: MatrixReal::new(row.get(6)?, row.get(5)?),
+          barkbands,
           dissonance: row.get(7)?,
           hfc: row.get(8)?,
           pitch: row.get(9)?,
@@ -944,5 +948,74 @@ where sample_id = ?1",
 
   pub fn close(self) {
     self.conn.close().unwrap();
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  fn new_mem_db() -> Mdb {
+    let db = Mdb::new(None).unwrap();
+    db.init().unwrap();
+    db
+  }
+  #[test]
+  fn test_init() {
+    assert!(Mdb::new(None).unwrap().init().is_ok())
+  }
+
+  #[test]
+  fn test_insert_track_tags() {
+    let db = new_mem_db();
+    let data = AudioData::default();
+    let tags = TrackTags::default();
+    let mb_tags = MusicbrainzTags::default();
+    assert!(db.insert_track(&data).is_ok());
+    assert!(db.insert_track_tags(1, &tags).is_ok());
+    assert!(db.insert_track_tags_musicbrainz(1, &mb_tags).is_ok());
+  }
+
+  #[test]
+  fn test_insert_track_features() {
+    let db = new_mem_db();
+    let data = AudioData::default();
+    let low = LowlevelFeatures::default();
+    let ryt = RhythmFeatures::default();
+    let tnl = TonalFeatures::default();
+    let sfx = SfxFeatures::default(); 
+    let spc = Spectrograms::default();
+
+    assert!(db.insert_track(&data).is_ok());
+    assert!(db.insert_track_features_lowlevel(1, &low).is_ok());
+    assert!(db.insert_track_features_rhythm(1, &ryt).is_ok());
+    assert!(db.insert_track_features_tonal(1, &tnl).is_ok());
+    assert!(db.insert_track_features_sfx(1, &sfx).is_ok());
+    assert!(db.insert_track_images(1, &spc).is_ok());
+  }
+
+  #[test]
+  fn test_insert_sample() {
+    let db = new_mem_db();
+    let data = AudioData::default();
+    let low = LowlevelFeatures::default();
+    let ryt = RhythmFeatures::default();
+    let tnl = TonalFeatures::default();
+    let sfx = SfxFeatures::default(); 
+    let spc = Spectrograms::default();
+
+    assert!(db.insert_track(&data).is_ok());
+    assert!(db.insert_track_features_lowlevel(1, &low).is_ok());
+    assert!(db.insert_track_features_rhythm(1, &ryt).is_ok());
+    assert!(db.insert_track_features_tonal(1, &tnl).is_ok());
+    assert!(db.insert_track_features_sfx(1, &sfx).is_ok());
+    assert!(db.insert_track_images(1, &spc).is_ok());
+  }
+
+  #[test]
+  fn test_matrix() {
+    let vec = VecReal(vec![300.;10000]);
+    let mtx = MatrixReal::new(vec.clone(), 100);
+    assert_eq!(vec, mtx.vec);
+
   }
 }

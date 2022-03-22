@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-03-16
+#+DATE: 2022-03-18
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
@@ -137,7 +137,7 @@ and Sysex patching.
 
 * COMMENT notes
 ** tasks
-*** TODO finish mpk_extract [4/6]
+*** TODO finish mpk_extract [5/8]
 **** DONE debug CStrings                                                :ffi:
 some strings fields are broken when inserting to db - UUIDs, VecText, and VecReal
 - test DB blob insert with floats. if these are ok then they can be ignored
@@ -154,8 +154,12 @@ input else tracks/samples from config else current path
 - this will likely require a threadpool
 - extractor segfaults when working with large directories, need to
   insert into db after each extraction
-**** TODO populate all columns in tracks table
+**** DONE populate all columns in tracks table
+- State "DONE"       from "TODO"       [2022-03-18 Fri 22:36]
 Currently only inserting path
+**** TODO fix MatrixReal segfault
+- probably best to switch to ndarray instead of vec<vec<>>
+- likely a dereference issue
 *** TODO mpk_config updates [1/3]
 **** DONE add support for external paths
 add external track/sample locations
@@ -179,6 +183,17 @@ just need enough to make emacs integration - =mpk-midi.el=
 can start with terminal process then move to C dynamic module
 check [[https://github.com/jnykopp/emaccordion][jnykopp/emaccordion]]
 **** TODO MIDI config                                                :config:
+*** TODO docstrings [0/5]
+**** TODO DB
+**** TODO config
+**** TODO audio
+**** TODO FFI
+**** TODO py
+*** TODO unit tests [0/4]
+**** TODO DB
+**** TODO config
+**** TODO audio
+**** TODO jack
 
 ** notes
 *** Background

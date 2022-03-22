@@ -1,3 +1,7 @@
+//! MPK_SESH
+//!
+//! MPK Session Environment.
+
 #[cfg(test)]
 mod tests {
   #[test]

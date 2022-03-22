@@ -1,3 +1,6 @@
+//! MPK_FLATE
+//!
+//! ZSTD and TAR utilities.
 use std::{fs, io, path::Path};
 
 /// Level of compression data should be compressed with.
