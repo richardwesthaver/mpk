@@ -13,6 +13,8 @@ const
   ffi {.booldefine.} = false
   all {.booldefine.} = false
   release {.booldefine.} = false
+  fastexport {.strdefine.}: string = expandTilde("~/stash/fast-export/hg-fast-export.sh")
+  stash {.strdefine.}: string = expandTilde("~/stash")
   MPK_BIN = "src/mpk"
 
 proc getVcRoot(): string =
@@ -37,7 +39,7 @@ proc getVcRoot(): string =
 var
   target_dir = "target/debug"
   build_dir = getVcRoot() / "build"
-  
+
 when defined(Windows):
   let ext = ".dll"
 elif defined(Linux):
@@ -168,3 +170,14 @@ task fmt, "format code":
   withDir getVcRoot():
     exec "cargo fmt"
     exec "black ."
+
+task mirror, "push code to github mirror":
+  withDir stash:
+    exec "git init mpk"
+    withDir "mpk":
+      exec "git config core.ignoreCase false"
+      exec fastexport & " -r " & getVcRoot() & " -M default"
+      exec "git checkout HEAD"
+      exec "git remote add gh git@github.com:richardwesthaver/mpk.git"
+      exec "git push gh"
+    rmDir("mpk")
