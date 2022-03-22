@@ -3,8 +3,8 @@
 use libc::{c_char, c_int, size_t};
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 use mpk_db::{
-  LowlevelFeatures, Mdb, MusicbrainzTags, RhythmFeatures, SfxFeatures, Spectrograms,
-  TonalFeatures, TrackTags, Uuid, VecReal, MatrixReal, VecText, AudioData
+  AudioData, LowlevelFeatures, MatrixReal, Mdb, MusicbrainzTags, RhythmFeatures,
+  SfxFeatures, Spectrograms, TonalFeatures, TrackTags, Uuid, VecReal, VecText,
 };
 use std::ffi::{CStr, CString, OsStr};
 use std::os::unix::ffi::OsStrExt;
@@ -183,7 +183,7 @@ pub extern "C" fn mpk_db_config_flags(cfg: *const Config) -> c_int {
 
 #[no_mangle]
 pub extern "C" fn mpk_db_config_path(cfg: *const Config) -> *mut c_char {
-  let cfg = unsafe {&*cfg};
+  let cfg = unsafe { &*cfg };
   let res = cfg.db.path().unwrap();
   CString::new(res.as_os_str().as_bytes()).unwrap().into_raw()
 }
@@ -210,7 +210,8 @@ pub extern "C" fn mdb_audio_data_new(
   duration: f64,
   channels: u8,
   bitrate: u32,
-  samplerate: u32) -> *mut AudioData {
+  samplerate: u32,
+) -> *mut AudioData {
   let data = AudioData {
     path: unsafe { CStr::from_ptr(path).to_str().unwrap().to_string() },
     filesize: Some(filesize),
@@ -461,7 +462,10 @@ pub extern "C" fn mdb_rhythm_features_new(
     bpm_estimates: VecReal::from(bpm_estimates),
     bpm_intervals: VecReal::from(bpm_intervals),
     onset_times: VecReal::from(onset_times),
-    beats_loudness_band_ratio: MatrixReal::new(beats_loudness_band_ratio.into(), beats_loudness_band_ratio_frame_size),
+    beats_loudness_band_ratio: MatrixReal::new(
+      beats_loudness_band_ratio.into(),
+      beats_loudness_band_ratio_frame_size,
+    ),
     histogram: VecReal::from(histogram),
   };
   let features_box = Box::new(features);
@@ -633,7 +637,7 @@ pub unsafe extern "C" fn mdb_init(db: *const Mdb) {
 
 #[no_mangle]
 pub extern "C" fn mdb_insert_track(db: *const Mdb, data: *const AudioData) -> i64 {
-  let data = unsafe{&*data};
+  let data = unsafe { &*data };
   let mdb = unsafe { &*db };
   mdb.insert_track(data).unwrap()
 }
@@ -717,8 +721,8 @@ pub extern "C" fn mdb_insert_track_images(
 
 #[no_mangle]
 pub extern "C" fn mdb_insert_sample(db: *const Mdb, data: *const AudioData) -> i64 {
-  let data = unsafe{&*data};
-  let mdb = unsafe{&*db};
+  let data = unsafe { &*data };
+  let mdb = unsafe { &*db };
   mdb.insert_sample(&data).unwrap()
 }
 
@@ -726,9 +730,9 @@ pub extern "C" fn mdb_insert_sample(db: *const Mdb, data: *const AudioData) -> i
 pub extern "C" fn mdb_insert_sample_features_lowlevel(
   db: *const Mdb,
   id: i64,
-  features: *mut LowlevelFeatures,
+  features: *const LowlevelFeatures,
 ) {
-  let features = unsafe { &mut *features };
+  let features = unsafe { &*features };
   let mdb = unsafe { &*db };
   mdb.insert_sample_features_lowlevel(id, features).unwrap();
 }
@@ -737,9 +741,9 @@ pub extern "C" fn mdb_insert_sample_features_lowlevel(
 pub extern "C" fn mdb_insert_sample_features_rhythm(
   db: *const Mdb,
   id: i64,
-  features: *mut RhythmFeatures,
+  features: *const RhythmFeatures,
 ) {
-  let features = unsafe { &mut *features };
+  let features = unsafe { &*features };
   let mdb = unsafe { &*db };
   mdb.insert_sample_features_rhythm(id, features).unwrap();
 }
@@ -748,9 +752,9 @@ pub extern "C" fn mdb_insert_sample_features_rhythm(
 pub extern "C" fn mdb_insert_sample_features_sfx(
   db: *const Mdb,
   id: i64,
-  features: *mut SfxFeatures,
+  features: *const SfxFeatures,
 ) {
-  let features = unsafe { &mut *features };
+  let features = unsafe { &*features };
   let mdb = unsafe { &*db };
   mdb.insert_sample_features_sfx(id, features).unwrap();
 }
@@ -759,9 +763,9 @@ pub extern "C" fn mdb_insert_sample_features_sfx(
 pub extern "C" fn mdb_insert_sample_features_tonal(
   db: *const Mdb,
   id: i64,
-  features: *mut TonalFeatures,
+  features: *const TonalFeatures,
 ) {
-  let features = unsafe { &mut *features };
+  let features = unsafe { &*features };
   let mdb = unsafe { &*db };
   mdb.insert_sample_features_tonal(id, features).unwrap();
 }
@@ -770,9 +774,9 @@ pub extern "C" fn mdb_insert_sample_features_tonal(
 pub extern "C" fn mdb_insert_sample_images(
   db: *const Mdb,
   id: i64,
-  images: *mut Spectrograms,
+  images: *const Spectrograms,
 ) {
-  let images = unsafe { &mut *images };
+  let images = unsafe { &*images };
   let mdb = unsafe { &*db };
   mdb.insert_sample_images(id, images).unwrap();
 }
@@ -780,7 +784,6 @@ pub extern "C" fn mdb_insert_sample_images(
 #[no_mangle]
 pub extern "C" fn mdb_exec_batch(db: *const Mdb, sql: *const c_char) {
   let sql = unsafe { CStr::from_ptr(sql).to_str().unwrap() };
-
   let mdb = unsafe { &*db };
   mdb.exec_batch(sql).unwrap()
 }

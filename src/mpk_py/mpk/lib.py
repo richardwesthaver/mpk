@@ -113,18 +113,23 @@ class Mdb:
 
 def vectorize(arr):
     if type(arr) is list:
-      arr = np.float32(arr).flatten()
+        arr = np.float32(arr).flatten()
     buf = ffi.from_buffer("float[]", arr)
     return lib.mdb_vecreal_new(ffi.cast("const float *", buf), len(buf))
 
+
 def matrixize(mtx):
-  if type(mtx) is list:
-    mtx = np.float32(mtx).flatten()  
-  buf = ffi.from_buffer("float[]", mtx)
-  return lib.mdb_matrixreal_new(ffi.cast("const float *", buf), len(buf))
+    if type(mtx) is list:
+        mtx = np.float32(mtx).flatten()
+    buf = ffi.from_buffer("float[]", mtx)
+    return lib.mdb_matrixreal_new(ffi.cast("const float *", buf), len(buf))
+
 
 def audio_data(path, filesize, duration, channels, bitrate, samplerate):
-  return lib.mdb_audio_data_new(path.encode(), filesize, duration, channels, bitrate, samplerate)
+    return lib.mdb_audio_data_new(
+        path.encode(), filesize, duration, channels, bitrate, samplerate
+    )
+
 
 def track_tags(tags):
     tags[0:4] = [x.encode() for x in tags[0:4]]
@@ -167,7 +172,7 @@ def tonal_features(features):
     features[7:10] = [vectorize(x) for x in features[7:10]]
     features[11] = matrixize(features[11])
     features[12:16] = [x.encode() for x in features[12:16]]
-    features[16] = '|'.join(features[16]).encode()
+    features[16] = "|".join(features[16]).encode()
     return lib.mdb_tonal_features_new(*features)
 
 

@@ -26,8 +26,8 @@
 use crate::err::{Error, Result};
 use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, Value, ValueRef};
 use std::fmt;
-use std::str::FromStr;
 use std::ops::{Index, Range};
+use std::str::FromStr;
 pub use uuid::Uuid;
 
 /// Display wrapper for SQLite Value
@@ -103,7 +103,7 @@ impl fmt::Display for VecReal {
   }
 }
 
-impl From::<Vec<f32>> for VecReal {
+impl From<Vec<f32>> for VecReal {
   fn from(v: Vec<f32>) -> Self {
     VecReal(v)
   }
@@ -139,30 +139,27 @@ impl From<MatrixReal> for VecReal {
 // TODO
 /// A Matrix of f32s for SQLite. Implemented as a flat Vec with a frame_size
 #[derive(Debug, Default, Clone)]
-pub struct MatrixReal{
+pub struct MatrixReal {
   pub vec: VecReal,
   pub frame_size: usize,
 }
 
 impl MatrixReal {
   pub fn new(vec: VecReal, frame_size: usize) -> Self {
-    MatrixReal {
-      vec,
-      frame_size,
-    }
+    MatrixReal { vec, frame_size }
   }
   pub fn to_vec(&self) -> VecReal {
     self.clone().into()
   }
   pub fn frames(&self) -> usize {
-    self.vec.len()/self.frame_size
+    self.vec.len() / self.frame_size
   }
 }
 
 impl Index<usize> for MatrixReal {
   type Output = [f32];
   fn index(&self, idx: usize) -> &Self::Output {
-    &self.vec[idx * self.frame_size .. idx+1 * self.frame_size]
+    &self.vec[idx * self.frame_size..idx + 1 * self.frame_size]
   }
 }
 
@@ -172,7 +169,7 @@ impl fmt::Display for MatrixReal {
       f,
       "matrix([{}, ...], frame_size={}, frames={})",
       VecReal::from(self[0].to_vec()),
-//      VecReal::from(self[1].to_vec()),
+      //      VecReal::from(self[1].to_vec()),
       self.frame_size,
       self.frames()
     )

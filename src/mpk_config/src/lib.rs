@@ -39,6 +39,7 @@ pub struct Config {
   pub fs: FsConfig,
   pub db: DbConfig,
   pub jack: JackConfig,
+  pub metro: MetroConfig,
 }
 
 impl Default for Config {
@@ -47,12 +48,18 @@ impl Default for Config {
       fs: FsConfig::default(),
       db: DbConfig::default(),
       jack: JackConfig::default(),
+      metro: MetroConfig::default(),
     }
   }
 }
 impl Config {
   pub fn new(fs: FsConfig, db: DbConfig, jack: JackConfig) -> Result<Config> {
-    Ok(Config { fs, db, jack })
+    Ok(Config {
+      fs,
+      db,
+      jack,
+      metro: MetroConfig::default(),
+    })
   }
 
   pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<()> {
@@ -405,3 +412,30 @@ pub struct ProjectConfig {}
 /// Configuration for Patches.
 #[derive(Serialize, Deserialize)]
 pub struct PatchConfig {}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MetroConfig {
+  pub bpm: u16,
+  pub time_sig: (u8, u8),
+  pub tic: Option<PathBuf>,
+  pub toc: Option<PathBuf>,
+}
+
+impl Default for MetroConfig {
+  fn default() -> Self {
+    MetroConfig {
+      bpm: 120,
+      time_sig: (4, 4),
+      tic: if let Ok(t) = std::env::var("MPK_METRO_TIC") {
+        Some(t.into())
+      } else {
+        None
+      },
+      toc: if let Ok(t) = std::env::var("MPK_METRO_TOC") {
+        Some(t.into())
+      } else {
+        None
+      },
+    }
+  }
+}

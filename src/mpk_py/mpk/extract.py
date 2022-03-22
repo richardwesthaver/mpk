@@ -115,35 +115,49 @@ class Extract(AudioFile):
         self.pool.merge(extractor(self.mono()))
         print("added features to pool.")
 
-    def mel_spec(self, bands=96, lfbound=0, hfbound=11000, window='hann', framesize=2048, hopsize=1024):
+    def mel_spec(
+        self,
+        bands=96,
+        lfbound=0,
+        hfbound=11000,
+        window="hann",
+        framesize=2048,
+        hopsize=1024,
+    ):
         windowing = es.Windowing(type=window)
         spectrum = es.Spectrum()
         melbands = es.MelBands(
             numberBands=bands, lowFrequencyBound=lfbound, highFrequencyBound=hfbound
         )
         amp2db = es.UnaryOperator(type="lin2db", scale=2)
-        for frame in es.FrameGenerator(self.mono(), frameSize=framesize, hopSize=hopsize):
+        for frame in es.FrameGenerator(
+            self.mono(), frameSize=framesize, hopSize=hopsize
+        ):
             frame_spec = spectrum(windowing(frame))
             frame_mel = melbands(frame_spec)
             self.pool.add("mel_spec", amp2db(frame_mel))
         print("added mel_spec to pool.")
 
-    def log_spec(self, window='hann', framesize=2048, hopsize=1024):
+    def log_spec(self, window="hann", framesize=2048, hopsize=1024):
         windowing = es.Windowing(type=window)
         spectrum = es.Spectrum()
         logfreq = es.LogSpectrum(binsPerSemitone=1)
         amp2db = es.UnaryOperator(type="lin2db", scale=2)
-        for frame in es.FrameGenerator(self.mono(), frameSize=framesize, hopSize=hopsize):
+        for frame in es.FrameGenerator(
+            self.mono(), frameSize=framesize, hopSize=hopsize
+        ):
             frame_spec = spectrum(windowing(frame))
             frame_logfreq, _, _ = logfreq(frame_spec)
             self.pool.add("log_spec", amp2db(frame_logfreq))
         print("added log_spec to pool.")
 
-    def freq_spec(self, window='hann', framesize=2048, hopsize=1024):
+    def freq_spec(self, window="hann", framesize=2048, hopsize=1024):
         windowing = es.Windowing(type=window)
         spectrum = es.Spectrum()
         amp2db = es.UnaryOperator(type="lin2db", scale=2)
-        for frame in es.FrameGenerator(self.mono(), frameSize=framesize, hopSize=hopsize):
+        for frame in es.FrameGenerator(
+            self.mono(), frameSize=framesize, hopSize=hopsize
+        ):
             frame_spec = spectrum(windowing(frame))
             self.pool.add("freq_spec", amp2db(frame_spec))
         print("added freq_spec to pool.")
@@ -157,12 +171,16 @@ class Extract(AudioFile):
         self.pool.add("bpm_intervals", intervals)
         print("added rhythm descriptors to pool.")
 
-    def loudness(self, window='blackmanharris62', padding=2048, framesize=2048, hopsize=1024):
+    def loudness(
+        self, window="blackmanharris62", padding=2048, framesize=2048, hopsize=1024
+    ):
         windowing = es.Windowing(type=window, zeroPadding=padding)
         spectrum = es.Spectrum()
         rms = es.RMS()
         hfc = es.HFC()
-        for frame in es.FrameGenerator(self.mono(), frameSize=framesize, hopSize=hopsize):
+        for frame in es.FrameGenerator(
+            self.mono(), frameSize=framesize, hopSize=hopsize
+        ):
             frame_spectrum = spectrum(windowing(frame))
             self.pool.add("rms", rms(frame))
             self.pool.add("rms_spectrum", rms(frame_spectrum))
@@ -171,7 +189,7 @@ class Extract(AudioFile):
 
     def write_json(self, out_file):
         print("writing to file: ", out_file)
-        es.YamlOutput(filename=out_file, format='json', writeVersion=False)(self.pool)
+        es.YamlOutput(filename=out_file, format="json", writeVersion=False)(self.pool)
 
     def descriptors(self):
         return self.pool.descriptorNames()

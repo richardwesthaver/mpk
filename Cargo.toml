@@ -9,6 +9,7 @@ members = [
   "src/mpk_midi",
   "src/mpk_codec",
   "src/mpk_db",
+  "src/mpk_plot",
   "src/mpk_sesh",
   "src/mpk_ffi",
 ]

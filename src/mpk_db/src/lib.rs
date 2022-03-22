@@ -326,7 +326,7 @@ where track_id = ?1
       "insert into track_features_tonal
 values (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18)
 on conflict do update
-set chords_change_rate = ?2,
+set chords_changes_rate = ?2,
 chords_number_rate = ?3,
 key_strength = ?4,
 tuning_diatonic_strength = ?5,
@@ -342,7 +342,7 @@ chords_key = ?14,
 chords_scale = ?15,
 key_key = ?16,
 key_scale = ?17,
-chord_progression = ?18
+chords_progression = ?18
 where track_id = ?1",
       &[
         &id,
@@ -379,8 +379,16 @@ log_spec = ?5,
 freq_frame_size = ?6,
 freq_spec = ?7
 where track_id = ?1",
-      &[&id, &images.mel_spec.frame_size, &images.mel_spec.to_vec(), &images.log_spec.frame_size, &images.log_spec.to_vec(), &images.freq_spec.frame_size, &images.freq_spec.to_vec()],
-   )?;
+      &[
+        &id,
+        &images.mel_spec.frame_size,
+        &images.mel_spec.to_vec(),
+        &images.log_spec.frame_size,
+        &images.log_spec.to_vec(),
+        &images.freq_spec.frame_size,
+        &images.freq_spec.to_vec(),
+      ],
+    )?;
     Ok(())
   }
 
@@ -403,7 +411,7 @@ samplerate = ?6
 where id = ?1",
 	      &[&file.path, &file.filesize, &file.duration, &file.channels, &file.bitrate, &file.samplerate],
     )?;
-    Ok(self.last_track_id(&file.path))
+    Ok(self.last_sample_id(&file.path))
   }
 
   pub fn insert_sample_features_lowlevel(
@@ -538,7 +546,7 @@ where sample_id = ?1",
         &features.bpm_estimates,
         &features.bpm_intervals,
         &features.onset_times,
-	&features.beats_loudness_band_ratio.frame_size,
+        &features.beats_loudness_band_ratio.frame_size,
         &features.beats_loudness_band_ratio.to_vec(),
         &features.histogram,
       ],
@@ -631,16 +639,24 @@ where sample_id = ?1",
 
   pub fn insert_sample_images(&self, id: i64, images: &Spectrograms) -> Result<()> {
     self.exec(
-      "insert into sample_images values (?1,?2,?3,?4)
+      "insert into sample_images values (?1,?2,?3,?4,?5,?6,?7)
 on conflict do update
-set mel_frame_size = ?1,
-mel_spec = ?2,
-log_frame_size = ?3
-log_spec = ?4,
-freq_frame_size = ?5,
-freq_spec = ?6
+set mel_frame_size = ?2,
+mel_spec = ?3,
+log_frame_size = ?4,
+log_spec = ?5,
+freq_frame_size = ?6,
+freq_spec = ?7
 where sample_id = ?1",
-      &[&id, &images.mel_spec.frame_size, &images.mel_spec.to_vec(), &images.log_spec.frame_size, &images.log_spec.to_vec(), &images.freq_spec.frame_size, &images.freq_spec.to_vec()],
+      &[
+        &id,
+        &images.mel_spec.frame_size,
+        &images.mel_spec.to_vec(),
+        &images.log_spec.frame_size,
+        &images.log_spec.to_vec(),
+        &images.freq_spec.frame_size,
+        &images.freq_spec.to_vec(),
+      ],
     )?;
     Ok(())
   }
@@ -728,7 +744,7 @@ where sample_id = ?1",
       "select * from track_features_lowlevel where track_id = ?",
       [id],
       |row| {
-	let barkbands = MatrixReal::new(row.get(6)?, row.get(5)?);
+        let barkbands = MatrixReal::new(row.get(6)?, row.get(5)?);
         Ok(LowlevelFeatures {
           average_loudness: row.get(1)?,
           barkbands_kurtosis: row.get(2)?,
@@ -982,7 +998,7 @@ mod tests {
     let low = LowlevelFeatures::default();
     let ryt = RhythmFeatures::default();
     let tnl = TonalFeatures::default();
-    let sfx = SfxFeatures::default(); 
+    let sfx = SfxFeatures::default();
     let spc = Spectrograms::default();
 
     assert!(db.insert_track(&data).is_ok());
@@ -1000,7 +1016,7 @@ mod tests {
     let low = LowlevelFeatures::default();
     let ryt = RhythmFeatures::default();
     let tnl = TonalFeatures::default();
-    let sfx = SfxFeatures::default(); 
+    let sfx = SfxFeatures::default();
     let spc = Spectrograms::default();
 
     assert!(db.insert_track(&data).is_ok());
@@ -1013,9 +1029,8 @@ mod tests {
 
   #[test]
   fn test_matrix() {
-    let vec = VecReal(vec![300.;10000]);
+    let vec = VecReal(vec![300.; 10000]);
     let mtx = MatrixReal::new(vec.clone(), 100);
     assert_eq!(vec, mtx.vec);
-
   }
 }

@@ -1,4 +1,5 @@
 use std::io::BufReader;
+use std::path::Path;
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -11,9 +12,9 @@ pub fn calc_beat_delta(bpm: u16, lower: u8) -> Duration {
 }
 
 #[derive(Debug)]
-pub enum TicToc {
-  Tic,
-  Toc,
+pub enum TicToc<'a> {
+  Tic(&'a Path),
+  Toc(&'a Path),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -23,7 +24,7 @@ pub struct TimeSig {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct MetroConfig {
+pub struct MetroCfg {
   pub bpm: u16,
   pub time_sig: TimeSig,
 }
@@ -35,7 +36,7 @@ pub enum MetroMsg {
 
 #[derive(Debug, Copy, Clone)]
 pub struct Metro {
-  cfg: MetroConfig,
+  cfg: MetroCfg,
   current_beat: u8,
   last_time_run: Instant,
   beat_delta: Duration,
@@ -44,7 +45,7 @@ pub struct Metro {
 impl Metro {
   pub fn new(bpm: u16, upper: u8, lower: u8) -> Metro {
     Metro {
-      cfg: MetroConfig {
+      cfg: MetroCfg {
         bpm,
         time_sig: TimeSig { upper, lower },
       },
@@ -60,8 +61,8 @@ impl Metro {
 
   pub fn play(self, t: TicToc) {
     let st = match t {
-      TicToc::Tic => "tic.wav",
-      TicToc::Toc => "toc.wav",
+      TicToc::Tic(p) => p,
+      TicToc::Toc(p) => p,
     };
     let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
     let file = std::fs::File::open(st).unwrap();
@@ -73,7 +74,11 @@ impl Metro {
     std::thread::sleep(self.beat_delta);
   }
 
-  pub fn start(mut self) -> Sender<MetroMsg> {
+  pub fn start<P: 'static + AsRef<Path> + std::marker::Send>(
+    mut self,
+    tic: P,
+    toc: P,
+  ) -> Sender<MetroMsg> {
     eprintln!("Metro started!");
     let (tx, rx) = channel();
     thread::spawn(move || loop {
@@ -83,8 +88,8 @@ impl Metro {
         Err(_) => (),
       }
       match self.current_beat {
-        0 => self.play(TicToc::Tic),
-        _ => self.play(TicToc::Toc),
+        0 => self.play(TicToc::Tic(tic.as_ref())),
+        _ => self.play(TicToc::Toc(toc.as_ref())),
       }
       self.next()
     });

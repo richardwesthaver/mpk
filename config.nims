@@ -10,26 +10,10 @@ const
   v {.booldefine.} = false # verbose
   p {.strdefine.}: string = "" # package
   m {.strdefine.}: string = ""
-  dev {.booldefine.} = false
   ffi {.booldefine.} = false
   all {.booldefine.} = false
+  release {.booldefine.} = false
   MPK_BIN = "src/mpk"
-
-var
-  target_dir = "target/debug"
-  build_dir = absolutePath("build")
-  
-when defined(Windows):
-  let ext = ".dll"
-elif defined(Linux):
-  let ext = ".so"
-elif defined(MacOsX):
-  let ext = ".dylib"
-let 
-  ffi_lib = "libmpk_ffi" & ext
-  ffi_h = "mpk_ffi.h"
-  mpk_py = "build.py"
-  include_dir = build_dir / "include"
 
 proc getVcRoot(): string =
   ## Try to get the path to the current VC root directory.
@@ -43,14 +27,28 @@ proc getVcRoot(): string =
     path = path / "../"
     attempt += 1
   if dirExists(path / ".hg"):
-    echo "found hg root"
     result = path
   elif dirExists(path / ".git"):
-    echo "found git root"
     result = path
   else:
     echo "no VC root found, defaulting to projectDir"
     result = projectDir()  
+
+var
+  target_dir = "target/debug"
+  build_dir = getVcRoot() / "build"
+  
+when defined(Windows):
+  let ext = ".dll"
+elif defined(Linux):
+  let ext = ".so"
+elif defined(MacOsX):
+  let ext = ".dylib"
+let 
+  ffi_lib = "libmpk_ffi" & ext
+  ffi_h = "mpk_ffi.h"
+  mpk_py = "build.py"
+  include_dir = build_dir / "include"
 
 proc DepMissing(dep: string) =
   var d = case dep:
@@ -100,58 +98,73 @@ proc ffiTest() =
   rmFile("/tmp/mpk.toml")  
 
 task build, "build MPK":
-  var args: seq[string]
-  when defined(release):
-    args.insert(" --release")
-    target_dir = "target/release"
-  when defined(p):
-    args.add(" -p " & p)
-  exec "cargo build" & args.join
-  mkDir(include_dir)
-  cpFile(target_dir / ffi_lib, build_dir / ffi_lib)
-  if fileExists(ffi_h):
-    mvFile(ffi_h, include_dir / ffi_h)
-  if fileExists(mpk_py):
-    mvFile(mpk_py, build_dir / mpk_py)
-    exec "cd " & build_dir & " && " & "python3 " & mpk_py
-  when defined(dev):
-    exec "cp build/_mpk* build/libmpk_ffi* src/mpk_py/mpk/"
+  withDir getVcRoot():
+    var args: seq[string]
+    when defined(release):
+      args.insert(" --release")
+      target_dir = "target/release"
+    when defined(p):
+      args.add(" -p " & p)
+    exec "cargo build" & args.join
+    mkDir(include_dir)
+    cpFile(target_dir / ffi_lib, build_dir / ffi_lib)
+    if fileExists(ffi_h):
+      mvFile(ffi_h, include_dir / ffi_h)
+    if fileExists(mpk_py):
+      mvFile(mpk_py, build_dir / mpk_py)
+      exec "cd " & build_dir & " && " & "python3 " & mpk_py
+    when not defined(release):
+      exec "cp build/_mpk* build/libmpk_ffi* src/mpk_py/mpk/"
 
 task run, "run MPK binary":
-  var args: seq[string]
-  when defined(release):
-    args.insert(" --release")
-  exec "cargo run" & args.join
+  withDir getVcRoot():
+    var args: seq[string]
+    when defined(release):
+      args.insert(" --release")
+    exec "cargo run" & args.join
 
 task install, "install MPK":
-  exec "cargo install --path " & MPK_BIN
+  withDir getVcRoot():
+    exec "cargo install --path " & MPK_BIN
 
 task clean, "clean build artifacts":
-  exec "cargo clean"
-  rmDir(build_dir)
-  rmFile("Cargo.lock")
+  withDir getVcRoot():
+    exec "cargo clean"
+    rmDir(build_dir)
+    rmFile("Cargo.lock")
 
 task test, "run MPK tests":
-  if not dirExists(build_dir):
-    buildTask()
-  if defined(ffi):
-    ffiTest()
-  elif defined(all):
-    rustTest()
-    ffiTest()
-  else:
-    rustTest()
+  withDir getVcRoot():
+    if not dirExists(build_dir):
+      buildTask()
+    if defined(ffi):
+      ffiTest()
+    elif defined(all):
+      rustTest()
+      ffiTest()
+    else:
+      rustTest()
 
 task info, "print system, dependency, and project info":
   hostInfo()
   echo ""
   checkDeps()
 
-task ci, "add changes and commit":
-  var root = getVcRoot()
+task status, "print hg status":
+  withDir getVcRoot():
+    exec "hg status"
+
+task ar, "add/remove files":
+  withDir getVcRoot():
+    exec "hg addremove ."
+
+task ci, "commit and push changes":
+  withDir getVcRoot():
+    echo "message: "
+    exec("hg ci -m '" & readLineFromStdin() & "'")
+    exec "hg push"
 
 task fmt, "format code":
   withDir getVcRoot():
     exec "cargo fmt"
     exec "black ."
-  

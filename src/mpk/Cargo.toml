@@ -9,3 +9,5 @@ mpk_config = { path = "../mpk_config" }
 mpk_audio = { path = "../mpk_audio" }
 mpk_midi = { path = "../mpk_midi" }
 mpk_db = { path = "../mpk_db" }
+mpk_plot = { path = "../mpk_plot" }
+mpk_flate = { path = "../mpk_flate" }

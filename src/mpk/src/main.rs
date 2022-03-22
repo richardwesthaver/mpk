@@ -61,9 +61,23 @@ enum Command {
     db: bool,
   },
   /// Package resources [.tar.zst]
-  Pack,
+  Pack {
+    #[clap(parse(from_os_str))]
+    input: PathBuf,
+    #[clap(parse(from_os_str))]
+    output: PathBuf,
+    #[clap(short, long)]
+    level: Option<u8>,
+  },
   /// Unpackage resources [.tar.zst]
-  Unpack,
+  Unpack {
+    #[clap(parse(from_os_str))]
+    input: PathBuf,
+    #[clap(parse(from_os_str))]
+    output: PathBuf,
+    #[clap(short, long)]
+    replace: bool,
+  },
   /// Shutdown services
   Quit,
 }
@@ -81,8 +95,12 @@ enum Runner {
     #[clap(parse(from_os_str))]
     output: PathBuf,
   },
+  Plot,
   /// start the metronome
-  Metro { bpm: u16, time_sig: String },
+  Metro {
+    bpm: Option<u16>,
+    time_sig: Option<String>,
+  },
 }
 
 fn ppln(i: &str, s: char) {
@@ -209,8 +227,6 @@ fn main() -> Result<()> {
       samples,
       projects,
     } => {
-      //      let conn = Mdb::new_with_config(cfg.db)?;
-
       if tracks {
         let _ts = cfg.fs.get_path("tracks")?;
       }
@@ -221,16 +237,46 @@ fn main() -> Result<()> {
         let _ps = cfg.fs.get_path("projects")?;
       }
     }
+    Command::Pack {
+      input,
+      output,
+      level,
+    } => mpk_flate::pack(input, output, level.map(|x| x.into())),
+    Command::Unpack {
+      input,
+      output,
+      replace,
+    } => {
+      if replace {
+        mpk_flate::unpack_replace(input, output)
+      } else {
+        mpk_flate::unpack(input, output)
+      }
+    }
     Command::Run { runner } => match runner {
       Runner::Metro { bpm, time_sig } => {
-        let sig: Vec<u8> = time_sig
-          .trim()
-          .split("/")
-          .map(|x| x.parse().unwrap())
-          .collect();
-        let metro = mpk_audio::gen::Metro::new(bpm, sig[0], sig[1]);
-        metro.start();
+        let bpm = match bpm {
+          Some(b) => b,
+          None => cfg.metro.bpm,
+        };
+        let sig: (u8, u8) = match time_sig {
+          Some(t) => {
+            let tsig: Vec<u8> =
+              t.trim().split("/").map(|x| x.parse().unwrap()).collect();
+            (tsig[0], tsig[1])
+          }
+          None => cfg.metro.time_sig,
+        };
+
+        let metro = mpk_audio::gen::Metro::new(bpm, sig.0, sig.1);
+        metro.start(cfg.metro.tic.unwrap(), cfg.metro.toc.unwrap());
         loop {}
+      }
+      Runner::Plot => {
+        let data = mpk_db::Mdb::new_with_config(cfg.db)?
+          .query_sample_features_rhythm(1)?
+          .histogram;
+        mpk_plot::plot_histogram(data).unwrap()
       }
       _ => println!("starting jack server"),
     },

@@ -108,7 +108,7 @@ foreign key(track_id) references tracks(id));
 
 create table if not exists track_features_tonal (
 track_id integer unique,
-chords_change_rate real,
+chords_changes_rate real,
 chords_number_rate real,
 key_strength real,
 tuning_diatonic_strength real,
@@ -124,7 +124,7 @@ chords_key text,
 chords_scale text,
 key_key text,
 key_scale text,
-chord_progression blob,
+chords_progression blob,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_images (
@@ -146,7 +146,6 @@ foreign key(track_id) references tracks(id));
 create table if not exists samples (
 id integer primary key,
 path text not null unique,
-format text,
 channels integer,
 filesize integer,
 bitrate integer,
@@ -230,7 +229,7 @@ foreign key(sample_id) references samples(id));
 
 create table if not exists sample_features_tonal (
 sample_id integer unique,
-chords_change_rate real,
+chords_changes_rate real,
 chords_number_rate real,
 key_strength real,
 tuning_diatonic_strength real,
@@ -246,7 +245,7 @@ chords_key text,
 chords_scale text,
 key_key text,
 key_scale text,
-chord_progression blob,
+chords_progression blob,
 foreign key(sample_id) references samples(id));
 
 create table if not exists sample_images (

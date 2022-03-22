@@ -18,7 +18,7 @@ pub enum Level {
   /// qualities. The interpretation of this depends on the algorithm chosen
   /// and the specific implementation backing it.
   /// Qualities are implicitly clamped to the algorithm's maximum.
-  Precise(u32),
+  Precise(u8),
 }
 
 impl Level {
@@ -28,6 +28,17 @@ impl Level {
       Self::Best => 21,
       Self::Precise(quality) => quality.min(21) as i32,
       Self::Default => 0,
+    }
+  }
+}
+
+impl From<u8> for Level {
+  fn from(n: u8) -> Self {
+    match n {
+      0 => Self::Default,
+      1 => Self::Fastest,
+      2 => Self::Best,
+      n => Self::Precise(n),
     }
   }
 }
@@ -43,8 +54,12 @@ pub fn pack<P: AsRef<Path>>(src: P, dst: P, level: Option<Level>) {
   let tar = tar.into_inner().unwrap();
   let dst = dst.as_ref();
   let file = fs::File::create(dst).expect("failed to create output path");
-  zstd::stream::copy_encode(&tar[..], file, level.unwrap_or(Level::Best).into_zstd())
-    .unwrap();
+  zstd::stream::copy_encode(
+    &tar[..],
+    file,
+    level.unwrap_or(Level::Default).into_zstd(),
+  )
+  .unwrap();
 }
 
 /// unpack a tar.zst compressed archive or zst file
