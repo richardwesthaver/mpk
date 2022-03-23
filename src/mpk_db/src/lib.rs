@@ -2,11 +2,11 @@
 //!
 //! Types for interacting with the SQLite DB. The schema is defined in 'init.sql'.
 use mpk_config::DbConfig;
-use rusqlite::{Connection, OpenFlags, ToSql};
+use rusqlite::{version, Connection, OpenFlags, ToSql};
 use std::path::Path;
 mod err;
 pub use err::{Error, Result};
-
+use rusqlite::backup::{Backup, Progress};
 mod types;
 pub use types::*;
 
@@ -24,6 +24,10 @@ impl Mdb {
     };
 
     Ok(Mdb { conn })
+  }
+
+  pub fn version() -> &'static str {
+    version()
   }
 
   pub fn new_with_config(cfg: DbConfig) -> Result<Mdb> {
@@ -962,9 +966,36 @@ where sample_id = ?1",
     Ok(res)
   }
 
+  pub fn backup<P: AsRef<Path>>(&self, dst: P, progress: fn(Progress)) -> Result<()> {
+    let mut dst = Connection::open(dst)?;
+    let backup = Backup::new(&self.conn, &mut dst)?;
+    backup.run_to_completion(
+      5,
+      std::time::Duration::from_millis(200),
+      Some(progress),
+    )?;
+    Ok(())
+  }
+
+  pub fn set_tracer(&mut self, tracer: Option<fn(_: &str)>) {
+    self.conn.trace(tracer);
+  }
+
+  pub fn set_profiler(
+    &mut self,
+    profiler: Option<fn(_: &str, _: std::time::Duration)>,
+  ) {
+    self.conn.profile(profiler);
+  }
+
   pub fn close(self) {
     self.conn.close().unwrap();
   }
+}
+
+pub fn print_progress(p: Progress) {
+  let current = (p.pagecount - p.remaining) / p.pagecount;
+  println!("{}", current)
 }
 
 #[cfg(test)]

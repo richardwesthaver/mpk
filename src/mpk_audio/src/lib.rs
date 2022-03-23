@@ -1,7 +1,9 @@
 pub use rodio::cpal::traits::{DeviceTrait, HostTrait};
 use rodio::cpal::{available_hosts, host_from_id, ALL_HOSTS};
 
+pub mod err;
 pub mod gen;
+pub use err::{Error, Result};
 
 pub fn info() {
   println!("supported hosts: {:?}", ALL_HOSTS);
@@ -52,10 +54,10 @@ fn beep() {
 fn sample_chain() {
   use gen::SampleChain;
   let mut chain = SampleChain::default();
-  chain.add_file("ch1.wav").unwrap();
-  chain.add_file("ch2.wav").unwrap();
-  chain.process_file("ch1.wav", false).unwrap();
-  chain.process_file("ch2.wav", false).unwrap();
+  chain.add_file("../../tests/ch1.wav").unwrap();
+  chain.add_file("../../tests/ch2.wav").unwrap();
+  chain.process_file("../../tests/ch1.wav", false).unwrap();
+  chain.process_file("../../tests/ch2.wav", false).unwrap();
 }
 
 #[test]

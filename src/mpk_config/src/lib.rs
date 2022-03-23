@@ -307,6 +307,9 @@ pub struct DbConfig {
   pub log_file: Option<String>,
   pub flags: Option<Vec<String>>,
   pub limits: Option<HashMap<String, usize>>,
+  /// TODO: trace/profile to stdout or file, init in _db
+  pub trace: bool,
+  pub profile: bool,
 }
 
 impl DbConfig {
@@ -341,6 +344,8 @@ impl Default for DbConfig {
           .collect(),
       ),
       limits: None,
+      trace: false,
+      profile: false,
     }
   }
 }

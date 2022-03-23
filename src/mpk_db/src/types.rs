@@ -597,6 +597,23 @@ pub enum QueryBy {
   SampleRate,
 }
 
+impl FromStr for QueryBy {
+  type Err = Error;
+  fn from_str(input: &str) -> Result<QueryBy> {
+    match input {
+      "id" => Ok(QueryBy::Id),
+      "path" => Ok(QueryBy::Path),
+      "title" => Ok(QueryBy::Title),
+      "artist" => Ok(QueryBy::Artist),
+      "album" => Ok(QueryBy::Album),
+      "genre" => Ok(QueryBy::Genre),
+      "year" => Ok(QueryBy::Year),
+      "samplerate" | "sr" => Ok(QueryBy::SampleRate),
+      e => Err(Error::BadQType(e.to_string())),
+    }
+  }
+}
+
 /// The type of query. Determines which tables are returned by a query.
 #[derive(Debug)]
 pub enum QueryType {

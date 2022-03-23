@@ -1,7 +1,8 @@
+use crate::err::{Error, Result};
 use rodio::{source::UniformSourceIterator, Decoder};
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
-
+use std::str::FromStr;
 pub const OT_FILE_HEADER: [u8; 23] = [
   0x46, 0x4F, 0x52, 0x4D, 0x00, 0x00, 0x00, 0x00, 0x44, 0x50, 0x53, 0x31, 0x53, 0x4D,
   0x50, 0x41, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00,
@@ -20,6 +21,18 @@ impl std::fmt::Display for ChainExt {
       ChainExt::Wav => f.write_str("wav"),
       ChainExt::Flac => f.write_str("flac"),
       ChainExt::Mp3 => f.write_str("mp3"),
+    }
+  }
+}
+
+impl FromStr for ChainExt {
+  type Err = Error;
+  fn from_str(input: &str) -> Result<ChainExt> {
+    match input {
+      "wav" => Ok(ChainExt::Wav),
+      "flac" => Ok(ChainExt::Flac),
+      "mp3" => Ok(ChainExt::Mp3),
+      e => Err(Error::BadChainExt(e.to_string())),
     }
   }
 }
@@ -65,7 +78,7 @@ impl SampleChain {
     self.slices.clear();
     self.start_offset = 0;
   }
-  pub fn add_file<P: AsRef<Path>>(&mut self, path: P) -> Result<(), std::io::Error> {
+  pub fn add_file<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
     let path = path.as_ref();
     if path.is_file() {
       eprintln!("Adding file to sample_chainer: {:?}", path.display());
@@ -78,17 +91,16 @@ impl SampleChain {
     Ok(())
   }
 
-  // TODO
   pub fn process_file<P: AsRef<Path>>(
     &mut self,
     path: P,
     even_spacing: bool,
-  ) -> Result<(), std::io::Error> {
+  ) -> Result<()> {
     let path = path.as_ref();
     eprintln!("Processing file: {:?}", path);
     let file = std::fs::File::open(path).unwrap();
-    // if input.sample_rate() != self.sample_rate
-    //   || input.channels() != self.channels {
+    //    if input.sample_rate() != self.sample_rate
+    //       || input.channels() != self.channels {
     let source = UniformSourceIterator::<_, i16>::new(
       Decoder::new(BufReader::new(file)).unwrap(),
       self.channels,

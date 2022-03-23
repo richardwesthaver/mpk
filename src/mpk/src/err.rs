@@ -5,6 +5,7 @@ pub enum Error {
   Db(mpk_db::Error),
   Cfg(mpk_config::Error),
   Midi(mpk_midi::Error),
+  Audio(mpk_audio::Error),
   Io(std::io::Error),
 }
 
@@ -14,6 +15,7 @@ impl std::error::Error for Error {
       Error::Db(ref err) => Some(err),
       Error::Cfg(ref err) => Some(err),
       Error::Midi(ref err) => Some(err),
+      Error::Audio(ref err) => Some(err),
       Error::Io(ref err) => Some(err),
     }
   }
@@ -25,6 +27,7 @@ impl std::fmt::Display for Error {
       Error::Db(ref err) => err.fmt(f),
       Error::Cfg(ref err) => err.fmt(f),
       Error::Midi(ref err) => err.fmt(f),
+      Error::Audio(ref err) => err.fmt(f),
       Error::Io(ref err) => err.fmt(f),
     }
   }
@@ -51,5 +54,11 @@ impl From<mpk_config::Error> for Error {
 impl From<mpk_midi::Error> for Error {
   fn from(err: mpk_midi::Error) -> Error {
     Error::Midi(err)
+  }
+}
+
+impl From<mpk_audio::Error> for Error {
+  fn from(err: mpk_audio::Error) -> Error {
+    Error::Audio(err)
   }
 }

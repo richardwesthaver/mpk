@@ -1,10 +1,10 @@
 use clap::{AppSettings, Parser, Subcommand};
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 
+use mpk::Result;
+use mpk_audio::gen::SampleChain;
 use mpk_config::{Config, CONFIG_FILE, DEFAULT_PATH};
 use mpk_db::{Mdb, QueryType};
-
-use mpk::Result;
 
 #[derive(Parser)]
 #[clap(name = "mpk")]
@@ -19,6 +19,12 @@ struct Args {
   cmd: Command,
   #[clap(short,long, default_value_t = [DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), CONFIG_FILE].concat())]
   cfg: String,
+  /// enable DB tracing
+  #[clap(long)]
+  db_trace: bool,
+  /// enable DB profiling
+  #[clap(long)]
+  db_profile: bool,
 }
 
 #[derive(Subcommand)]
@@ -94,6 +100,8 @@ enum Runner {
     input: Vec<PathBuf>,
     #[clap(parse(from_os_str))]
     output: PathBuf,
+    #[clap(short, long)]
+    even: bool,
   },
   Plot,
   /// start the metronome
@@ -171,7 +179,17 @@ fn main() -> Result<()> {
       sample,
       raw,
     } => {
-      let conn = Mdb::new_with_config(cfg.db)?;
+      let (trace, profile) = (
+        &cfg.db.trace | args.db_trace,
+        &cfg.db.profile | args.db_profile,
+      );
+      let mut conn = Mdb::new_with_config(cfg.db)?;
+      if trace {
+        conn.set_tracer(Some(|x| println!("{}", x)))
+      }
+      if profile {
+        conn.set_profiler(Some(|x, y| println!("{} -- {}ms", x, y.as_millis())))
+      }
       match query {
         QueryType::Info => {
           if track.is_some() {
@@ -254,6 +272,27 @@ fn main() -> Result<()> {
       }
     }
     Command::Run { runner } => match runner {
+      Runner::Chain {
+        input,
+        output,
+        even,
+      } => {
+        let mut chain = SampleChain::default();
+        chain.output_file = output.with_extension("");
+        chain.output_ext = output
+          .extension()
+          .unwrap()
+          .to_str()
+          .unwrap()
+          .parse()
+          .unwrap();
+        for i in &input {
+          chain.add_file(i)?;
+        }
+        for i in &input {
+          chain.process_file(i, even)?;
+        }
+      }
       Runner::Metro { bpm, time_sig } => {
         let bpm = match bpm {
           Some(b) => b,
@@ -273,10 +312,9 @@ fn main() -> Result<()> {
         loop {}
       }
       Runner::Plot => {
-        let data = mpk_db::Mdb::new_with_config(cfg.db)?
+        let _data = mpk_db::Mdb::new_with_config(cfg.db)?
           .query_sample_features_rhythm(1)?
           .histogram;
-        mpk_plot::plot_histogram(data).unwrap()
       }
       _ => println!("starting jack server"),
     },
