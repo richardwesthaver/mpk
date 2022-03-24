@@ -107,32 +107,33 @@ def prep_common(v):
             ll["scvalleys"],
         ]
     )
-    try:
-        rl = v["rhythm"]
-        rhythm = rhythm_features(
-            [
-                rl["bpm"],
-                rl["confidence"],
-                rl["onset_rate"],
-                rl["beats_loudness"],
-                rl["first_peak_bpm"],
-                rl["first_peak_spread"],
-                rl["first_peak_weight"],
-                rl["second_peak_bpm"],
-                rl["second_peak_spread"],
-                rl["second_peak_weight"],
-                rl["beats_position"],
-                rl["bpm_estimates"],
-                rl["bpm_intervals"],
-                rl["onset_times"],
-                len(rl["beats_loudness_band_ratio"][0]),
-                rl["beats_loudness_band_ratio"],
-                rl["histogram"],
-            ]
-        )
-    except Exception as err:
-        rhythm = None
-        print("error while building rhythm_features: {0}".format(err))
+
+    rhythm = []
+    for i in (
+        "bpm",
+        "confidence",
+        "onset_rate",
+        "beats_loudness",
+        "first_peak_bpm",
+        "first_peak_spread",
+        "first_peak_weight",
+        "second_peak_bpm",
+        "second_peak_spread",
+        "second_peak_weight",
+        "beats_position",
+        "bpm_estimates",
+        "bpm_intervals",
+        "onset_times",
+        "beats_loudness_band_ratio",
+        "histogram",
+    ):
+        if i in v["rhythm"]:
+            if i == "beats_loudness_band_ratio":
+                rhythm.append(len(v["rhythm"][i][0]))
+            rhythm.append(v["rhythm"][i])
+        else:
+            rhythm.append(None)
+    rhythm = rhythm_features(rhythm)
 
     sfx = sfx_features(list(v["sfx"].values()))
 
@@ -180,38 +181,33 @@ def prep_common(v):
 def prep_track(v):
     # collect common
     common = prep_common(v)
+
     # collect musicbrainz_tags
-    try:
-        mb_tags = musicbrainz_tags(
-            [
-                v["metadata"]["tags"][k][0]
-                for k in (
-                    "musicbrainz_albumartistid",
-                    "musicbrainz_albumid",
-                    "musicbrainz_albumstatus",
-                    "musicbrainz_albumtype",
-                    "musicbrainz_artistid",
-                    "musicbrainz_releasegroupid",
-                    "musicbrainz_releasetrackid",
-                    "musicbrainz_trackid",
-                )
-            ]
-        )
-    except Exception as err:
-        mb_tags = None
-        print("error while building musicbrainz_tags: {0}".format(err))
+    mb_tags = []
+    for i in (
+        "musicbrainz_albumartistid",
+        "musicbrainz_albumid",
+        "musicbrainz_albumstatus",
+        "musicbrainz_albumtype",
+        "musicbrainz_artistid",
+        "musicbrainz_releasegroupid",
+        "musicbrainz_releasetrackid",
+        "musicbrainz_trackid",
+    ):
+        if i in v["metadata"]["tags"]:
+            mb_tags.append(v["metadata"]["tags"][i][0])
+        else:
+            mb_tags.append(None)
+    mb_tags = musicbrainz_tags(mb_tags)
 
     # collect track_tags
-    try:
-        tags = track_tags(
-            [
-                v["metadata"]["tags"][k][0]
-                for k in ("artist", "title", "album", "genre", "year")
-            ]
-        )
-    except Exception as err:
-        tags = None
-        print("error while building track_tags: {0}".format(err))
+    tags = []
+    for i in ("artist", "title", "album", "genre", "year"):
+        if i in v["metadata"]["tags"]:
+            tags.append(v["metadata"]["tags"][i][0])
+        else:
+            tags.append(None)
+    tags = track_tags(tags)
 
     return common + (tags, mb_tags)
 
@@ -260,41 +256,43 @@ def insert_sample(audiodata, lowlevel, rhythm, sfx, tonal, specs):
 
 def insert(data):
     for k, v in data.items():
-        if args.db:
-            if args.type == "track":
-                (
-                    audiodata,
-                    lowlevel,
-                    rhythm,
-                    sfx,
-                    tonal,
-                    specs,
-                    tags,
-                    mb_tags,
-                ) = prep_track(v)
-                insert_track(
-                    audiodata, lowlevel, rhythm, sfx, tonal, specs, tags, mb_tags
-                )
-            elif args.type == "sample":
-                (audiodata, lowlevel, rhythm, sfx, tonal, specs) = prep_common(v)
-                insert_sample(audiodata, lowlevel, rhythm, sfx, tonal, specs)
+        if args.type == "track":
+            (
+                audiodata,
+                lowlevel,
+                rhythm,
+                sfx,
+                tonal,
+                specs,
+                tags,
+                mb_tags,
+            ) = prep_track(v)
+            insert_track(audiodata, lowlevel, rhythm, sfx, tonal, specs, tags, mb_tags)
+        elif args.type == "sample":
+            (audiodata, lowlevel, rhythm, sfx, tonal, specs) = prep_common(v)
+            insert_sample(audiodata, lowlevel, rhythm, sfx, tonal, specs)
+
+
+def job(files):
+    print("spawning %d with %d files" % (os.getpid(), len(files)))
+    return bulk_extract(files)
 
 
 if __name__ == "__main__":
     args = run()
-    cfg = Config(args.cfg)
-
-    if args.db:
+    with mp.Pool(processes=args.jobs) as pool:
+        cfg = Config(args.cfg)
         db = Mdb(cfg.db_path())
-        db.init()
-
-    files = [i for s in [collect_files(f) for f in args.input] for i in s]
-
-    pool = mp.Pool(processes=args.jobs)
-    batch_size = 10
-    for f in range(0, len(files), batch_size):
-        data = pool.map(bulk_extract, (files[f : f + batch_size],))
-        for i in data:
-            insert(i)
-
-    print("...Done")
+        files = [i for s in [collect_files(f) for f in args.input] for i in s]
+        queue_size = 16
+        batch_size = 1
+        for i in range(0, len(files), queue_size):
+            batch_files = files[i : i + queue_size]
+            res = [
+                pool.apply_async(job, (batch_files[x : x + batch_size],))
+                for x in range(0, queue_size, batch_size)
+            ]
+            for r in res:
+                insert(r.get())
+            print("PROCESSED :: %d/%d" % (i + queue_size, len(files)))
+    print("...DONE")

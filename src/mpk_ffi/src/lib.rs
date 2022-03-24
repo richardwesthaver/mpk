@@ -290,37 +290,62 @@ pub extern "C" fn mdb_musicbrainz_tags_new(
   releasetrackid: *const c_char,
   trackid: *const c_char,
 ) -> *mut MusicbrainzTags {
-  assert!(
-    !albumartistid.is_null()
-      | !albumid.is_null()
-      | !albumstatus.is_null()
-      | !albumtype.is_null()
-      | !artistid.is_null()
-      | !releasegroupid.is_null()
-      | !releasetrackid.is_null()
-      | !trackid.is_null()
-  );
   let tags = MusicbrainzTags {
-    albumartistid: Uuid::parse_str(unsafe {
-      CStr::from_ptr(albumartistid).to_str().unwrap()
-    })
-    .unwrap(),
-    albumid: Uuid::parse_str(unsafe { CStr::from_ptr(albumid).to_str().unwrap() })
-      .unwrap(),
-    albumstatus: unsafe { CStr::from_ptr(albumstatus).to_str().unwrap() }.to_string(),
-    albumtype: unsafe { CStr::from_ptr(albumtype).to_str().unwrap() }.to_string(),
-    artistid: Uuid::parse_str(unsafe { CStr::from_ptr(artistid).to_str().unwrap() })
-      .unwrap(),
-    releasegroupid: Uuid::parse_str(unsafe {
-      CStr::from_ptr(releasegroupid).to_str().unwrap()
-    })
-    .unwrap(),
-    releasetrackid: Uuid::parse_str(unsafe {
-      CStr::from_ptr(releasetrackid).to_str().unwrap()
-    })
-    .unwrap(),
-    trackid: Uuid::parse_str(unsafe { CStr::from_ptr(trackid).to_str().unwrap() })
-      .unwrap(),
+    albumartistid: if albumartistid.is_null() {
+      None
+    } else {
+      Some(
+        Uuid::parse_str(unsafe { CStr::from_ptr(albumartistid).to_str().unwrap() })
+          .unwrap(),
+      )
+    },
+    albumid: if albumid.is_null() {
+      None
+    } else {
+      Some(
+        Uuid::parse_str(unsafe { CStr::from_ptr(albumid).to_str().unwrap() }).unwrap(),
+      )
+    },
+    albumstatus: if albumstatus.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(albumstatus).to_str().unwrap() }.to_string())
+    },
+    albumtype: if albumtype.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(albumtype).to_str().unwrap() }.to_string())
+    },
+    artistid: if artistid.is_null() {
+      None
+    } else {
+      Some(
+        Uuid::parse_str(unsafe { CStr::from_ptr(artistid).to_str().unwrap() }).unwrap(),
+      )
+    },
+    releasegroupid: if releasegroupid.is_null() {
+      None
+    } else {
+      Some(
+        Uuid::parse_str(unsafe { CStr::from_ptr(releasegroupid).to_str().unwrap() })
+          .unwrap(),
+      )
+    },
+    releasetrackid: if releasetrackid.is_null() {
+      None
+    } else {
+      Some(
+        Uuid::parse_str(unsafe { CStr::from_ptr(releasetrackid).to_str().unwrap() })
+          .unwrap(),
+      )
+    },
+    trackid: if trackid.is_null() {
+      None
+    } else {
+      Some(
+        Uuid::parse_str(unsafe { CStr::from_ptr(trackid).to_str().unwrap() }).unwrap(),
+      )
+    },
   };
   let tags_box = Box::new(tags);
   Box::into_raw(tags_box)

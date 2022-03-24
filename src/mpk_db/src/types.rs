@@ -285,18 +285,58 @@ year: {}",
 /// tables: [track_tags_musicbrainz]
 #[derive(Debug, Default)]
 pub struct MusicbrainzTags {
-  pub albumartistid: Uuid,
-  pub albumid: Uuid,
-  pub albumstatus: String,
-  pub albumtype: String,
-  pub artistid: Uuid,
-  pub releasegroupid: Uuid,
-  pub releasetrackid: Uuid,
-  pub trackid: Uuid,
+  pub albumartistid: Option<Uuid>,
+  pub albumid: Option<Uuid>,
+  pub albumstatus: Option<String>,
+  pub albumtype: Option<String>,
+  pub artistid: Option<Uuid>,
+  pub releasegroupid: Option<Uuid>,
+  pub releasetrackid: Option<Uuid>,
+  pub trackid: Option<Uuid>,
 }
 
 impl fmt::Display for MusicbrainzTags {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    let albumartistid = self
+      .albumartistid
+      .as_ref()
+      .map(|s| s.to_string())
+      .unwrap_or("NULL".to_string());
+    let albumid = self
+      .albumid
+      .as_ref()
+      .map(|s| s.to_string())
+      .unwrap_or("NULL".to_string());
+    let albumstatus = self
+      .albumstatus
+      .as_ref()
+      .map(|s| s.to_string())
+      .unwrap_or("NULL".to_string());
+    let albumtype = self
+      .albumtype
+      .as_ref()
+      .map(|s| s.to_string())
+      .unwrap_or("NULL".to_string());
+    let artistid = self
+      .artistid
+      .as_ref()
+      .map(|s| s.to_string())
+      .unwrap_or("NULL".to_string());
+    let releasegroupid = self
+      .releasegroupid
+      .as_ref()
+      .map(|s| s.to_string())
+      .unwrap_or("NULL".to_string());
+    let releasetrackid = self
+      .releasetrackid
+      .as_ref()
+      .map(|s| s.to_string())
+      .unwrap_or("NULL".to_string());
+    let trackid = self
+      .trackid
+      .as_ref()
+      .map(|s| s.to_string())
+      .unwrap_or("NULL".to_string());
     write!(
       f,
       "albumartistid: {}
@@ -307,14 +347,14 @@ artistid: {}
 releasegroupid: {}
 releasetrackid: {}
 trackid: {}",
-      self.albumartistid,
-      self.albumid,
-      self.albumstatus,
-      self.albumtype,
-      self.artistid,
-      self.releasegroupid,
-      self.releasetrackid,
-      self.trackid
+      albumartistid,
+      albumid,
+      albumstatus,
+      albumtype,
+      artistid,
+      releasegroupid,
+      releasetrackid,
+      trackid
     )
   }
 }

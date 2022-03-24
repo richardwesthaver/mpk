@@ -15,7 +15,7 @@ pub const CONFIG_FILE: &str = "mpk.toml";
 pub const DB_FILE: &str = "mpk.db";
 
 /// utility function to expand `~` in PATH.
-fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
+pub fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
   let p = path.as_ref();
   if !p.starts_with("~") {
     return Some(p.to_path_buf());
@@ -34,24 +34,15 @@ fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
 }
 
 /// MPK Configuration
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Config {
   pub fs: FsConfig,
   pub db: DbConfig,
   pub jack: JackConfig,
   pub metro: MetroConfig,
+  pub extractor: ExtractorConfig,
 }
 
-impl Default for Config {
-  fn default() -> Self {
-    Config {
-      fs: FsConfig::default(),
-      db: DbConfig::default(),
-      jack: JackConfig::default(),
-      metro: MetroConfig::default(),
-    }
-  }
-}
 impl Config {
   pub fn new(fs: FsConfig, db: DbConfig, jack: JackConfig) -> Result<Config> {
     Ok(Config {
@@ -59,6 +50,7 @@ impl Config {
       db,
       jack,
       metro: MetroConfig::default(),
+      extractor: ExtractorConfig::default(),
     })
   }
 
@@ -442,5 +434,53 @@ impl Default for MetroConfig {
         None
       },
     }
+  }
+}
+
+impl From<Config> for MetroConfig {
+  fn from(cfg: Config) -> MetroConfig {
+    cfg.metro
+  }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ExtractorConfig {
+  include: Vec<String>,
+  mono: bool,
+  sample_rate: u32,
+  windowing: String,
+  frame_size: u32,
+  hop_size: u32,
+  mel_bands: u16,
+  lf_bound: u32,
+  hf_bound: u32,
+}
+
+impl Default for ExtractorConfig {
+  fn default() -> Self {
+    ExtractorConfig {
+      include: vec![
+        "lowlevel".to_string(),
+        "rhythm".to_string(),
+        "sfx".to_string(),
+        "tonal".to_string(),
+        "mel_spec".to_string(),
+        "freq_spec".to_string(),
+      ],
+      mono: false,
+      sample_rate: 44100,
+      windowing: "hann".to_string(),
+      frame_size: 2048,
+      hop_size: 1024,
+      mel_bands: 96,
+      lf_bound: 0,
+      hf_bound: 11000,
+    }
+  }
+}
+
+impl From<Config> for ExtractorConfig {
+  fn from(cfg: Config) -> ExtractorConfig {
+    cfg.extractor
   }
 }

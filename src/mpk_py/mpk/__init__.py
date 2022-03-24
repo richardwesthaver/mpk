@@ -11,5 +11,6 @@ from .lib import (
     sfx_features,
     tonal_features,
     spectrograms,
+    NULL,
 )
 from .extract import AudioFile, Extract, FILE_EXT, collect_files, bulk_extract

@@ -7,6 +7,7 @@ use std::path::Path;
 mod err;
 pub use err::{Error, Result};
 use rusqlite::backup::{Backup, Progress};
+pub use rusqlite::DatabaseName;
 mod types;
 pub use types::*;
 
@@ -974,6 +975,16 @@ where sample_id = ?1",
       std::time::Duration::from_millis(200),
       Some(progress),
     )?;
+    Ok(())
+  }
+
+  pub fn restore<P: AsRef<Path>>(
+    &mut self,
+    name: DatabaseName,
+    src: P,
+    progress: Option<fn(Progress)>,
+  ) -> Result<()> {
+    self.conn.restore(name, src, progress)?;
     Ok(())
   }
 

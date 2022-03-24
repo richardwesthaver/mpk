@@ -11,3 +11,4 @@ mpk_midi = { path = "../mpk_midi" }
 mpk_db = { path = "../mpk_db" }
 mpk_plot = { path = "../mpk_plot" }
 mpk_flate = { path = "../mpk_flate" }
+mpk_gear = { path = "../mpk_gear" }

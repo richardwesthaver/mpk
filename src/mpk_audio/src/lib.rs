@@ -1,7 +1,7 @@
 pub use rodio::cpal::traits::{DeviceTrait, HostTrait};
 use rodio::cpal::{available_hosts, host_from_id, ALL_HOSTS};
 
-pub mod err;
+mod err;
 pub mod gen;
 pub use err::{Error, Result};
 

@@ -1,9 +1,9 @@
 use clap::{AppSettings, Parser, Subcommand};
-use std::path::{Path, PathBuf, MAIN_SEPARATOR};
+use std::path::PathBuf;
 
 use mpk::Result;
 use mpk_audio::gen::SampleChain;
-use mpk_config::{Config, CONFIG_FILE, DEFAULT_PATH};
+use mpk_config::{expand_tilde, Config};
 use mpk_db::{Mdb, QueryType};
 
 #[derive(Parser)]
@@ -17,7 +17,7 @@ use mpk_db::{Mdb, QueryType};
 struct Args {
   #[clap(subcommand)]
   cmd: Command,
-  #[clap(short,long, default_value_t = [DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), CONFIG_FILE].concat())]
+  #[clap(short,long, default_value_t = String::from("~/mpk/mpk.toml"))]
   cfg: String,
   /// enable DB tracing
   #[clap(long)]
@@ -98,10 +98,13 @@ enum Runner {
   Chain {
     #[clap(parse(from_os_str))]
     input: Vec<PathBuf>,
-    #[clap(parse(from_os_str))]
+    #[clap(short, long, parse(from_os_str))]
     output: PathBuf,
     #[clap(short, long)]
     even: bool,
+    /// Generate an octatrack data file (.ot)
+    #[clap(long)]
+    ot: bool,
   },
   Plot,
   /// start the metronome
@@ -127,9 +130,9 @@ fn ppln(i: &str, s: char) {
 
 fn main() -> Result<()> {
   let args = Args::parse();
-  let cfg_path = Path::new(&args.cfg);
+  let cfg_path = expand_tilde(&args.cfg).unwrap();
   let cfg = if cfg_path.exists() {
-    Config::load(cfg_path)?
+    Config::load(&cfg_path)?
   } else {
     Config::default()
   };
@@ -276,6 +279,7 @@ fn main() -> Result<()> {
         input,
         output,
         even,
+        ot,
       } => {
         let mut chain = SampleChain::default();
         chain.output_file = output.with_extension("");
@@ -291,6 +295,9 @@ fn main() -> Result<()> {
         }
         for i in &input {
           chain.process_file(i, even)?;
+        }
+        if ot {
+          mpk_gear::octatrack::generate_ot_file(&mut chain)?;
         }
       }
       Runner::Metro { bpm, time_sig } => {

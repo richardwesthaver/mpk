@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-wmidi = "4.0.6"
+mpk_audio = { path = "../mpk_audio" }

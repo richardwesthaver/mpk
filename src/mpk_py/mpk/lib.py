@@ -59,54 +59,70 @@ class Mdb:
     def insert_track(self, data):
         return lib.mdb_insert_track(self.db, data)
 
-    def insert_track_tags(self, id, tags, ptr=True):
-        print("inserting tags:", tags, "for track_id:", id)
-        return lib.mdb_insert_track_tags(self.db, id, tags)
+    def insert_track_tags(self, id, tags):
+        if tags is None:
+            print("no track_tags found for track_id:", id)
+            return
+        else:
+            print("inserting tags:", tags, "for track_id:", id)
+            return lib.mdb_insert_track_tags(self.db, id, tags)
 
-    def insert_track_tags_musicbrainz(self, id, tags, ptr=True):
-        print("inserting musicbrainz_tags:", tags, "for track_id:", id)
-        return lib.mdb_insert_track_tags_musicbrainz(self.db, id, tags)
+    def insert_track_tags_musicbrainz(self, id, tags):
+        if tags is None:
+            print("no track_tags_musicbrainz found for track_id:", id)
+            return
+        else:
+            print("inserting musicbrainz_tags:", tags, "for track_id:", id)
+            return lib.mdb_insert_track_tags_musicbrainz(self.db, id, tags)
 
-    def insert_track_featues_lowlevel(self, id, features, ptr=True):
+    def insert_track_featues_lowlevel(self, id, features):
         print("inserting lowlevel_features:", features, "for track_id:", id)
         return lib.mdb_insert_track_features_lowlevel(self.db, id, features)
 
-    def insert_track_features_rhythm(self, id, features, ptr=True):
-        print("inserting rhythm_features:", features, "for track_id:", id)
-        return lib.mdb_insert_track_features_rhythm(self.db, id, features)
+    def insert_track_features_rhythm(self, id, features):
+        if features is None:
+            print("no track_features_rhythm found for track_id:", id)
+            return
+        else:
+            print("inserting rhythm_features:", features, "for track_id:", id)
+            return lib.mdb_insert_track_features_rhythm(self.db, id, features)
 
-    def insert_track_features_sfx(self, id, features, ptr=True):
+    def insert_track_features_sfx(self, id, features):
         print("inserting sfx_features:", features, "for track_id:", id)
         return lib.mdb_insert_track_features_sfx(self.db, id, features)
 
-    def insert_track_features_tonal(self, id, features, ptr=True):
+    def insert_track_features_tonal(self, id, features):
         print("inserting tonal_features:", features, "for track_id:", id)
         return lib.mdb_insert_track_features_tonal(self.db, id, features)
 
-    def insert_track_images(self, id, images, ptr=True):
+    def insert_track_images(self, id, images):
         print("inserting spectrograms:", images, "for track_id:", id)
         return lib.mdb_insert_track_images(self.db, id, images)
 
     def insert_sample(self, data):
         return lib.mdb_insert_sample(self.db, data)
 
-    def insert_sample_featues_lowlevel(self, id, features, ptr=True):
+    def insert_sample_featues_lowlevel(self, id, features):
         print("inserting lowlevel_features for sample_id:", id)
         return lib.mdb_insert_sample_features_lowlevel(self.db, id, features)
 
-    def insert_sample_features_rhythm(self, id, features, ptr=True):
-        print("inserting rhythm_features for sample_id:", id)
-        return lib.mdb_insert_sample_features_rhythm(self.db, id, features)
+    def insert_sample_features_rhythm(self, id, features):
+        if features is None:
+            print("no sample_features_rhythm found for track_id:", id)
+            return
+        else:
+            print("inserting rhythm_features for sample_id:", id)
+            return lib.mdb_insert_sample_features_rhythm(self.db, id, features)
 
-    def insert_sample_features_sfx(self, id, features, ptr=True):
+    def insert_sample_features_sfx(self, id, features):
         print("inserting sfx_features for sample_id:", id)
         return lib.mdb_insert_sample_features_sfx(self.db, id, features)
 
-    def insert_sample_features_tonal(self, id, features, ptr=True):
+    def insert_sample_features_tonal(self, id, features):
         print("inserting tonal_features for sample_id:", id)
         return lib.mdb_insert_sample_features_tonal(self.db, id, features)
 
-    def insert_sample_images(self, id, images, ptr=True):
+    def insert_sample_images(self, id, images):
         print("inserting spectrograms for sample_id:", id)
         return lib.mdb_insert_sample_images(self.db, id, images)
 
@@ -132,14 +148,32 @@ def audio_data(path, filesize, duration, channels, bitrate, samplerate):
 
 
 def track_tags(tags):
-    tags[0:4] = [x.encode() for x in tags[0:4]]
-    tags[4] = int(tags[4])
-    return lib.mdb_track_tags_new(*tags)
+    if all(i is None for i in tags):
+        return
+    else:
+        for idx, v in enumerate(tags):
+            if idx == 4:
+                if v is None:
+                    tags[idx] = 0
+                elif type(v) is str:
+                    tags[idx] = int(v)
+            elif v is None:
+                tags[idx] = NULL
+            elif idx in range(4):
+                tags[idx] = v.encode()
+        return lib.mdb_track_tags_new(*tags)
 
 
 def musicbrainz_tags(tags):
-    tags = [x.encode() for x in tags]
-    return lib.mdb_musicbrainz_tags_new(*tags)
+    if all(i is None for i in tags):
+        return
+    else:
+        for idx, v in enumerate(tags):
+            if v is None:
+                tags[idx] = NULL
+            elif type(v) is str:
+                tags[idx] = v.encode()
+        return lib.mdb_musicbrainz_tags_new(*tags)
 
 
 def lowlevel_features(features):
@@ -153,13 +187,17 @@ def lowlevel_features(features):
 
 
 def rhythm_features(features):
-    #    features[:3] = [x[0] for x in features[:3] if isinstance(x, (list, np.ndarray))]
-    features[3] = vectorize(features[3])
-    features[4:10] = [x[0] for x in features[4:10] if isinstance(x, (list, np.ndarray))]
-    features[10:14] = [vectorize(x) for x in features[10:14]]
-    features[15] = matrixize(features[15])
-    features[16] = vectorize(features[16])
-    return lib.mdb_rhythm_features_new(*features)
+    if any(i is None for i in features):
+        return
+    else:
+        features[3] = vectorize(features[3])
+        features[4:10] = [
+            x[0] for x in features[4:10] if isinstance(x, (list, np.ndarray))
+        ]
+        features[10:14] = [vectorize(x) for x in features[10:14]]
+        features[15] = matrixize(features[15])
+        features[16] = vectorize(features[16])
+        return lib.mdb_rhythm_features_new(*features)
 
 
 def sfx_features(features):
