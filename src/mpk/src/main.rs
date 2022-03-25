@@ -1,10 +1,12 @@
 use clap::{AppSettings, Parser, Subcommand};
-use std::path::PathBuf;
-
 use mpk::Result;
 use mpk_audio::gen::SampleChain;
 use mpk_config::{expand_tilde, Config};
 use mpk_db::{Mdb, QueryType};
+use std::io;
+use std::path::PathBuf;
+use std::sync::mpsc::sync_channel;
+use std::thread;
 
 #[derive(Parser)]
 #[clap(name = "mpk")]
@@ -32,6 +34,16 @@ struct Args {
 enum Command {
   /// Initialize MPK
   Init,
+  /// Play an audio file
+  Play {
+    file: PathBuf,
+    #[clap(short)]
+    volume: Option<f32>,
+    #[clap(short)]
+    speed: Option<f32>,
+    #[clap(short)]
+    device: Option<String>,
+  },
   /// Run a service
   Run {
     #[clap(subcommand)]
@@ -90,9 +102,11 @@ enum Command {
 
 #[derive(Subcommand)]
 enum Runner {
-  /// start the jack server
-  Jack,
-  /// start a network server
+  /// start a JACK service
+  Jack {
+    name: String,
+  },
+  /// start a network service
   Net,
   /// create a sample chain
   Chain {
@@ -176,6 +190,21 @@ fn main() -> Result<()> {
         mpk_midi::list_midi_ports()?;
       }
     }
+    Command::Play {
+      file,
+      volume,
+      speed,
+      device,
+    } => {
+      let device = if let Some(d) = device {
+        mpk_audio::device_from_str(d.as_str())
+      } else {
+        None
+      };
+      let rx = mpk_audio::pause_controller_cli();
+      mpk_audio::play(file, device, volume, speed, rx)
+    }
+
     Command::Query {
       query,
       track,
@@ -275,6 +304,17 @@ fn main() -> Result<()> {
       }
     }
     Command::Run { runner } => match runner {
+      Runner::Jack { name } => {
+        // Wait for user input to quit
+        let (tx, rx) = sync_channel(1);
+        println!("Press enter to quit...");
+        thread::spawn(move || {
+          let mut input = String::new();
+          io::stdin().read_line(&mut input).ok();
+          tx.send(()).unwrap();
+        });
+        mpk_jack::internal_client(&name, rx);
+      }
       Runner::Chain {
         input,
         output,

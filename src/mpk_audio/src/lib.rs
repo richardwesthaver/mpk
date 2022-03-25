@@ -1,5 +1,11 @@
 pub use rodio::cpal::traits::{DeviceTrait, HostTrait};
 use rodio::cpal::{available_hosts, host_from_id, ALL_HOSTS};
+pub use rodio::cpal::{Device, Devices};
+use std::io;
+use std::io::BufReader;
+use std::path::Path;
+use std::sync::mpsc::{channel, Receiver};
+use std::thread;
 
 mod err;
 pub mod gen;
@@ -32,6 +38,75 @@ pub fn info() {
       }
     }
   }
+}
+
+pub fn play<P: AsRef<Path>>(
+  path: P,
+  device: Option<Device>,
+  vol: Option<f32>,
+  speed: Option<f32>,
+  pause: Receiver<bool>,
+) {
+  let (_stream, handle) = if let Some(d) = device {
+    rodio::OutputStream::try_from_device(&d).unwrap()
+  } else {
+    rodio::OutputStream::try_default().unwrap()
+  };
+  let sink = rodio::Sink::try_new(&handle).unwrap();
+  if let Some(v) = vol {
+    sink.set_volume(v)
+  }
+  if let Some(s) = speed {
+    sink.set_speed(s)
+  }
+  let file = std::fs::File::open(path).unwrap();
+  sink.append(rodio::Decoder::new(BufReader::new(file)).unwrap());
+
+  loop {
+    match sink.is_paused() {
+      true => {
+        if !pause.recv().unwrap() {
+          sink.play();
+        }
+      }
+      false => {
+        if pause.recv().unwrap() {
+          sink.pause();
+        }
+      }
+    }
+  }
+}
+
+pub fn device_from_str(s: &str) -> Option<Device> {
+  let mut dev = None;
+  for i in available_hosts() {
+    for h in host_from_id(i).unwrap().devices().unwrap() {
+      if s == h.name().unwrap() {
+        dev = Some(h);
+      }
+    }
+  }
+  dev
+}
+pub fn pause_controller_cli() -> Receiver<bool> {
+  let (tx, rx) = channel();
+  println!("Press enter to pause, C-c to quit...");
+  thread::spawn(move || {
+    let mut pause = false;
+    let mut input = String::new();
+    loop {
+      io::stdin().read_line(&mut input).ok();
+      if pause {
+        tx.send(false).unwrap();
+        pause = false;
+      } else if !pause {
+        tx.send(true).unwrap();
+        pause = true;
+      }
+    }
+  });
+  rx
 }
 
 #[test]

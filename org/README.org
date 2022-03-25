@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-03-18
+#+DATE: 2022-03-25
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
@@ -17,7 +17,7 @@ future plans for image/video support followed by VR/AR. The core APIs
 are written in Rust but there are bindings for C and Python (see
 [[*=mpk_ffi=][mpk_ffi]]).
 
-Right now my focus is on the SQLite[fn:5] database and cataloging
+Right now my focus is on the SQLite[fn:1] database and cataloging
 libraries of audio tracks and samples. The database is designed to
 capture as much information as possible with minimal user
 configuration and input. The libraries have a fairly flat directory
@@ -30,9 +30,33 @@ Once I'm happy with the database I'll work on the MIDI module
 ([[*=mpk_audio=][mpk_audio]]/[[*=mpk_codec=][mpk_codec]]), and then get started on session management
 functionality ([[*=mpk_sesh=][mpk_sesh]]).
 
-mpk_audio also includes a metronome and sample chainer[fn:6] which I
+mpk_audio also includes a metronome and sample chainer[fn:2] which I
 plan to tweak over the next few weeks since they have well-defined
 requirements.
+
+[fn:1] [[https://www.sqlite.org/index.html][SQLite Home Page]]
+
+[fn:2] [[https://github.com/KaiDrange/OctaChainer][GitHub - KaiDrange/OctaChainer]]
+* Dependencies
+- [[https://www.rust-lang.org/tools/install][Rust]] :: use =cargo= to install =mpk=
+- Python3 :: use =pip= to install =mpk_extract= and =mpk= python package.
+  - your mileage may vary on Py3.10. If installation fails try it on 3.9.
+- _Dev Dependencies_
+  - essentia :: try a =pip install= from the [[https://github.com/MTG/essentia][github repo]], if that
+    doesn't work you will need to [[https://essentia.upf.edu/installing.html][install from source]]. If you have
+    issues just contact me.
+  - numpy :: you will need a version <1.22, for example =pip install numpy==1.21.5=.
+  - poetry :: =pip= or OS package manager
+  - black :: =pip= or OS package manager
+  - Nim :: OS package manager
+    - used as a build tool via [[https://nim-lang.org/docs/nims.html][NimScript]].
+  - C Compiler :: GCC or LLVM
+    - Valgrind :: OS package manager
+      - used to detect issues with FFI memory management.
+  - SQLite :: OS package manager
+    - required by =mpk_db=
+  - JACK :: OS package manager
+    - required by =mpk_jack=
 
 * Modules
 ** =mpk=
@@ -45,13 +69,13 @@ User configuration with read/write support for TOML (typically from
 The =Mdb= struct provides an API to the underlying SQLite database
 which works with the custom structs defined in =src/types.rs=. 
 ** =mpk_py=
-The MIR[fn:1] tool (=mpk_extract.py=) uses Python as a bridge
-between Essentia[fn:2] for feature extraction and the MPK
+The MIR[fn:3] tool (=mpk_extract.py=) uses Python as a bridge
+between Essentia[fn:4] for feature extraction and the MPK
 database. There are a huge amount of features stored in the database
 (/97/ at time of writing), but the feature set will be reduced in
 future iterations as I find the features which are most useful to
-me. As for the extraction algorithms, My plan is to RiiR[fn:3] and
-reduce DB size by applying zstd[fn:4] compression.
+me. As for the extraction algorithms, My plan is to RiiR[fn:5] and
+reduce DB size by applying zstd[fn:6] compression.
 
 #+begin_src artist
            +------------------+                             
@@ -75,6 +99,14 @@ reduce DB size by applying zstd[fn:4] compression.
 
 #+end_src
 
+[fn:3]  [[https://en.wikipedia.org/wiki/Music_information_retrieval][Music information retrieval - Wikipedia]]
+
+[fn:4] [[https://essentia.upf.edu/][Essentia - Music Technology Group - Universitat Pompeu Fabra]]
+
+[fn:5] [[https://transitiontech.ca/random/RIIR][ansuz - /random/RIIR]]
+
+[fn:6] [[http://facebook.github.io/zstd/][Zstandard - Real-time data compression algorithm]]
+
 ** =mpk_ffi=
 C-compatible MPK FFI with C-header and python binding generators.
 ** =mpk_audio=
@@ -96,45 +128,15 @@ MPK interface for hardware devices connected via USB.
 MPK interface for JACK.
 ** TODO =mpk_sesh=
 MPK session management. Inspired by NSM[fn:7].
+
+[fn:7] [[http://non.tuxfamily.org/wiki/Non%20Session%20Manager][Non Session Manager]]
 ** TODO =mpk_midi=
 MPK MIDI interface supporting real-time processing, encoding/decoding,
 and Sysex patching.
-* Footnotes
-[fn:1]  [[https://en.wikipedia.org/wiki/Music_information_retrieval][Music information retrieval - Wikipedia]]
-
-[fn:2] [[https://essentia.upf.edu/][Essentia - Music Technology Group - Universitat Pompeu Fabra]] 
-
-[fn:3] [[https://transitiontech.ca/random/RIIR][ansuz - /random/RIIR]]
-
-[fn:4] [[http://facebook.github.io/zstd/][Zstandard - Real-time data compression algorithm]] 
-
-[fn:5] [[https://www.sqlite.org/index.html][SQLite Home Page]] 
-
-[fn:6] [[https://github.com/KaiDrange/OctaChainer][GitHub - KaiDrange/OctaChainer]] 
-
-[fn:7] [[http://non.tuxfamily.org/wiki/Non%20Session%20Manager][Non Session Manager]]
-
-* Dependencies
-- [[https://www.rust-lang.org/tools/install][Rust]] :: use =cargo= to install =mpk=
-- Python3 :: use =pip= to install =mpk_extract= and =mpk= python package.
-  - your mileage may vary on Py3.10. If installation fails try it on 3.9.
-- _Dev Dependencies_
-  - essentia :: try a =pip install= from the [[https://github.com/MTG/essentia][github repo]], if that
-    doesn't work you will need to [[https://essentia.upf.edu/installing.html][install from source]]. If you have
-    issues just contact me.
-  - numpy :: you will need a version <1.22, for example =pip install numpy==1.21.5=.
-  - poetry :: =pip= or OS package manager
-  - black :: =pip= or OS package manager
-  - Nim :: OS package manager
-    - used as a build tool via [[https://nim-lang.org/docs/nims.html][NimScript]].
-  - C Compiler :: GCC or LLVM
-    - Valgrind :: OS package manager
-      - used to detect issues with FFI memory management.
-  - SQLite :: OS package manager
-    - required by =mpk_db=
-  - JACK :: OS package manager
-    - required by =mpk_jack=
-
+** TODO =mpk_http=
+HTTP client APIs for MPK. Currently includes freesound.org and musicbrainz.org.
+** TODO =mpk_osc=
+OSC APIs for MPK. Includes an API client for NSM (Non-Session Manager).
 * COMMENT notes
 ** tasks
 *** TODO finish mpk_extract [5/8]
