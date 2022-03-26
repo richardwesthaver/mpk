@@ -599,9 +599,9 @@ pub struct TonalFeatures {
 /// tables: [track_images, sample_images]
 #[derive(Debug, Default)]
 pub struct Spectrograms {
-  pub mel_spec: MatrixReal,
-  pub log_spec: MatrixReal,
-  pub freq_spec: MatrixReal,
+  pub mel_spec: Option<MatrixReal>,
+  pub log_spec: Option<MatrixReal>,
+  pub freq_spec: Option<MatrixReal>,
 }
 
 impl fmt::Display for Spectrograms {
@@ -611,7 +611,7 @@ impl fmt::Display for Spectrograms {
       "mel_spec: {}
 log_spec: {}
 freq_spec: {}",
-      self.mel_spec, self.log_spec, self.freq_spec
+      self.mel_spec.as_ref().unwrap(), self.log_spec.as_ref().unwrap(), self.freq_spec.as_ref().unwrap()
     )
   }
 }

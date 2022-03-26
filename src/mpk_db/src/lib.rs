@@ -386,12 +386,12 @@ freq_spec = ?7
 where track_id = ?1",
       &[
         &id,
-        &images.mel_spec.frame_size,
-        &images.mel_spec.to_vec(),
-        &images.log_spec.frame_size,
-        &images.log_spec.to_vec(),
-        &images.freq_spec.frame_size,
-        &images.freq_spec.to_vec(),
+	&images.mel_spec.as_ref().map(|s| s.frame_size),
+        &images.mel_spec.as_ref().map(|s| s.to_vec()),
+        &images.log_spec.as_ref().map(|s| s.frame_size),
+        &images.log_spec.as_ref().map(|s| s.to_vec()),
+        &images.freq_spec.as_ref().map(|s| s.frame_size),
+        &images.freq_spec.as_ref().map(|s| s.to_vec()),
       ],
     )?;
     Ok(())
@@ -655,12 +655,12 @@ freq_spec = ?7
 where sample_id = ?1",
       &[
         &id,
-        &images.mel_spec.frame_size,
-        &images.mel_spec.to_vec(),
-        &images.log_spec.frame_size,
-        &images.log_spec.to_vec(),
-        &images.freq_spec.frame_size,
-        &images.freq_spec.to_vec(),
+	&images.mel_spec.as_ref().map(|s| s.frame_size),
+        &images.mel_spec.as_ref().map(|s| s.to_vec()),
+        &images.log_spec.as_ref().map(|s| s.frame_size),
+        &images.log_spec.as_ref().map(|s| s.to_vec()),
+        &images.freq_spec.as_ref().map(|s| s.frame_size),
+        &images.freq_spec.as_ref().map(|s| s.to_vec()),
       ],
     )?;
     Ok(())
@@ -825,9 +825,9 @@ where sample_id = ?1",
       [id],
       |row| {
         Ok(Spectrograms {
-          mel_spec: MatrixReal::new(row.get(2)?, row.get(1)?),
-          log_spec: MatrixReal::new(row.get(4)?, row.get(3)?),
-          freq_spec: MatrixReal::new(row.get(6)?, row.get(5)?),
+          mel_spec: Some(MatrixReal::new(row.get(2)?, row.get(1)?)),
+          log_spec: Some(MatrixReal::new(row.get(4)?, row.get(3)?)),
+          freq_spec: Some(MatrixReal::new(row.get(6)?, row.get(5)?)),
         })
       },
     )?;
@@ -931,9 +931,9 @@ where sample_id = ?1",
       [id],
       |row| {
         Ok(Spectrograms {
-          mel_spec: MatrixReal::new(row.get(2)?, row.get(1)?),
-          log_spec: MatrixReal::new(row.get(4)?, row.get(3)?),
-          freq_spec: MatrixReal::new(row.get(6)?, row.get(5)?),
+          mel_spec: Some(MatrixReal::new(row.get(2)?, row.get(1)?)),
+          log_spec: Some(MatrixReal::new(row.get(4)?, row.get(3)?)),
+          freq_spec: Some(MatrixReal::new(row.get(6)?, row.get(5)?)),
         })
       },
     )?;

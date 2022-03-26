@@ -1,5 +1,21 @@
 //! MPK FFI
 //!
+//! This crate provides FFI-safe bindings for MPK. The cdylib
+//! generated from this crate can be used from other C-compatible
+//! languages as you see fit.
+//!
+//! Cbindgen is used in the build.rs script to generate a C header
+//! file ('mpk_ffi.h') which is also compatible with C++. This header
+//! is in turn utilized by the Python package cffi in build.py to
+//! generate Python-compatible bindings (_mpk.c, _mpk.o, and
+//! _mpk.cpython-*.so). All of these files can be found in the build
+//! directory at the project root after executing 'nim build'.
+//!
+//! The Python bindings are required by MPK_PY so if you plan to work
+//! with the files mpk_extract.py, mpk/extract.py or mpk/lib.py
+//! directly, be sure to build the project first. When the 'dev' flag
+//! is defined (default) the Python bindings will be automatically
+//! copied to the appropriate directory.
 use libc::{c_char, c_int, size_t};
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 use mpk_db::{
@@ -11,6 +27,8 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::slice;
 
+/// a f32 vector. In C this is represented as a raw pointer and
+/// length.
 #[repr(C)]
 pub struct CVecReal {
   pub ptr: *const f32,
@@ -26,34 +44,45 @@ impl From<VecReal> for CVecReal {
   }
 }
 
+/// From<CVecReal> is implemented for VecReal so we can can convert
+/// between these types
 impl From<CVecReal> for VecReal {
   fn from(v: CVecReal) -> Self {
     VecReal(unsafe { slice::from_raw_parts(v.ptr, v.len) }.to_vec())
   }
 }
 
+/// A flattened f32 matrix. This is exactly the same as CVecReal but
+/// defined as a separate struct for type assertions. It is the
+/// developer's responsibility to capture the 'frame' or row size and
+/// provide it to MatrixReal initializers.
 #[repr(C)]
 pub struct CMatrixReal {
   pub ptr: *const f32,
   pub len: size_t,
 }
 
+/// From<CMatrixReal> is also implemented for VecReal since we can not
+/// initialize a MatrixReal with only the fields in this struct.
 impl From<CMatrixReal> for VecReal {
   fn from(m: CMatrixReal) -> Self {
     VecReal(unsafe { slice::from_raw_parts(m.ptr, m.len) }.to_vec())
   }
 }
 
+/// Build a CVecReal from PTR and LEN.
 #[no_mangle]
 pub extern "C" fn mdb_vecreal_new(ptr: *const f32, len: size_t) -> CVecReal {
   CVecReal { ptr, len }
 }
 
+/// Build a CMatrixReal from PTR and LEN.
 #[no_mangle]
 pub extern "C" fn mdb_matrixreal_new(ptr: *const f32, len: size_t) -> CMatrixReal {
   CMatrixReal { ptr, len }
 }
 
+/// Drop a c_char
 #[no_mangle]
 pub extern "C" fn mpk_string_free(ptr: *mut c_char) {
   if ptr.is_null() {
@@ -64,6 +93,8 @@ pub extern "C" fn mpk_string_free(ptr: *mut c_char) {
   }
 }
 
+/// Build a new Config from inner configs FS, DB, and JACK. Returns a
+/// mutable pointer.
 #[no_mangle]
 pub extern "C" fn mpk_config_new(
   fs: *mut FsConfig,
@@ -84,6 +115,7 @@ pub extern "C" fn mpk_config_new(
   }
 }
 
+/// Drop a Config
 #[no_mangle]
 pub extern "C" fn mpk_config_free(ptr: *mut Config) {
   if ptr.is_null() {
@@ -94,6 +126,7 @@ pub extern "C" fn mpk_config_free(ptr: *mut Config) {
   }
 }
 
+/// Load a Config from PATH. Returns mutable pointer to Config.
 #[no_mangle]
 pub extern "C" fn mpk_config_load(path: *const c_char) -> *mut Config {
   let cstr = unsafe {
@@ -105,6 +138,7 @@ pub extern "C" fn mpk_config_load(path: *const c_char) -> *mut Config {
   Box::into_raw(Box::new(Config::load(p).unwrap()))
 }
 
+/// Write a Config CFG to PATH.
 #[no_mangle]
 pub extern "C" fn mpk_config_write(cfg: *const Config, path: *const c_char) {
   let cstr = unsafe {
@@ -116,11 +150,13 @@ pub extern "C" fn mpk_config_write(cfg: *const Config, path: *const c_char) {
   cfg.write(p).unwrap()
 }
 
+/// Build a Config CFG
 #[no_mangle]
 pub extern "C" fn mpk_config_build(cfg: *const Config) {
   unsafe { &*cfg }.build().unwrap()
 }
 
+/// Build a FsConfig from ROOT. Returns a mutable pointer to FsConfig.
 #[no_mangle]
 pub extern "C" fn mpk_fs_config_new(root: *const c_char) -> *mut FsConfig {
   if !root.is_null() {
@@ -133,6 +169,7 @@ pub extern "C" fn mpk_fs_config_new(root: *const c_char) -> *mut FsConfig {
   }
 }
 
+/// Drop a FsConfig
 #[no_mangle]
 pub extern "C" fn mpk_fs_config_free(ptr: *mut FsConfig) {
   if ptr.is_null() {
@@ -143,6 +180,8 @@ pub extern "C" fn mpk_fs_config_free(ptr: *mut FsConfig) {
   }
 }
 
+/// Get a PATH from FsConfig given CFG of type Config. Returns mutable
+/// char pointer.
 #[no_mangle]
 pub extern "C" fn mpk_fs_config_get_path(
   cfg: *const Config,
@@ -160,11 +199,13 @@ pub extern "C" fn mpk_fs_config_get_path(
   CString::new(res.as_os_str().as_bytes()).unwrap().into_raw()
 }
 
+/// Build a DbConfig. Returns mutable pointer to DbConfig.
 #[no_mangle]
 pub extern "C" fn mpk_db_config_new() -> *mut DbConfig {
   Box::into_raw(Box::new(DbConfig::default()))
 }
 
+/// Drop a DbConfig
 #[no_mangle]
 pub extern "C" fn mpk_db_config_free(ptr: *mut DbConfig) {
   if ptr.is_null() {
@@ -175,12 +216,16 @@ pub extern "C" fn mpk_db_config_free(ptr: *mut DbConfig) {
   }
 }
 
+/// Get the current DbConfig flags from CFG of type Config. Returns a
+/// single int.
 #[no_mangle]
 pub extern "C" fn mpk_db_config_flags(cfg: *const Config) -> c_int {
   let cfg = unsafe { cfg.as_ref().unwrap() };
   cfg.db.flags().unwrap()
 }
 
+/// Get the DbConfig path from CFG of type Config. Returns a mutable
+/// char pointer.
 #[no_mangle]
 pub extern "C" fn mpk_db_config_path(cfg: *const Config) -> *mut c_char {
   let cfg = unsafe { &*cfg };
@@ -188,11 +233,13 @@ pub extern "C" fn mpk_db_config_path(cfg: *const Config) -> *mut c_char {
   CString::new(res.as_os_str().as_bytes()).unwrap().into_raw()
 }
 
+/// Build JackConfig. Returns mutable JackConfig pointer.
 #[no_mangle]
 pub extern "C" fn mpk_jack_config_new() -> *mut JackConfig {
   Box::into_raw(Box::new(JackConfig::new().unwrap()))
 }
 
+/// Drop a JackConfig.
 #[no_mangle]
 pub extern "C" fn mpk_jack_config_free(ptr: *mut JackConfig) {
   if ptr.is_null() {
@@ -608,9 +655,22 @@ pub extern "C" fn mdb_spectrograms_new(
   freq_frame_size: size_t,
   freq_spec: CMatrixReal,
 ) -> *mut Spectrograms {
-  let mel_spec = MatrixReal::new(mel_spec.into(), mel_frame_size);
-  let log_spec = MatrixReal::new(log_spec.into(), log_frame_size);
-  let freq_spec = MatrixReal::new(freq_spec.into(), freq_frame_size);
+  let mel_spec = if mel_frame_size.eq(&0) {
+    None
+  } else {
+    Some(MatrixReal::new(mel_spec.into(), mel_frame_size))
+  };
+    
+  let log_spec = if log_frame_size.eq(&0) {
+    None
+  } else {
+    Some(MatrixReal::new(log_spec.into(), log_frame_size))
+  };
+  let freq_spec = if freq_frame_size.eq(&0) {
+    None
+  } else {
+    Some(MatrixReal::new(freq_spec.into(), freq_frame_size))
+  };
   let specs = Spectrograms {
     mel_spec,
     log_spec,

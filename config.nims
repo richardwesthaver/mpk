@@ -171,6 +171,10 @@ task fmt, "format code":
     exec "cargo fmt"
     exec "black ."
 
+task ox, "export readme to GitHub-flavored Markdown":
+  withDir getVcRoot():
+    exec "emacs --eval '(progn (find-file \"org/README.org\") (org-gfm-export-to-markdown) (rename-file \"README.md\" \"../README.md\" t) (save-buffers-kill-terminal))'"
+
 task mirror, "push code to github mirror":
   withDir stash:
     exec "git init mpk"
