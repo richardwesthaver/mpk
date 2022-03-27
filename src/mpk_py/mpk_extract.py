@@ -41,6 +41,7 @@ def run():
 #            "tonal",
 #            "spectrograms",
 #            "metadata",
+          # "none",
             "features",
             "mel_spec",
             "log_spec",
@@ -52,10 +53,10 @@ def run():
         "-j", "--jobs", default=mp.cpu_count(), help="number of parallel jobs"
     )
     parser.add_argument(
-      "-qs", "--queue_size", default=16, help="size of batch queue"
+      "-qs", "--queue_size", type=int, default=16, help="size of batch queue"
     )
     parser.add_argument(
-      "-bs", "--batch_size", default=1, help="size of batch"
+      "-bs", "--batch_size", type=int, default=1, help="size of batch"
     )
     parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
 
@@ -211,6 +212,8 @@ def get_musicbrainz_tags(v):
         "musicbrainz_releasegroupid",
         "musicbrainz_releasetrackid",
         "musicbrainz_trackid",
+        "asin",
+        "musicip_puid text",
     ):
         if i in v["metadata"]["tags"]:
             mb_tags.append(v["metadata"]["tags"][i][0])
@@ -221,7 +224,7 @@ def get_musicbrainz_tags(v):
 
 def get_track_tags(v):
     tags = []
-    for i in ("artist", "title", "album", "genre", "year"):
+    for i in ("artist", "title", "album", "genre", "date", "tracknumber", "format", "language", "releasecountry","label","producer","engineer","mixer"):
         if i in v["metadata"]["tags"]:
             tags.append(v["metadata"]["tags"][i][0])
         else:
@@ -286,7 +289,8 @@ def insert_track(audiodata, lowlevel, rhythm, sfx, tonal, specs, tags, mb_tags):
 
 def insert_sample(audiodata, lowlevel, rhythm, sfx, tonal, specs):
     id = db.insert_sample(audiodata)
-    db.insert_sample_featues_lowlevel(id, lowlevel)
+    if lowlevel is not None:
+      db.insert_sample_featues_lowlevel(id, lowlevel)
 
     if rhythm is not None:
         try:
@@ -294,8 +298,10 @@ def insert_sample(audiodata, lowlevel, rhythm, sfx, tonal, specs):
         except Exception as err:
             print("error during insert_sample_features_rhythm: {0}".format(err))
 
-    db.insert_sample_features_sfx(id, sfx)
-    db.insert_sample_features_tonal(id, tonal)
+    if sfx is not None:
+      db.insert_sample_features_sfx(id, sfx)
+    if tonal is not None:
+      db.insert_sample_features_tonal(id, tonal)
     if specs is not None:
       db.insert_sample_images(id, specs)
 

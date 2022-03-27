@@ -255,7 +255,15 @@ pub struct TrackTags {
   pub title: Option<String>,
   pub album: Option<String>,
   pub genre: Option<String>,
-  pub year: Option<i16>,
+  pub date: Option<String>,
+  pub tracknumber: Option<String>,
+  pub format: Option<String>,
+  pub language: Option<String>,
+  pub country: Option<String>,
+  pub label: Option<String>,
+  pub producer: Option<String>,
+  pub engineer: Option<String>,
+  pub mixer: Option<String>,
 }
 
 impl fmt::Display for TrackTags {
@@ -264,18 +272,32 @@ impl fmt::Display for TrackTags {
     let title = self.title.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
     let album = self.album.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
     let genre = self.genre.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
-    let year = self
-      .year
-      .map(|n| n.to_string())
-      .unwrap_or("NULL".to_string());
+    let date = self.date.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let tracknumber = self.tracknumber.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let format = self.format.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let language = self.language.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let country = self.country.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let label = self.label.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let producer = self.producer.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let engineer = self.engineer.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let mixer = self.mixer.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+
     write!(
       f,
       "artist: {}
 title: {}
 album: {}
 genre: {}
-year: {}",
-      artist, title, album, genre, year
+date: {}
+tracknumber: {}
+format: {}
+language: {}
+country: {}
+label: {}
+producer: {}
+engineer: {}
+mixer: {}",
+      artist, title, album, genre, date, tracknumber, format, language, country, label, producer, engineer, mixer
     )
   }
 }
@@ -293,6 +315,8 @@ pub struct MusicbrainzTags {
   pub releasegroupid: Option<Uuid>,
   pub releasetrackid: Option<Uuid>,
   pub trackid: Option<Uuid>,
+  pub asin: Option<String>,  
+  pub musicip_puid: Option<Uuid>,
 }
 
 impl fmt::Display for MusicbrainzTags {
@@ -337,6 +361,8 @@ impl fmt::Display for MusicbrainzTags {
       .as_ref()
       .map(|s| s.to_string())
       .unwrap_or("NULL".to_string());
+    let asin = self.asin.as_ref().map(|s| s.to_string()).unwrap_or("NULL".to_string());
+    let musicip_puid = self.musicip_puid.as_ref().map(|s| s.to_string()).unwrap_or("NULL".to_string());
     write!(
       f,
       "albumartistid: {}
@@ -346,7 +372,9 @@ albumtype: {}
 artistid: {}
 releasegroupid: {}
 releasetrackid: {}
-trackid: {}",
+trackid: {}
+asin: {}
+musicip_puid: {}",
       albumartistid,
       albumid,
       albumstatus,
@@ -354,7 +382,9 @@ trackid: {}",
       artistid,
       releasegroupid,
       releasetrackid,
-      trackid
+      trackid,
+      asin,
+      musicip_puid,
     )
   }
 }
@@ -633,7 +663,7 @@ pub enum QueryBy {
   Artist,
   Album,
   Genre,
-  Year,
+  Date,
   SampleRate,
 }
 
@@ -647,7 +677,7 @@ impl FromStr for QueryBy {
       "artist" => Ok(QueryBy::Artist),
       "album" => Ok(QueryBy::Album),
       "genre" => Ok(QueryBy::Genre),
-      "year" => Ok(QueryBy::Year),
+      "date" => Ok(QueryBy::Date),
       "samplerate" | "sr" => Ok(QueryBy::SampleRate),
       e => Err(Error::BadQType(e.to_string())),
     }

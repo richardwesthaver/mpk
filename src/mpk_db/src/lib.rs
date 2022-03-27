@@ -97,13 +97,21 @@ where id = ?1",
   pub fn insert_track_tags(&self, id: i64, tags: &TrackTags) -> Result<()> {
     self.exec(
       "
-insert into track_tags values (?1,?2,?3,?4,?5,?6)
+insert into track_tags values (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14)
 on conflict do update
 set artist = ?2,
     title = ?3,
     album = ?4,
     genre = ?5,
-    year =  ?6
+    date =  ?6,
+    tracknumber = ?7,
+    format = ?8,
+    language = ?9,
+    country = ?10,
+    label = ?11,
+    producer = ?12,
+    engineer = ?13,
+    mixer = ?14
 where track_id = ?1",
       &[
         &id,
@@ -111,7 +119,15 @@ where track_id = ?1",
         &tags.title,
         &tags.album,
         &tags.genre,
-        &tags.year,
+        &tags.date,
+	&tags.tracknumber,
+	&tags.format,
+	&tags.language,
+	&tags.country,
+	&tags.label,
+	&tags.producer,
+	&tags.engineer,
+	&tags.mixer,
       ],
     )?;
     Ok(())
@@ -124,16 +140,18 @@ where track_id = ?1",
   ) -> Result<()> {
     self.exec(
       "
-insert into track_tags_musicbrainz values (?1,?2,?3,?4,?5,?6,?7,?8,?9)
+insert into track_tags_musicbrainz values (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)
 on conflict do update
 set albumartistid = ?2,
-    albumid = ?3,
-    albumstatus = ?4,
-    albumtype = ?5,
-    artistid = ?6,
-    releasegroupid = ?7,
-    releasetrackid = ?8,
-    trackid = ?9
+albumid = ?3,
+albumstatus = ?4,
+albumtype = ?5,
+artistid = ?6,
+releasegroupid = ?7,
+releasetrackid = ?8,
+trackid = ?9,
+asin = ?10,
+musicip_puid = ?11
 where track_id = ?1",
       &[
         &id,
@@ -145,6 +163,8 @@ where track_id = ?1",
         &tags.releasegroupid,
         &tags.releasetrackid,
         &tags.trackid,
+	&tags.asin,
+	&tags.musicip_puid,
       ],
     )?;
     Ok(())
@@ -717,7 +737,15 @@ where sample_id = ?1",
           title: row.get(2)?,
           album: row.get(3)?,
           genre: row.get(4)?,
-          year: row.get(5)?,
+          date: row.get(5)?,
+	  tracknumber: row.get(6)?,
+	  format: row.get(7)?,
+	  language: row.get(8)?,
+	  country: row.get(9)?,
+	  label: row.get(10)?,
+	  producer: row.get(11)?,
+	  engineer: row.get(12)?,
+	  mixer: row.get(13)?,
         })
       },
     )?;
@@ -738,6 +766,8 @@ where sample_id = ?1",
           releasegroupid: row.get(6)?,
           releasetrackid: row.get(7)?,
           trackid: row.get(8)?,
+	  asin: row.get(9)?,
+	  musicip_puid: row.get(10)?,
         })
       },
     )?;

@@ -126,6 +126,7 @@ enum Runner {
     bpm: Option<u16>,
     time_sig: Option<String>,
   },
+  Monitor,
 }
 
 fn ppln(i: &str, s: char) {
@@ -362,6 +363,9 @@ fn main() -> Result<()> {
         let _data = mpk_db::Mdb::new_with_config(cfg.db)?
           .query_sample_features_rhythm(1)?
           .histogram;
+      },
+      Runner::Monitor => {
+	mpk_midi::monitor()?
       }
       _ => println!("starting jack server"),
     },

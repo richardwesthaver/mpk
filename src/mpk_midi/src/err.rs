@@ -6,6 +6,8 @@ pub enum Error {
   MidiConnect(midir::ConnectError<midir::ConnectErrorKind>),
   MidiPortInfo(midir::PortInfoError),
   MidiSend(midir::SendError),
+  Io(std::io::Error),
+  BadPort(std::num::ParseIntError),
 }
 
 impl std::error::Error for Error {
@@ -15,6 +17,8 @@ impl std::error::Error for Error {
       Error::MidiConnect(ref err) => Some(err),
       Error::MidiPortInfo(ref err) => Some(err),
       Error::MidiSend(ref err) => Some(err),
+      Error::Io(ref err) => Some(err),
+      Error::BadPort(ref err) => Some(err),
     }
   }
 }
@@ -26,6 +30,8 @@ impl std::fmt::Display for Error {
       Error::MidiConnect(ref err) => err.fmt(f),
       Error::MidiPortInfo(ref err) => err.fmt(f),
       Error::MidiSend(ref err) => err.fmt(f),
+      Error::Io(ref err) => err.fmt(f),
+      Error::BadPort(ref err) => err.fmt(f),
     }
   }
 }
@@ -51,5 +57,17 @@ impl From<midir::PortInfoError> for Error {
 impl From<midir::SendError> for Error {
   fn from(e: midir::SendError) -> Error {
     Error::MidiSend(e)
+  }
+}
+
+impl From<std::io::Error> for Error {
+  fn from(e: std::io::Error) -> Error {
+    Error::Io(e)
+  }
+}
+
+impl From<std::num::ParseIntError> for Error {
+  fn from(e: std::num::ParseIntError) -> Error {
+    Error::BadPort(e)
   }
 }

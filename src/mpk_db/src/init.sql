@@ -17,7 +17,15 @@ artist text,
 title text,
 album text,
 genre text,
-year integer,
+date text,
+tracknumber text,
+format text,
+language text,
+country text,
+label text,
+producer text,
+engineer text,
+mixer text,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_tags_musicbrainz (
@@ -30,6 +38,8 @@ artistid text,
 releasegroupid text,
 releasetrackid text,
 trackid text,
+asin text,
+musicip_puid text,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_features_lowlevel (

@@ -57,7 +57,7 @@ class Mdb:
         return lib.mdb_exec_batch(self.db, sql.encode())
 
     def insert_track(self, data):
-        print("inserting track:", data, "for track_id:", id)
+        print("inserting track:", data)
         return lib.mdb_insert_track(self.db, data)
 
     def insert_track_tags(self, id, tags):
@@ -69,12 +69,8 @@ class Mdb:
             return lib.mdb_insert_track_tags(self.db, id, tags)
 
     def insert_track_tags_musicbrainz(self, id, tags):
-        if tags is None:
-            print("no track_tags_musicbrainz found for track_id:", id)
-            return
-        else:
-            print("inserting musicbrainz_tags:", tags, "for track_id:", id)
-            return lib.mdb_insert_track_tags_musicbrainz(self.db, id, tags)
+      print("inserting musicbrainz_tags:", tags, "for track_id:", id)
+      return lib.mdb_insert_track_tags_musicbrainz(self.db, id, tags)
 
     def insert_track_featues_lowlevel(self, id, features):
         print("inserting lowlevel_features:", features, "for track_id:", id)
@@ -101,7 +97,7 @@ class Mdb:
         return lib.mdb_insert_track_images(self.db, id, images)
 
     def insert_sample(self, data):
-        print("inserting sample:", data, "for track_id:", id)
+        print("inserting sample:", data)
         return lib.mdb_insert_sample(self.db, data)
 
     def insert_sample_featues_lowlevel(self, id, features):
@@ -154,14 +150,9 @@ def track_tags(tags):
         return
     else:
         for idx, v in enumerate(tags):
-            if idx == 4:
-                if v is None:
-                    tags[idx] = 0
-                elif type(v) is str:
-                    tags[idx] = int(v)
-            elif v is None:
+            if v is None:
                 tags[idx] = NULL
-            elif idx in range(4):
+            else:
                 tags[idx] = v.encode()
         return lib.mdb_track_tags_new(*tags)
 
@@ -220,7 +211,6 @@ def tonal_features(features):
 
 def spectrograms(specs):
   for idx, v in enumerate(specs):
-    print(idx)
     if idx in [1,3,5]:
       if v is not None:
         specs[idx] = matrixize(v)

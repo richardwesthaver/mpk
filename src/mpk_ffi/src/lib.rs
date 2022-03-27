@@ -13,7 +13,7 @@
 //!
 //! The Python bindings are required by MPK_PY so if you plan to work
 //! with the files mpk_extract.py, mpk/extract.py or mpk/lib.py
-//! directly, be sure to build the project first. When the 'dev' flag
+//! directly, be sure to build the project first. When the `dev` flag
 //! is defined (default) the Python bindings will be automatically
 //! copied to the appropriate directory.
 use libc::{c_char, c_int, size_t};
@@ -287,7 +287,15 @@ pub extern "C" fn mdb_track_tags_new(
   title: *const c_char,
   album: *const c_char,
   genre: *const c_char,
-  year: i16,
+  date: *const c_char,
+  tracknumber: *const c_char,
+  format: *const c_char,
+  language: *const c_char,
+  country: *const c_char,
+  label: *const c_char,
+  producer: *const c_char,
+  engineer: *const c_char,
+  mixer: *const c_char
 ) -> *mut TrackTags {
   let tags = TrackTags {
     artist: if artist.is_null() {
@@ -310,7 +318,51 @@ pub extern "C" fn mdb_track_tags_new(
     } else {
       Some(unsafe { CStr::from_ptr(genre).to_str().unwrap().to_string() })
     },
-    year: if year == 0 { None } else { Some(year) },
+    date: if date.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(date).to_str().unwrap().to_string() })
+    },
+    tracknumber: if tracknumber.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(tracknumber).to_str().unwrap().to_string() })
+    },
+    format: if format.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(format).to_str().unwrap().to_string() })
+    },
+    language: if language.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(language).to_str().unwrap().to_string() })
+    },
+    country: if country.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(country).to_str().unwrap().to_string() })
+    },
+    label: if label.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(label).to_str().unwrap().to_string() })
+    },
+    producer: if producer.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(producer).to_str().unwrap().to_string() })
+    },
+    engineer: if engineer.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(engineer).to_str().unwrap().to_string() })
+    },
+    mixer: if mixer.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(mixer).to_str().unwrap().to_string() })
+    },
   };
   let tags_box = Box::new(tags);
   Box::into_raw(tags_box)
@@ -336,6 +388,8 @@ pub extern "C" fn mdb_musicbrainz_tags_new(
   releasegroupid: *const c_char,
   releasetrackid: *const c_char,
   trackid: *const c_char,
+  asin: *const c_char,
+  musicip_puid: *const c_char,
 ) -> *mut MusicbrainzTags {
   let tags = MusicbrainzTags {
     albumartistid: if albumartistid.is_null() {
@@ -391,6 +445,18 @@ pub extern "C" fn mdb_musicbrainz_tags_new(
     } else {
       Some(
         Uuid::parse_str(unsafe { CStr::from_ptr(trackid).to_str().unwrap() }).unwrap(),
+      )
+    },
+    asin: if asin.is_null() {
+      None
+    } else {
+      Some(unsafe { CStr::from_ptr(asin).to_str().unwrap() }.to_string())
+    },
+    musicip_puid: if musicip_puid.is_null() {
+      None
+    } else {
+      Some(
+        Uuid::parse_str(unsafe { CStr::from_ptr(musicip_puid).to_str().unwrap() }).unwrap(),
       )
     },
   };

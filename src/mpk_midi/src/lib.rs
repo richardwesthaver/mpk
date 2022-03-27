@@ -6,6 +6,9 @@ use midir::{Ignore, MidiInput, MidiOutput};
 mod err;
 pub use err::{Error, Result};
 
+mod monitor;
+pub use monitor::monitor;
+
 /// Detect available midi devices and print a summary.
 pub fn list_midi_ports() -> Result<()> {
   let mut midi_in = MidiInput::new("list_midi_input")?;
