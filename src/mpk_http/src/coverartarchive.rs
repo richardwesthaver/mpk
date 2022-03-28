@@ -6,6 +6,9 @@
 //! retrieving cover art via a release MBID.
 //!
 //! This module implements the coverartarchive.org API.
+//!
+//! REF: https://wiki.musicbrainz.org/Cover_Art_Archive/API
+//! ENDPOINT: https://coverartarchive.org/
 use crate::Client;
 
 pub struct CoverArtArchiveClient {

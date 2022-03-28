@@ -443,29 +443,33 @@ impl From<Config> for MetroConfig {
   }
 }
 
+/// MPK Extractor Config. Note that you should use the same settings
+/// for all samples/tracks in a DB, but 'descriptors' can be changed
+/// in between sync runs.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ExtractorConfig {
-  include: Vec<String>,
-  mono: bool,
-  sample_rate: u32,
-  windowing: String,
-  frame_size: u32,
-  hop_size: u32,
-  mel_bands: u16,
-  lf_bound: u32,
-  hf_bound: u32,
+  pub path: Option<PathBuf>,
+  pub descriptors: Vec<String>,
+  pub mono: bool,
+  pub sample_rate: u32,
+  pub windowing: String,
+  pub frame_size: u32,
+  pub hop_size: u32,
+  pub mel_bands: u16,
+  pub lf_bound: u32,
+  pub hf_bound: u32,
 }
 
 impl Default for ExtractorConfig {
   fn default() -> Self {
     ExtractorConfig {
-      include: vec![
-        "lowlevel".to_string(),
-        "rhythm".to_string(),
-        "sfx".to_string(),
-        "tonal".to_string(),
+      path: if let Ok(p) = std::env::var("MPK_METRO_TIC") {
+	Some(p.into())
+      } else {
+	None
+      },
+      descriptors: vec![
         "mel_spec".to_string(),
-        "freq_spec".to_string(),
       ],
       mono: false,
       sample_rate: 44100,

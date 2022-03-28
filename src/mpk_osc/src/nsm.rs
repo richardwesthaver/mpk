@@ -12,20 +12,51 @@
 //!
 //! This module and nsmd are used in MPK_SESH for session management,
 //! so for full session support you need a Linux box available.
+//!
+//! REF: https://new-session-manager.jackaudio.org
 // use crate::OscPacket;
+use crate::Result;
 use std::net::{SocketAddr, UdpSocket};
 
 pub const NSM_API_VERSION_MAJOR: u8 = 1;
 pub const NSM_API_VERSION_MINOR: u8 = 1;
 
+#[derive(Debug)]
 pub struct NsmClient {
   pub name: String,
   pub socket: UdpSocket,
   pub addr: SocketAddr,
+  pub caps: Vec<ClientCaps>,
   pub nsm_url: SocketAddr,
-  pub capabilities: Vec<ClientCaps>,
 }
 
+impl NsmClient {
+  pub fn new(name: &str, addr: SocketAddr, caps: Vec<ClientCaps>, nsm_url: Option<SocketAddr>) -> Result<Self> {
+    let socket = UdpSocket::bind(addr)?;
+    let name = name.to_owned();
+    let nsm_url = if let Some(u) = nsm_url {
+      u
+    } else {
+      std::env::var("NSM_URL").unwrap().parse().unwrap()
+    };
+
+    Ok(
+      NsmClient {
+	name,
+	socket,
+	addr,
+	caps,
+	nsm_url
+      }
+    )
+  }
+
+  pub fn announce(&self) -> Result<ServerReply> {
+    Ok(ServerReply::Announce)
+  }
+}
+
+#[derive(Debug)]
 pub enum ClientCaps {
   Dirty,
   Switch,

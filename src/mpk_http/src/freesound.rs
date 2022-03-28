@@ -9,10 +9,23 @@
 //! This module implements the client-side freesound.org API. It is
 //! used in MPK_SESH and is especially useful with the analysis data
 //! from MPK_DB.
+//!
+//! REF: https://freesound.org/docs/api/
+//! ENDPOINT: https://freesound.org/apiv2/
 use crate::Client;
-
+use crate::Result;
 pub struct FreeSoundClient {
   pub client: Client,
+}
+
+impl FreeSoundClient {
+  pub fn new() -> Result<FreeSoundClient> {
+    Ok(
+      FreeSoundClient {
+	client: Client::new()
+      }
+    )
+  }
 }
 
 pub enum FreeSoundRequest {

@@ -136,7 +136,6 @@ impl From<MatrixReal> for VecReal {
   }
 }
 
-// TODO
 /// A Matrix of f32s for SQLite. Implemented as a flat Vec with a frame_size
 #[derive(Debug, Default, Clone)]
 pub struct MatrixReal {
@@ -175,6 +174,47 @@ impl fmt::Display for MatrixReal {
     )
   }
 }
+
+//TODO
+#[derive(Debug)]
+pub enum Note {
+  C = 0,
+  Db = 1,
+  D = 2,
+  Eb = 3,
+  E = 4,
+  F = 5,
+  Gb = 6,
+  G = 7,
+  Ab = 8,
+  A = 9,
+  Bb = 10,
+  B = 11,
+}
+
+impl FromStr for Note {
+  type Err = Error;
+  fn from_str(input: &str) -> Result<Note> {
+    match input {
+      "C" => Ok(Note::C),
+      "Db" => Ok(Note::Db),
+      "D" => Ok(Note::D),
+      "Eb" => Ok(Note::Eb),
+      "E" => Ok(Note::E),
+      "F" => Ok(Note::F),
+      "Gb" => Ok(Note::Gb),
+      "G" => Ok(Note::G),
+      "Ab" => Ok(Note::Ab),
+      "A" => Ok(Note::A),
+      "Bb" => Ok(Note::Bb),
+      "B" => Ok(Note::B),
+      e => Err(Error::BadNote(e.to_string()))
+    }
+  }
+}
+  
+#[derive(Debug, Default)]
+pub struct VecNote(pub Vec<Note>);
 
 #[derive(Debug, Default)]
 pub struct VecText(pub Vec<String>);
@@ -665,6 +705,8 @@ pub enum QueryBy {
   Genre,
   Date,
   SampleRate,
+  Bpm,
+  Label,
 }
 
 impl FromStr for QueryBy {
@@ -679,6 +721,8 @@ impl FromStr for QueryBy {
       "genre" => Ok(QueryBy::Genre),
       "date" => Ok(QueryBy::Date),
       "samplerate" | "sr" => Ok(QueryBy::SampleRate),
+      "bpm" => Ok(QueryBy::Bpm),
+      "label" => Ok(QueryBy::Label),
       e => Err(Error::BadQType(e.to_string())),
     }
   }

@@ -5,6 +5,7 @@ pub enum Error {
   Sql(rusqlite::Error),
   Io(std::io::Error),
   BadQType(String),
+  BadNote(String),
 }
 
 impl std::error::Error for Error {
@@ -13,6 +14,7 @@ impl std::error::Error for Error {
       Error::Sql(ref err) => Some(err),
       Error::Io(ref err) => Some(err),
       Error::BadQType(_) => None,
+      Error::BadNote(_) => None,
     }
   }
 }
@@ -23,6 +25,7 @@ impl std::fmt::Display for Error {
       Error::Sql(ref err) => err.fmt(f),
       Error::Io(ref err) => err.fmt(f),
       Error::BadQType(ref s) => f.write_str(&format!("Invalid Query Type: {}", s)),
+      Error::BadNote(ref s) => f.write_str(&format!("Invalid Note: {}", s)),
     }
   }
 }

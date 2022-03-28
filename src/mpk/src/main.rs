@@ -36,7 +36,8 @@ enum Command {
   Init,
   /// Play an audio file
   Play {
-    file: PathBuf,
+    file: Option<PathBuf>,
+    query: Option<String>,
     #[clap(short)]
     volume: Option<f32>,
     #[clap(short)]
@@ -193,6 +194,7 @@ fn main() -> Result<()> {
     }
     Command::Play {
       file,
+      query: _,
       volume,
       speed,
       device,
@@ -203,7 +205,7 @@ fn main() -> Result<()> {
         None
       };
       let rx = mpk_audio::pause_controller_cli();
-      mpk_audio::play(file, device, volume, speed, rx)
+      mpk_audio::play(file.unwrap(), device, volume, speed, rx)
     }
 
     Command::Query {
@@ -278,14 +280,23 @@ fn main() -> Result<()> {
       samples,
       projects,
     } => {
+	let script = cfg.extractor.path.unwrap();
+	let descriptors = cfg.extractor.descriptors;
+	let mut cmd = std::process::Command::new(script);
       if tracks {
-        let _ts = cfg.fs.get_path("tracks")?;
+        let tracks = cfg.fs.get_path("tracks")?;
+	cmd.args([tracks.to_str().unwrap(), "-t", "track", "-d"]);
+	cmd.args(&descriptors);
+	cmd.output()?;
       }
       if samples {
-        let _ss = cfg.fs.get_path("samples")?;
+        let samps = cfg.fs.get_path("samples")?;
+	cmd.args([samps.to_str().unwrap(), "-t", "track", "-d"]);
+	cmd.args(&descriptors);
+	cmd.output()?;
       }
       if projects {
-        let _ps = cfg.fs.get_path("projects")?;
+        let _projs = cfg.fs.get_path("projects")?;
       }
     }
     Command::Pack {

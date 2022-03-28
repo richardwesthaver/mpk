@@ -9,6 +9,7 @@
 //! used in MPK_SESH with help from the track_tags_musicbrainz table
 //! in MPK_DB.
 //!
+//! REF: https://musicbrainz.org/doc/MusicBrainz_API
 //! ENDPOINT: https://musicbrainz.org/ws/2/
 use crate::Client;
 

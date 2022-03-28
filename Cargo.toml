@@ -6,6 +6,7 @@ members = [
   "src/mpk_audio",
   "src/mpk_jack",
   "src/mpk_flate",
+  "src/mpk_hash",
   "src/mpk_midi",
   "src/mpk_codec",
   "src/mpk_db",
