@@ -463,14 +463,12 @@ pub struct ExtractorConfig {
 impl Default for ExtractorConfig {
   fn default() -> Self {
     ExtractorConfig {
-      path: if let Ok(p) = std::env::var("MPK_METRO_TIC") {
-	Some(p.into())
+      path: if let Ok(p) = std::env::var("MPK_EXTRACTOR") {
+        Some(p.into())
       } else {
-	None
+        None
       },
-      descriptors: vec![
-        "mel_spec".to_string(),
-      ],
+      descriptors: vec!["mel_spec".to_string()],
       mono: false,
       sample_rate: 44100,
       windowing: "hann".to_string(),

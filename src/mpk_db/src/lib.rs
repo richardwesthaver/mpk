@@ -2,6 +2,7 @@
 //!
 //! Types for interacting with the SQLite DB. The schema is defined in 'init.sql'.
 use mpk_config::DbConfig;
+use mpk_hash::Checksum;
 use rusqlite::{version, Connection, OpenFlags, ToSql};
 use std::path::Path;
 mod err;
@@ -81,15 +82,16 @@ impl Mdb {
 
   pub fn insert_track(&self, file: &AudioData) -> Result<i64> {
     self.exec(
-      "insert into tracks (path, filesize, duration, channels, bitrate, samplerate) values (?1,?2,?3,?4,?5,?6)
+      "insert into tracks (path, filesize, duration, channels, bitrate, samplerate, checksum) values (?1,?2,?3,?4,?5,?6,?7)
 on conflict do update
 set filesize = ?2,
 duration = ?3,
 channels = ?4,
 bitrate = ?5,
-samplerate = ?6
+samplerate = ?6,
+checksum = ?7
 where id = ?1",
-      &[&file.path, &file.filesize, &file.duration, &file.channels, &file.bitrate, &file.samplerate],
+      &[&file.path, &file.filesize, &file.duration, &file.channels, &file.bitrate, &file.samplerate, &file.checksum.map(|c| c.to_hex())],
     )?;
     Ok(self.last_track_id(&file.path))
   }
@@ -120,14 +122,14 @@ where track_id = ?1",
         &tags.album,
         &tags.genre,
         &tags.date,
-	&tags.tracknumber,
-	&tags.format,
-	&tags.language,
-	&tags.country,
-	&tags.label,
-	&tags.producer,
-	&tags.engineer,
-	&tags.mixer,
+        &tags.tracknumber,
+        &tags.format,
+        &tags.language,
+        &tags.country,
+        &tags.label,
+        &tags.producer,
+        &tags.engineer,
+        &tags.mixer,
       ],
     )?;
     Ok(())
@@ -163,8 +165,8 @@ where track_id = ?1",
         &tags.releasegroupid,
         &tags.releasetrackid,
         &tags.trackid,
-	&tags.asin,
-	&tags.musicip_puid,
+        &tags.asin,
+        &tags.musicip_puid,
       ],
     )?;
     Ok(())
@@ -406,7 +408,7 @@ freq_spec = ?7
 where track_id = ?1",
       &[
         &id,
-	&images.mel_spec.as_ref().map(|s| s.frame_size),
+        &images.mel_spec.as_ref().map(|s| s.frame_size),
         &images.mel_spec.as_ref().map(|s| s.to_vec()),
         &images.log_spec.as_ref().map(|s| s.frame_size),
         &images.log_spec.as_ref().map(|s| s.to_vec()),
@@ -426,15 +428,16 @@ where track_id = ?1",
   }
 
   pub fn insert_sample(&self, file: &AudioData) -> Result<i64> {
-    self.exec("insert into samples (path, filesize, duration, channels, bitrate, samplerate) values (?1,?2,?3,?4,?5,?6)
+    self.exec("insert into samples (path, filesize, duration, channels, bitrate, samplerate, checksum) values (?1,?2,?3,?4,?5,?6,?7)
 on conflict do update
 set filesize = ?2,
 duration = ?3,
 channels = ?4,
 bitrate = ?5,
-samplerate = ?6
+samplerate = ?6,
+checksum = ?7
 where id = ?1",
-	      &[&file.path, &file.filesize, &file.duration, &file.channels, &file.bitrate, &file.samplerate],
+	      &[&file.path, &file.filesize, &file.duration, &file.channels, &file.bitrate, &file.samplerate, &file.checksum.map(|c| c.to_hex())],
     )?;
     Ok(self.last_sample_id(&file.path))
   }
@@ -675,7 +678,7 @@ freq_spec = ?7
 where sample_id = ?1",
       &[
         &id,
-	&images.mel_spec.as_ref().map(|s| s.frame_size),
+        &images.mel_spec.as_ref().map(|s| s.frame_size),
         &images.mel_spec.as_ref().map(|s| s.to_vec()),
         &images.log_spec.as_ref().map(|s| s.frame_size),
         &images.log_spec.as_ref().map(|s| s.to_vec()),
@@ -722,6 +725,7 @@ where sample_id = ?1",
             channels: row.get(4)?,
             bitrate: row.get(5)?,
             samplerate: row.get(6)?,
+            checksum: Some(Checksum::from_hex(row.get::<_, String>(7)?.as_str())),
           })
         })?;
     Ok(res)
@@ -738,14 +742,14 @@ where sample_id = ?1",
           album: row.get(3)?,
           genre: row.get(4)?,
           date: row.get(5)?,
-	  tracknumber: row.get(6)?,
-	  format: row.get(7)?,
-	  language: row.get(8)?,
-	  country: row.get(9)?,
-	  label: row.get(10)?,
-	  producer: row.get(11)?,
-	  engineer: row.get(12)?,
-	  mixer: row.get(13)?,
+          tracknumber: row.get(6)?,
+          format: row.get(7)?,
+          language: row.get(8)?,
+          country: row.get(9)?,
+          label: row.get(10)?,
+          producer: row.get(11)?,
+          engineer: row.get(12)?,
+          mixer: row.get(13)?,
         })
       },
     )?;
@@ -766,8 +770,8 @@ where sample_id = ?1",
           releasegroupid: row.get(6)?,
           releasetrackid: row.get(7)?,
           trackid: row.get(8)?,
-	  asin: row.get(9)?,
-	  musicip_puid: row.get(10)?,
+          asin: row.get(9)?,
+          musicip_puid: row.get(10)?,
         })
       },
     )?;
@@ -876,6 +880,7 @@ where sample_id = ?1",
             channels: row.get(4)?,
             bitrate: row.get(5)?,
             samplerate: row.get(6)?,
+            checksum: Some(Checksum::from_hex(row.get::<_, String>(7)?.as_str())),
           })
         })?;
     Ok(res)
@@ -997,14 +1002,14 @@ where sample_id = ?1",
     Ok(res)
   }
 
-  pub fn backup<P: AsRef<Path>>(&self, dst: P, progress: fn(Progress)) -> Result<()> {
-    let mut dst = Connection::open(dst)?;
+  pub fn backup<P: AsRef<Path>>(
+    &self,
+    dst: P,
+    progress: Option<fn(Progress)>,
+  ) -> Result<()> {
+    let mut dst = Connection::open(&dst)?;
     let backup = Backup::new(&self.conn, &mut dst)?;
-    backup.run_to_completion(
-      5,
-      std::time::Duration::from_millis(200),
-      Some(progress),
-    )?;
+    backup.run_to_completion(2048, std::time::Duration::from_millis(10), progress)?;
     Ok(())
   }
 
@@ -1014,7 +1019,7 @@ where sample_id = ?1",
     src: P,
     progress: Option<fn(Progress)>,
   ) -> Result<()> {
-    self.conn.restore(name, src, progress)?;
+    self.conn.restore(name.into(), src, progress)?;
     Ok(())
   }
 
@@ -1035,8 +1040,14 @@ where sample_id = ?1",
 }
 
 pub fn print_progress(p: Progress) {
-  let current = (p.pagecount - p.remaining) / p.pagecount;
-  println!("{}", current)
+  let current: f32 =
+    ((p.pagecount - p.remaining) as f32 / p.pagecount as f32) * 100 as f32;
+  println!(
+    "progress: {}/{} {}%",
+    (p.pagecount - p.remaining),
+    p.pagecount,
+    current
+  )
 }
 
 #[cfg(test)]

@@ -69,8 +69,8 @@ class Mdb:
             return lib.mdb_insert_track_tags(self.db, id, tags)
 
     def insert_track_tags_musicbrainz(self, id, tags):
-      print("inserting musicbrainz_tags:", tags, "for track_id:", id)
-      return lib.mdb_insert_track_tags_musicbrainz(self.db, id, tags)
+        print("inserting musicbrainz_tags:", tags, "for track_id:", id)
+        return lib.mdb_insert_track_tags_musicbrainz(self.db, id, tags)
 
     def insert_track_featues_lowlevel(self, id, features):
         print("inserting lowlevel_features:", features, "for track_id:", id)
@@ -171,7 +171,7 @@ def musicbrainz_tags(tags):
 
 def lowlevel_features(features):
     if features is None:
-      return
+        return
     features[1:4] = [vectorize(x) for x in features[1:4]]
     features[5] = matrixize(features[5])
     features[6:32] = [vectorize(x) for x in features[6:32]]
@@ -210,14 +210,14 @@ def tonal_features(features):
 
 
 def spectrograms(specs):
-  for idx, v in enumerate(specs):
-    if idx in [1,3,5]:
-      if v is not None:
-        specs[idx] = matrixize(v)
-      elif v is None:
-        specs[idx] = matrixize([0])
-    if idx in [0,2,4]:
-      if v is None:
-        specs[idx] = 0
+    for idx, v in enumerate(specs):
+        if idx in [1, 3, 5]:
+            if v is not None:
+                specs[idx] = matrixize(v)
+            elif v is None:
+                specs[idx] = matrixize([0])
+        if idx in [0, 2, 4]:
+            if v is None:
+                specs[idx] = 0
 
-  return lib.mdb_spectrograms_new(*specs)
+    return lib.mdb_spectrograms_new(*specs)

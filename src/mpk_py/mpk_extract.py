@@ -35,13 +35,13 @@ def run():
         "-d",
         help="descriptors to include",
         choices=[
-#            "lowlevel",
-#            "rhythm",
-#            "sfx",
-#            "tonal",
-#            "spectrograms",
-#            "metadata",
-          # "none",
+            #            "lowlevel",
+            #            "rhythm",
+            #            "sfx",
+            #            "tonal",
+            #            "spectrograms",
+            #            "metadata",
+            # "none",
             "features",
             "mel_spec",
             "log_spec",
@@ -53,14 +53,15 @@ def run():
         "-j", "--jobs", default=mp.cpu_count(), help="number of parallel jobs"
     )
     parser.add_argument(
-      "-qs", "--queue_size", type=int, default=16, help="size of batch queue"
+        "-qs", "--queue_size", type=int, default=16, help="size of batch queue"
     )
     parser.add_argument(
-      "-bs", "--batch_size", type=int, default=1, help="size of batch"
+        "-bs", "--batch_size", type=int, default=1, help="size of batch"
     )
     parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
 
     return parser.parse_args()
+
 
 def get_audio_data(v):
     metadata = v["metadata"]["tags"]
@@ -72,6 +73,7 @@ def get_audio_data(v):
         int(metadata["bitrate"][0]),
         int(metadata["samplerate"][0]),
     )
+
 
 def get_lowlevel_features(v):
     ll = v["lowLevel"]
@@ -118,6 +120,7 @@ def get_lowlevel_features(v):
         ]
     )
 
+
 def get_rhythm_features(v):
     rhythm = []
     for i in (
@@ -147,13 +150,15 @@ def get_rhythm_features(v):
     rhythm = rhythm_features(rhythm)
     return rhythm
 
+
 def get_sfx_features(v):
-  sfx = sfx_features(list(v["sfx"].values()))
-  return sfx
+    sfx = sfx_features(list(v["sfx"].values()))
+    return sfx
+
 
 def get_tonal_features(v):
-  tl = v["tonal"]
-  tonal = tonal_features(
+    tl = v["tonal"]
+    tonal = tonal_features(
         [
             tl["chords_changes_rate"],
             tl["chords_number_rate"],
@@ -174,32 +179,31 @@ def get_tonal_features(v):
             tl["chords_progression"],
         ]
     )
-  return tonal
+    return tonal
+
 
 def get_spectrograms(v, descs):
-  specs = [None,None,None,None,None,None]
-  if descs is not None:
-    if "mel_spec" in descs:
-      specs[0:2] = [len(v["mel_spec"][0]),
-                    v["mel_spec"]]
-    if "log_spec" in descs:
-      specs[2:4] = [len(v["log_spec"][0]),
-                    v["log_spec"]]
+    specs = [None, None, None, None, None, None]
+    if descs is not None:
+        if "mel_spec" in descs:
+            specs[0:2] = [len(v["mel_spec"][0]), v["mel_spec"]]
+        if "log_spec" in descs:
+            specs[2:4] = [len(v["log_spec"][0]), v["log_spec"]]
 
-    if "freq_spec" in descs:
-      specs[4:6] = [len(v["freq_spec"][0]),
-                    v["freq_spec"]]
-  else:
-    specs = [
-        len(v["mel_spec"][0]),
-        v["mel_spec"],
-        len(v["log_spec"][0]),
-        v["log_spec"],
-        len(v["freq_spec"][0]),
-        v["freq_spec"],
-      ]
-  specs = spectrograms(specs)
-  return specs
+        if "freq_spec" in descs:
+            specs[4:6] = [len(v["freq_spec"][0]), v["freq_spec"]]
+    else:
+        specs = [
+            len(v["mel_spec"][0]),
+            v["mel_spec"],
+            len(v["log_spec"][0]),
+            v["log_spec"],
+            len(v["freq_spec"][0]),
+            v["freq_spec"],
+        ]
+    specs = spectrograms(specs)
+    return specs
+
 
 def get_musicbrainz_tags(v):
     mb_tags = []
@@ -222,9 +226,24 @@ def get_musicbrainz_tags(v):
     mb_tags = musicbrainz_tags(mb_tags)
     return mb_tags
 
+
 def get_track_tags(v):
     tags = []
-    for i in ("artist", "title", "album", "genre", "date", "tracknumber", "format", "language", "releasecountry","label","producer","engineer","mixer"):
+    for i in (
+        "artist",
+        "title",
+        "album",
+        "genre",
+        "date",
+        "tracknumber",
+        "format",
+        "language",
+        "releasecountry",
+        "label",
+        "producer",
+        "engineer",
+        "mixer",
+    ):
         if i in v["metadata"]["tags"]:
             tags.append(v["metadata"]["tags"][i][0])
         else:
@@ -232,20 +251,21 @@ def get_track_tags(v):
     tags = track_tags(tags)
     return tags
 
+
 def prep_common(v, descs):
-  audiodata = get_audio_data(v)
-  lowlevel = None
-  rhythm = None
-  sfx = None
-  tonal = None
-  if descs is not None:
-    if "features" in descs:
-      lowlevel = get_lowlevel_features(v)
-      rhythm = get_rhythm_features(v)
-      sfx = get_sfx_features(v)
-      tonal = get_tonal_features(v)
-  specs = get_spectrograms(v, descs)
-  return (audiodata, lowlevel, rhythm, sfx, tonal, specs)
+    audiodata = get_audio_data(v)
+    lowlevel = None
+    rhythm = None
+    sfx = None
+    tonal = None
+    if descs is not None:
+        if "features" in descs:
+            lowlevel = get_lowlevel_features(v)
+            rhythm = get_rhythm_features(v)
+            sfx = get_sfx_features(v)
+            tonal = get_tonal_features(v)
+    specs = get_spectrograms(v, descs)
+    return (audiodata, lowlevel, rhythm, sfx, tonal, specs)
 
 
 def prep_track(v, descs):
@@ -271,7 +291,7 @@ def insert_track(audiodata, lowlevel, rhythm, sfx, tonal, specs, tags, mb_tags):
             print("error during insert_track_tags_musicbrainz: {0}".format(err))
 
     if lowlevel is not None:
-      db.insert_track_featues_lowlevel(id, lowlevel)
+        db.insert_track_featues_lowlevel(id, lowlevel)
 
     if rhythm is not None:
         try:
@@ -280,17 +300,17 @@ def insert_track(audiodata, lowlevel, rhythm, sfx, tonal, specs, tags, mb_tags):
             print("error during insert_track_features_rhythm: {0}".format(err))
 
     if sfx is not None:
-      db.insert_track_features_sfx(id, sfx)
+        db.insert_track_features_sfx(id, sfx)
     if tonal is not None:
-      db.insert_track_features_tonal(id, tonal)
+        db.insert_track_features_tonal(id, tonal)
     if specs is not None:
-      db.insert_track_images(id, specs)
+        db.insert_track_images(id, specs)
 
 
 def insert_sample(audiodata, lowlevel, rhythm, sfx, tonal, specs):
     id = db.insert_sample(audiodata)
     if lowlevel is not None:
-      db.insert_sample_featues_lowlevel(id, lowlevel)
+        db.insert_sample_featues_lowlevel(id, lowlevel)
 
     if rhythm is not None:
         try:
@@ -299,11 +319,11 @@ def insert_sample(audiodata, lowlevel, rhythm, sfx, tonal, specs):
             print("error during insert_sample_features_rhythm: {0}".format(err))
 
     if sfx is not None:
-      db.insert_sample_features_sfx(id, sfx)
+        db.insert_sample_features_sfx(id, sfx)
     if tonal is not None:
-      db.insert_sample_features_tonal(id, tonal)
+        db.insert_sample_features_tonal(id, tonal)
     if specs is not None:
-      db.insert_sample_images(id, specs)
+        db.insert_sample_images(id, specs)
 
 
 def insert(data, descs):
@@ -337,16 +357,23 @@ if __name__ == "__main__":
         db = Mdb(cfg.db_path())
         files = [i for s in [collect_files(f) for f in args.input] for i in s]
         if args.d:
-          descs = args.d
+            descs = args.d
         else:
-          descs = None
+            descs = None
         queue_size = args.queue_size
-        if queue_size > len(files): queue_size = len(files)
+        if queue_size > len(files):
+            queue_size = len(files)
         batch_size = args.batch_size
         for i in range(0, len(files), queue_size):
             batch_files = files[i : i + queue_size]
             res = [
-                pool.apply_async(job, (batch_files[x : x + batch_size],descs,))
+                pool.apply_async(
+                    job,
+                    (
+                        batch_files[x : x + batch_size],
+                        descs,
+                    ),
+                )
                 for x in range(0, queue_size, batch_size)
             ]
             for r in res:

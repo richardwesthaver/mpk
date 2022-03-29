@@ -24,6 +24,7 @@
 //!  and QueryType. These are all used to simplify Interactions with
 //!  the DB.
 use crate::err::{Error, Result};
+use mpk_hash::Checksum;
 use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, Value, ValueRef};
 use std::fmt;
 use std::ops::{Index, Range};
@@ -208,11 +209,11 @@ impl FromStr for Note {
       "A" => Ok(Note::A),
       "Bb" => Ok(Note::Bb),
       "B" => Ok(Note::B),
-      e => Err(Error::BadNote(e.to_string()))
+      e => Err(Error::BadNote(e.to_string())),
     }
   }
 }
-  
+
 #[derive(Debug, Default)]
 pub struct VecNote(pub Vec<Note>);
 
@@ -250,6 +251,7 @@ pub struct AudioData {
   pub channels: Option<u8>,
   pub bitrate: Option<u32>,
   pub samplerate: Option<u32>,
+  pub checksum: Option<Checksum>,
 }
 
 impl fmt::Display for AudioData {
@@ -274,6 +276,10 @@ impl fmt::Display for AudioData {
       .samplerate
       .map(|n| n.to_string())
       .unwrap_or("NULL".to_string());
+    let checksum = self
+      .checksum
+      .map(|c| c.to_hex())
+      .unwrap_or("NULL".to_string());
     write!(
       f,
       "path: {}
@@ -281,8 +287,9 @@ filesize: {}
 duration: {}
 channels: {}
 bitrate: {}
-samplerate: {}",
-      self.path, filesize, duration, channels, bitrate, samplerate
+samplerate: {}
+checksum: {}",
+      self.path, filesize, duration, channels, bitrate, samplerate, checksum
     )
   }
 }
@@ -313,7 +320,11 @@ impl fmt::Display for TrackTags {
     let album = self.album.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
     let genre = self.genre.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
     let date = self.date.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
-    let tracknumber = self.tracknumber.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
+    let tracknumber = self
+      .tracknumber
+      .as_ref()
+      .map(|s| s.as_str())
+      .unwrap_or("NULL");
     let format = self.format.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
     let language = self.language.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
     let country = self.country.as_ref().map(|s| s.as_str()).unwrap_or("NULL");
@@ -337,7 +348,19 @@ label: {}
 producer: {}
 engineer: {}
 mixer: {}",
-      artist, title, album, genre, date, tracknumber, format, language, country, label, producer, engineer, mixer
+      artist,
+      title,
+      album,
+      genre,
+      date,
+      tracknumber,
+      format,
+      language,
+      country,
+      label,
+      producer,
+      engineer,
+      mixer
     )
   }
 }
@@ -355,7 +378,7 @@ pub struct MusicbrainzTags {
   pub releasegroupid: Option<Uuid>,
   pub releasetrackid: Option<Uuid>,
   pub trackid: Option<Uuid>,
-  pub asin: Option<String>,  
+  pub asin: Option<String>,
   pub musicip_puid: Option<Uuid>,
 }
 
@@ -401,8 +424,16 @@ impl fmt::Display for MusicbrainzTags {
       .as_ref()
       .map(|s| s.to_string())
       .unwrap_or("NULL".to_string());
-    let asin = self.asin.as_ref().map(|s| s.to_string()).unwrap_or("NULL".to_string());
-    let musicip_puid = self.musicip_puid.as_ref().map(|s| s.to_string()).unwrap_or("NULL".to_string());
+    let asin = self
+      .asin
+      .as_ref()
+      .map(|s| s.to_string())
+      .unwrap_or("NULL".to_string());
+    let musicip_puid = self
+      .musicip_puid
+      .as_ref()
+      .map(|s| s.to_string())
+      .unwrap_or("NULL".to_string());
     write!(
       f,
       "albumartistid: {}
@@ -681,7 +712,9 @@ impl fmt::Display for Spectrograms {
       "mel_spec: {}
 log_spec: {}
 freq_spec: {}",
-      self.mel_spec.as_ref().unwrap(), self.log_spec.as_ref().unwrap(), self.freq_spec.as_ref().unwrap()
+      self.mel_spec.as_ref().unwrap(),
+      self.log_spec.as_ref().unwrap(),
+      self.freq_spec.as_ref().unwrap()
     )
   }
 }

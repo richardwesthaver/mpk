@@ -14,6 +14,7 @@ mpk_sesh = { path = "../mpk_sesh" }
 mpk_midi = { path = "../mpk_midi" }
 mpk_gear = { path = "../mpk_gear" }
 mpk_jack = { path = "../mpk_jack" }
+mpk_hash = { path = "../mpk_hash" }
 libc = "0.2"
 [build-dependencies]
 cbindgen = "0.20"

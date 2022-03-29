@@ -20,11 +20,9 @@ pub struct FreeSoundClient {
 
 impl FreeSoundClient {
   pub fn new() -> Result<FreeSoundClient> {
-    Ok(
-      FreeSoundClient {
-	client: Client::new()
-      }
-    )
+    Ok(FreeSoundClient {
+      client: Client::new(),
+    })
   }
 }
 

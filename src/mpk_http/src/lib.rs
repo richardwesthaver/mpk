@@ -4,9 +4,9 @@ pub use reqwest::Client;
 mod err;
 pub use err::{Error, Result};
 
+pub mod coverartarchive;
 pub mod freesound;
 pub mod musicbrainz;
-pub mod coverartarchive;
 
 #[cfg(test)]
 mod tests {

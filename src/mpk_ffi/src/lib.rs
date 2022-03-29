@@ -22,12 +22,39 @@ use mpk_db::{
   AudioData, LowlevelFeatures, MatrixReal, Mdb, MusicbrainzTags, RhythmFeatures,
   SfxFeatures, Spectrograms, TonalFeatures, TrackTags, Uuid, VecReal, VecText,
 };
+use mpk_hash::Checksum;
 use std::ffi::{CStr, CString, OsStr};
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::slice;
 
-/// a f32 vector. In C this is represented as a raw pointer and
+/// An array of bytes with a fixed length. Reprersents a BLAKE3 hash value
+#[repr(C)]
+pub struct CChecksum {
+  pub ptr: *const u8,
+  pub len: size_t,
+}
+
+impl From<CChecksum> for Checksum {
+  fn from(c: CChecksum) -> Self {
+    let b = unsafe {
+      assert!(!c.ptr.is_null());
+      slice::from_raw_parts(c.ptr, c.len)
+    };
+    Checksum::hash(b)
+  }
+}
+
+impl From<Checksum> for CChecksum {
+  fn from(r: Checksum) -> Self {
+    let b = r.0.as_bytes();
+    Self {
+      ptr: b.as_ptr(),
+      len: b.len(),
+    }
+  }
+}
+/// A f32 vector. In C this is represented as a raw pointer and
 /// length.
 #[repr(C)]
 pub struct CVecReal {
@@ -82,7 +109,33 @@ pub extern "C" fn mdb_matrixreal_new(ptr: *const f32, len: size_t) -> CMatrixRea
   CMatrixReal { ptr, len }
 }
 
-/// Drop a c_char
+/// Build a Blake3 Checksum from array BYTES of LEN.
+#[no_mangle]
+pub extern "C" fn mpk_checksum_new(ptr: *const u8, len: size_t) -> CChecksum {
+  CChecksum { ptr, len }
+}
+
+/// Build a Blake3 Checksum from PATH given as c_char[].
+#[no_mangle]
+pub extern "C" fn mpk_checksum_path(path: *const c_char) -> CChecksum {
+  let p = unsafe {
+    assert!(!path.is_null());
+    CStr::from_ptr(path).to_str().unwrap()
+  };
+  Checksum::from_path(p).into()
+}
+
+#[no_mangle]
+pub extern "C" fn mpk_checksum_free(ptr: *mut Checksum) {
+  if ptr.is_null() {
+    return;
+  }
+  unsafe {
+    Box::from_raw(ptr);
+  }
+}
+
+/// Drop a c_char pointer
 #[no_mangle]
 pub extern "C" fn mpk_string_free(ptr: *mut c_char) {
   if ptr.is_null() {
@@ -259,13 +312,16 @@ pub extern "C" fn mdb_audio_data_new(
   bitrate: u32,
   samplerate: u32,
 ) -> *mut AudioData {
+  let path = unsafe { CStr::from_ptr(path).to_str().unwrap().to_string() };
+  let checksum = Checksum::from_path(path.as_str());
   let data = AudioData {
-    path: unsafe { CStr::from_ptr(path).to_str().unwrap().to_string() },
+    path,
     filesize: Some(filesize),
     duration: Some(duration),
     channels: Some(channels),
     bitrate: Some(bitrate),
     samplerate: Some(samplerate),
+    checksum: Some(checksum),
   };
   let box_data = Box::new(data);
   Box::into_raw(box_data)
@@ -295,7 +351,7 @@ pub extern "C" fn mdb_track_tags_new(
   label: *const c_char,
   producer: *const c_char,
   engineer: *const c_char,
-  mixer: *const c_char
+  mixer: *const c_char,
 ) -> *mut TrackTags {
   let tags = TrackTags {
     artist: if artist.is_null() {
@@ -456,7 +512,8 @@ pub extern "C" fn mdb_musicbrainz_tags_new(
       None
     } else {
       Some(
-        Uuid::parse_str(unsafe { CStr::from_ptr(musicip_puid).to_str().unwrap() }).unwrap(),
+        Uuid::parse_str(unsafe { CStr::from_ptr(musicip_puid).to_str().unwrap() })
+          .unwrap(),
       )
     },
   };
@@ -726,7 +783,7 @@ pub extern "C" fn mdb_spectrograms_new(
   } else {
     Some(MatrixReal::new(mel_spec.into(), mel_frame_size))
   };
-    
+
   let log_spec = if log_frame_size.eq(&0) {
     None
   } else {

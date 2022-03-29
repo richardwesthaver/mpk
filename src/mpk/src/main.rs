@@ -52,23 +52,10 @@ enum Command {
   },
   /// Save a session
   Save,
-  /// Query DB
-  Query {
-    query: QueryType,
-    #[clap(short, long)]
-    track: Option<i64>,
-    #[clap(short, long)]
-    sample: Option<i64>,
-    raw: Option<String>,
-  },
-  /// Sync resources with DB
-  Sync {
-    #[clap(short, long)]
-    tracks: bool,
-    #[clap(short, long)]
-    samples: bool,
-    #[clap(short, long)]
-    projects: bool,
+  /// Interact with the database
+  Db {
+    #[clap(subcommand)]
+    cmd: DbCmd,
   },
   /// Print info
   Info {
@@ -128,6 +115,34 @@ enum Runner {
     time_sig: Option<String>,
   },
   Monitor,
+}
+
+#[derive(Subcommand)]
+enum DbCmd {
+  /// Query DB
+  Query {
+    query: QueryType,
+    #[clap(short, long)]
+    track: Option<i64>,
+    #[clap(short, long)]
+    sample: Option<i64>,
+    raw: Option<String>,
+  },
+  /// Sync resources with DB
+  Sync {
+    #[clap(short, long)]
+    tracks: bool,
+    #[clap(short, long)]
+    samples: bool,
+    #[clap(short, long)]
+    projects: bool,
+  },
+  Backup {
+    output: PathBuf,
+  },
+  Restore {
+    input: PathBuf,
+  },
 }
 
 fn ppln(i: &str, s: char) {
@@ -208,12 +223,7 @@ fn main() -> Result<()> {
       mpk_audio::play(file.unwrap(), device, volume, speed, rx)
     }
 
-    Command::Query {
-      query,
-      track,
-      sample,
-      raw,
-    } => {
+    Command::Db { cmd } => {
       let (trace, profile) = (
         &cfg.db.trace | args.db_trace,
         &cfg.db.profile | args.db_profile,
@@ -225,78 +235,95 @@ fn main() -> Result<()> {
       if profile {
         conn.set_profiler(Some(|x, y| println!("{} -- {}ms", x, y.as_millis())))
       }
-      match query {
-        QueryType::Info => {
-          if track.is_some() {
-            println!("{}", conn.query_track(track.unwrap())?)
-          } else if sample.is_some() {
-            println!("{}", conn.query_sample(sample.unwrap())?)
+
+      match cmd {
+        DbCmd::Query {
+          query,
+          track,
+          sample,
+          raw,
+        } => match query {
+          QueryType::Info => {
+            if track.is_some() {
+              println!("{}", conn.query_track(track.unwrap())?)
+            } else if sample.is_some() {
+              println!("{}", conn.query_sample(sample.unwrap())?)
+            }
+          }
+          QueryType::Tags => {
+            if track.is_some() {
+              println!("{}", conn.query_track_tags(track.unwrap())?)
+            } else {
+              eprintln!("query type not supported")
+            }
+          }
+          QueryType::Musicbrainz => {
+            if track.is_some() {
+              println!("{}", conn.query_track_tags_musicbrainz(track.unwrap())?)
+            } else {
+              eprintln!("query type not supported");
+            }
+          }
+          QueryType::Lowlevel => {
+            if track.is_some() {
+              println!("{}", conn.query_track_features_lowlevel(track.unwrap())?)
+            } else if sample.is_some() {
+              println!("{}", conn.query_sample_features_lowlevel(sample.unwrap())?)
+            }
+          }
+          QueryType::Rhythm => {
+            if track.is_some() {
+              println!("{}", conn.query_track_features_rhythm(track.unwrap())?)
+            }
+            if sample.is_some() {
+              println!("{}", conn.query_sample_features_rhythm(sample.unwrap())?)
+            }
+          }
+          QueryType::Spectrograms => {
+            if track.is_some() {
+              println!("{}", conn.query_track_images(track.unwrap())?)
+            } else if sample.is_some() {
+              println!("{}", conn.query_sample_images(sample.unwrap())?)
+            }
+          }
+          QueryType::Raw => {
+            println!("{}", conn.query_raw(&raw.unwrap())?)
+          }
+          _ => eprintln!("query type not supported"),
+        },
+        DbCmd::Sync {
+          tracks,
+          samples,
+          projects,
+        } => {
+          let script = cfg.extractor.path.unwrap_or_default();
+          let descriptors = cfg.extractor.descriptors;
+          if tracks {
+            let mut cmd = std::process::Command::new(&script);
+            let tracks = cfg.fs.get_path("tracks")?;
+            cmd.args([tracks.to_str().unwrap(), "-t", "track", "-d"]);
+            cmd.args(&descriptors);
+            cmd.status()?;
+          }
+          if samples {
+            let mut cmd = std::process::Command::new(&script);
+            let samps = cfg.fs.get_path("samples")?;
+            cmd.args([samps.to_str().unwrap(), "-t", "sample", "-d"]);
+            cmd.args(&descriptors);
+            cmd.status()?;
+          }
+          if projects {
+            let _projs = cfg.fs.get_path("projects")?;
           }
         }
-        QueryType::Tags => {
-          if track.is_some() {
-            println!("{}", conn.query_track_tags(track.unwrap())?)
-          } else {
-            eprintln!("query type not supported")
-          }
+        DbCmd::Backup { output } => {
+          conn.backup(output, Some(|p| mpk_db::print_progress(p)))?
         }
-        QueryType::Musicbrainz => {
-          if track.is_some() {
-            println!("{}", conn.query_track_tags_musicbrainz(track.unwrap())?)
-          } else {
-            eprintln!("query type not supported");
-          }
-        }
-        QueryType::Lowlevel => {
-          if track.is_some() {
-            println!("{}", conn.query_track_features_lowlevel(track.unwrap())?)
-          } else if sample.is_some() {
-            println!("{}", conn.query_sample_features_lowlevel(sample.unwrap())?)
-          }
-        }
-        QueryType::Rhythm => {
-          if track.is_some() {
-            println!("{}", conn.query_track_features_rhythm(track.unwrap())?)
-          }
-          if sample.is_some() {
-            println!("{}", conn.query_sample_features_rhythm(sample.unwrap())?)
-          }
-        }
-        QueryType::Spectrograms => {
-          if track.is_some() {
-            println!("{}", conn.query_track_images(track.unwrap())?)
-          } else if sample.is_some() {
-            println!("{}", conn.query_sample_images(sample.unwrap())?)
-          }
-        }
-        QueryType::Raw => {
-          println!("{}", conn.query_raw(&raw.unwrap())?)
-        }
-        _ => eprintln!("query type not supported"),
-      }
-    }
-    Command::Sync {
-      tracks,
-      samples,
-      projects,
-    } => {
-	let script = cfg.extractor.path.unwrap();
-	let descriptors = cfg.extractor.descriptors;
-	let mut cmd = std::process::Command::new(script);
-      if tracks {
-        let tracks = cfg.fs.get_path("tracks")?;
-	cmd.args([tracks.to_str().unwrap(), "-t", "track", "-d"]);
-	cmd.args(&descriptors);
-	cmd.output()?;
-      }
-      if samples {
-        let samps = cfg.fs.get_path("samples")?;
-	cmd.args([samps.to_str().unwrap(), "-t", "track", "-d"]);
-	cmd.args(&descriptors);
-	cmd.output()?;
-      }
-      if projects {
-        let _projs = cfg.fs.get_path("projects")?;
+        DbCmd::Restore { input } => conn.restore(
+          mpk_db::DatabaseName::Main,
+          input,
+          Some(|p| mpk_db::print_progress(p)),
+        )?,
       }
     }
     Command::Pack {
@@ -374,10 +401,8 @@ fn main() -> Result<()> {
         let _data = mpk_db::Mdb::new_with_config(cfg.db)?
           .query_sample_features_rhythm(1)?
           .histogram;
-      },
-      Runner::Monitor => {
-	mpk_midi::monitor()?
       }
+      Runner::Monitor => mpk_midi::monitor()?,
       _ => println!("starting jack server"),
     },
     _ => ppln("Invalid command", 'E'),

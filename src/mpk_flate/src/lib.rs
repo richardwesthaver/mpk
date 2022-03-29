@@ -43,23 +43,40 @@ impl From<u8> for Level {
   }
 }
 
+pub fn is_tar<P: AsRef<Path>>(src: P) -> bool {
+  let p = src.as_ref();
+  if p
+    .file_name()
+    .map(|p| p.to_str().unwrap())
+    .unwrap()
+    .contains(".tar")
+  {
+    true
+  } else {
+    false
+  }
+}
+
 /// Pack a SRC directory, and return a compressed archive at DST.
 pub fn pack<P: AsRef<Path>>(src: P, dst: P, level: Option<Level>) {
-  let mut tar = tar::Builder::new(Vec::new());
   let src = src.as_ref();
-  let parent = src.parent().unwrap();
-  let art = src.strip_prefix(parent).unwrap();
-  tar.append_dir_all(art, src).unwrap();
-
-  let tar = tar.into_inner().unwrap();
   let dst = dst.as_ref();
-  let file = fs::File::create(dst).expect("failed to create output path");
-  zstd::stream::copy_encode(
-    &tar[..],
-    file,
-    level.unwrap_or(Level::Default).into_zstd(),
-  )
-  .unwrap();
+  if !src.is_file() {
+    let mut tar = tar::Builder::new(Vec::new());
+    let parent = src.parent().unwrap();
+    let art = src.strip_prefix(parent).unwrap();
+    tar.append_dir_all(art, src).unwrap();
+    let tar = tar.into_inner().unwrap();
+    let file = fs::File::create(dst).expect("failed to create output path");
+    zstd::stream::copy_encode(
+      &tar[..],
+      file,
+      level.unwrap_or(Level::Default).into_zstd(),
+    )
+    .unwrap();
+  } else {
+    compress(src, dst, level).unwrap()
+  }
 }
 
 /// unpack a tar.zst compressed archive or zst file
@@ -68,10 +85,10 @@ pub fn unpack<P: AsRef<Path>>(src: P, dst: P) {
   let input = fs::File::open(src).expect("failed to open input");
   let mut buff = Vec::new();
   zstd::stream::copy_decode(input, &mut buff).unwrap();
-  if tar::Archive::new(&buff[..]).entries().is_ok() {
+  if is_tar(src) {
     tar::Archive::new(&buff[..]).unpack(dst).unwrap();
   } else {
-    decompress(src).unwrap();
+    decompress(src, dst.as_ref()).unwrap()
   }
 }
 
@@ -83,11 +100,15 @@ pub fn unpack_replace<P: AsRef<Path>>(src: P, dst: P) {
 }
 
 /// compress a file with zstd
-pub fn compress<P: AsRef<Path>>(src: P, dst: P) -> io::Result<()> {
+pub fn compress<P: AsRef<Path>>(
+  src: P,
+  dst: P,
+  level: Option<Level>,
+) -> io::Result<()> {
   let mut file = fs::File::open(&src)?;
   let mut encoder = {
     let target = fs::File::create(dst.as_ref())?;
-    zstd::Encoder::new(target, 22)?
+    zstd::Encoder::new(target, level.unwrap_or(Level::Default).into_zstd())?
   };
   io::copy(&mut file, &mut encoder)?;
   encoder.finish()?;
@@ -95,12 +116,12 @@ pub fn compress<P: AsRef<Path>>(src: P, dst: P) -> io::Result<()> {
 }
 
 /// decompress a zst file into the current directory
-pub fn decompress<P: AsRef<Path>>(source: P) -> io::Result<()> {
+pub fn decompress<P: AsRef<Path>>(src: P, dst: P) -> io::Result<()> {
   let mut decoder = {
-    let file = fs::File::open(&source)?;
+    let file = fs::File::open(&src)?;
     zstd::Decoder::new(file)?
   };
-  let mut target = fs::File::create(source.as_ref().to_str().unwrap())?;
+  let mut target = fs::File::create(dst.as_ref().to_str().unwrap())?;
   io::copy(&mut decoder, &mut target)?;
   decoder.finish();
   Ok(())

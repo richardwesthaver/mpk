@@ -9,6 +9,7 @@ duration integer,
 channels integer,
 bitrate integer,
 samplerate integer,
+checksum text,
 updated datetime default current_timestamp not null);
 
 create table if not exists track_tags (
@@ -156,11 +157,12 @@ foreign key(track_id) references tracks(id));
 create table if not exists samples (
 id integer primary key,
 path text not null unique,
-channels integer,
 filesize integer,
-bitrate integer,
 duration integer,
+channels integer,
+bitrate integer,
 samplerate integer,
+checksum text,
 updated datetime default current_timestamp not null);
 
 create table if not exists sample_features_lowlevel (

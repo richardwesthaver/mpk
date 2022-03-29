@@ -61,19 +61,19 @@ def bulk_extract(files, sr=44100, mono=False, descs=None):
                 print("extracting:", f)
                 extractor.metadata()
                 if descs is not None:
-                  if "features" in descs:
-                    extractor.features()
-                  if "mel_spec" in descs:
-                    extractor.mel_spec()
-                  if "freq_spec" in descs:
-                    extractor.freq_spec()
-                  if "log_spec" in descs:
-                    extractor.log_spec()
+                    if "features" in descs:
+                        extractor.features()
+                    if "mel_spec" in descs:
+                        extractor.mel_spec()
+                    if "freq_spec" in descs:
+                        extractor.freq_spec()
+                    if "log_spec" in descs:
+                        extractor.log_spec()
                 else:
-                  extractor.features()
-                  extractor.mel_spec()
-                  extractor.freq_spec()
-                  extractor.log_spec()
+                    extractor.features()
+                    extractor.mel_spec()
+                    extractor.freq_spec()
+                    extractor.log_spec()
                 result.update({f: pool_to_dict(extractor.pool)})
         except Exception as e:
             print(str(e))

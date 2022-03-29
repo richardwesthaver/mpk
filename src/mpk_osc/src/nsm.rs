@@ -31,7 +31,12 @@ pub struct NsmClient {
 }
 
 impl NsmClient {
-  pub fn new(name: &str, addr: SocketAddr, caps: Vec<ClientCaps>, nsm_url: Option<SocketAddr>) -> Result<Self> {
+  pub fn new(
+    name: &str,
+    addr: SocketAddr,
+    caps: Vec<ClientCaps>,
+    nsm_url: Option<SocketAddr>,
+  ) -> Result<Self> {
     let socket = UdpSocket::bind(addr)?;
     let name = name.to_owned();
     let nsm_url = if let Some(u) = nsm_url {
@@ -40,15 +45,13 @@ impl NsmClient {
       std::env::var("NSM_URL").unwrap().parse().unwrap()
     };
 
-    Ok(
-      NsmClient {
-	name,
-	socket,
-	addr,
-	caps,
-	nsm_url
-      }
-    )
+    Ok(NsmClient {
+      name,
+      socket,
+      addr,
+      caps,
+      nsm_url,
+    })
   }
 
   pub fn announce(&self) -> Result<ServerReply> {

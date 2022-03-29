@@ -1,34 +1,47 @@
-pub use blake3::{derive_key, hash, keyed_hash, Hash as B3Hash, Hasher as B3Hasher, OutputReader};
-use hex;
+pub use blake3::{
+  derive_key, hash, keyed_hash, Hash as B3Hash, Hasher as B3Hasher, OutputReader,
+};
 use rand::Rng;
-
+use std::fs::File;
+use std::io::{BufReader, Read};
+use std::path::Path;
 pub const KEY_LEN: usize = 32;
 pub const OUT_LEN: usize = 32;
+pub const HEX_LEN: usize = KEY_LEN * 2;
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Default)]
-pub struct Checksum([u8;OUT_LEN]);
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
+pub struct Checksum(pub B3Hash);
 
 impl Checksum {
   pub fn rand() -> Self {
     let mut rng = rand::thread_rng();
-    let vals: [u8;KEY_LEN] = (0..KEY_LEN).map(|_| rng.gen_range(0..u8::MAX)).collect::<Vec<u8>>().as_slice().try_into().unwrap();
-    Checksum(vals)
+    let vals: [u8; KEY_LEN] = (0..KEY_LEN)
+      .map(|_| rng.gen_range(0..u8::MAX))
+      .collect::<Vec<u8>>()
+      .as_slice()
+      .try_into()
+      .unwrap();
+    Checksum(B3Hash::from(vals))
   }
-
-  pub fn state_hash(&self, state: &mut B3Hasher) -> Self {
-    let mut output = [0; OUT_LEN];
-    state.update(&self.0);
-    let mut res = state.finalize_xof();
-    res.fill(&mut output);
+  pub fn hash(input: &[u8]) -> Self {
+    let output = blake3::hash(input);
     Checksum(output)
   }
-
   pub fn to_hex(&self) -> String {
-    hex::encode(&self.0)
+    self.0.to_hex().to_string()
   }
-
-  pub fn from_bytes(b: &[u8]) -> Self {
-    Checksum(*blake3::hash(b).as_bytes())
+  pub fn from_hex(h: &str) -> Self {
+    Checksum(B3Hash::from_hex(h).unwrap())
+  }
+  pub fn from_file(f: File) -> Self {
+    let mut buf_reader = BufReader::new(f);
+    let mut buf = vec![];
+    buf_reader.read_to_end(&mut buf).unwrap();
+    Checksum::hash(buf.as_slice())
+  }
+  pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
+    let file = File::open(path).unwrap();
+    Checksum::from_file(file)
   }
 }
 
@@ -38,27 +51,9 @@ mod tests {
   use hex::decode;
   use std::convert::TryInto;
   #[test]
-  fn id_state_hash() {
-    let id = Checksum([0; KEY_LEN]);
-    let hash = id.state_hash(&mut B3Hasher::new());
-    assert_eq!(hash, id.state_hash(&mut B3Hasher::new()));
-  }
-
-  #[test]
-  fn id_hex() {
-    let id = Checksum([255; KEY_LEN]);
-
-    assert_eq!(
-      hex::decode("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").unwrap(),
-      id.0
-    );
-  }
-
-  #[test]
   fn rand_id() {
     let id = Checksum::rand();
-    let hash = id.state_hash(&mut B3Hasher::new());
-    assert_eq!(hash, id.state_hash(&mut B3Hasher::new()));
+    assert_eq!(id.0.as_bytes().len(), OUT_LEN);
   }
 
   #[test]
@@ -76,5 +71,13 @@ mod tests {
     let hash_bytes = decode(hash_hex).unwrap();
     let hash_array: [u8; blake3::OUT_LEN] = hash_bytes[..].try_into().unwrap();
     let _hash: B3Hash = hash_array.into();
+  }
+
+  #[test]
+  fn path_checksum() {
+    let checksum = Checksum::from_path("Cargo.toml");
+    dbg!(checksum);
+    let checksum = Checksum::from_file(File::open("src/lib.rs").unwrap());
+    dbg!(checksum);
   }
 }
