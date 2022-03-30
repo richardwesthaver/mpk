@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-03-29
+#+DATE: 2022-03-30
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
@@ -32,30 +32,192 @@ Once I'm happy with the database I'll work on the MIDI module
 functionality ([[*=mpk_sesh=][mpk_sesh]]).
 
 [fn:1] [[https://www.sqlite.org/index.html][SQLite Home Page]]
+* TODO On DAWs and other production tools
+** Analog Modeling
+** Commercial Workstations
+** Patchers
+** A new paradigm
+* Usage
+MPK is meant to be used on a Linux box. In this example we'll be using
+Arch Linux.
+
+MPK also runs on MacOS but some of the project management
+functionality isn't. Most notably, you can't run the [[https://new-session-manager.jackaudio.org][NSM]] server on
+MacOS, but you can still interact with one remotely. All other
+features are supported on both platforms.
+** Installation
+First install the dependencies:
+#+begin_src shell
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+  sudo pacman -S nim gcc sqlite jack2 new-session-manager
+  # cargo install paru or use another AUR installer
+  paru -S python39 # 3.10 is not supported yet
+
+  python -m pip install git+https://github.com/MTG/essentia.git
+#+end_src
+
+It is recommended to install [[https://nim-lang.org/][Nim]] so that you can run the build scripts
+in =config.nims=.
+
+Simply run =nim install= in the project root to install the mpk binary
+in =~/.cargo= and the python modules in the default location (usually
+=/usr/local/lib/python3.9/site-packages=).
+
+Run =nim help= to see the other commands and flags available.
+** Initialization
+Once the binary is installed run =mpk init= to initialize the app
+directories at =~/mpk= as well as the database and TOML config file.
+
+#+begin_src shell :exports results
+ls ~/mpk
+#+end_src
+#+RESULTS:
+| mpk.db   |
+| mpk.toml |
+| patches  |
+| plugins  |
+| projects |
+| samples  |
+| tracks   |
+** Configuration
+The default =mpk.toml= config file looks like this:
+#+begin_src conf-toml
+[fs]
+root = '~/mpk'
+
+[db]
+path = '~/mpk/mpk.db'
+flags = [
+    'readwrite',
+    'create',
+    'nomutex',
+    'uri',
+]
+trace = false
+profile = false
+
+[jack]
+name = 'mpk'
+audio = 'alsa'
+midi = 'seq'
+device = 'default'
+realtime = true
+auto = ' '
+temp = false
+rate = 44100
+period = 1024
+n_periods = 2
+
+[metro]
+bpm = 120
+time_sig = [
+    4,
+    4,
+]
+
+[extractor]
+descriptors = ['mel_spec']
+mono = false
+sample_rate = 44100
+windowing = 'hann'
+frame_size = 2048
+hop_size = 1024
+mel_bands = 96
+lf_bound = 0
+hf_bound = 11000
+#+end_src
+
+Much of the configuration can be overridden by CLI flags but you may
+want to change some of the default values. Some of the optional
+settings aren't included in the default file:
+- =ext_samples=, =ext_tracks=, =ext_projects=, =ext_plugins=, =ext_patches= :: external directories
+- =extractor.path= :: path to the =mpk_extract.py= script
+- =metro.tic= :: audio file to play on metro downbeats
+- =metro.toc= :: audio file to play on metro upbeats
+** The Database
+The database is able to store a wide variety of audio descriptors
+including metadata, lowlevel features, and full spectrograms. Storing
+all of the descriptors for every audio file comes at a cost though:
+- /time/ to process each file
+- /space/ to store these descriptors in a single-file database
+
+This is why the only optional descriptor enabled by default is the Mel
+Spectrogram. You can add additional descriptors via CLI or just add
+them to the config file. The full list includes the following:
+#+begin_example
+'lowlevel'
+'rhythm'
+'sfx'
+'tonal'
+'spectrograms'
+'mel_spec'
+'log_spec'
+'freq_spec'
+'all'
+#+end_example
+The samples and tracks tables always get populated, as well as
+track_tags and track_tags_musicbrainz since they don't require heavy
+processing.
+
+You can interact with the database via CLI:
+#+begin_src shell :exports results :results drawer
+mpk db --help
+#+end_src
+#+RESULTS:
+:results:
+mpk-db 
+
+USAGE:
+    mpk db <SUBCOMMAND>
+
+OPTIONS:
+    -h, --help    Print help information
+
+SUBCOMMANDS:
+    backup     
+    help       Print this message or the help of the given subcommand(s)
+    query      Query DB
+    restore    
+    sync       Sync resources with DB
+:end:
+*** Sync
+You can populate the database using =mpk db sync= which executes the
+=mpk_extract.py= script and updates any files that have changed based
+on checksums.
+*** Query
+Use =mpk db query= to query the database directly. You can get
+formatted output with the built-in commands. Raw queries are also
+supported but the output for non-UUID Blobs are summarized with a
+length in bytes.
+*** Backup/Restore
+Use =mpk db backup= to backup the current database and =mpk db
+restore= to restore from a backup.
+** TODO Projects
+
 * Dependencies
-- [[https://www.rust-lang.org/tools/install][Rust]] :: [[https://rustup.rs/][rustup.rs]]
+=*= -- /use your OS package manager (apt, brew, pacman, etc)/
+- [[https://www.rust-lang.org/tools/install][Rust]] :: install with [[https://rustup.rs/][rustup.rs]]
 - [[https://www.python.org/][Python]]3.9 :: *
 - C Compiler :: [[https://gcc.gnu.org/][GCC]] or [[https://llvm.org/][LLVM]] *
+- [[https://nim-lang.org/][Nim]] :: *
+  - used as a build tool via [[https://nim-lang.org/docs/nims.html][NimScript]].
 - [[https://essentia.upf.edu/][essentia]] :: try a =pip install= from the [[https://github.com/MTG/essentia][github repo]], if that
   doesn't work you will need to [[https://essentia.upf.edu/installing.html][install from source]]. If you have
   issues just contact me.
-- [[https://numpy.org/][numpy]] :: you will need a version <1.22, for example =pip install
-  numpy==1.21.5=.
+  - [[https://numpy.org/][numpy]] :: you will need a version <1.22, for example =pip install
+    numpy==1.21.5=.
 - [[https://www.sqlite.org/index.html][SQLite]] :: *
 - [[https://jackaudio.org/][JACK]] :: *
+- [[https://new-session-manager.jackaudio.org][NSM]] :: *
 - _Dev Dependencies_
   - [[https://python-poetry.org/][poetry]] :: =pip= or *
   - [[https://black.readthedocs.io/en/stable/][black]] :: =pip= or *
-  - [[https://nim-lang.org/][Nim]] :: *
-    - used as a build tool via [[https://nim-lang.org/docs/nims.html][NimScript]].
   - [[https://valgrind.org/][Valgrind]] :: *
     - used to detect issues with FFI memory management.
-
-=*= -- /use your OS package manager (apt, brew, pacman, etc)
 * Crates
 ** =mpk=
 The MPK binary providing CLI access to the library features.
-
 #+begin_example
 mpk 0.1.0
 ellis <ellis@rwest.io>
@@ -381,13 +543,13 @@ user_tags text,
 notes text
     #+end_example
 ** =mpk_py=
-The MIR[fn:3] tool (=mpk_extract.py=) uses Python as a bridge
-between Essentia[fn:4] for feature extraction and the MPK
-database. There are a huge amount of features stored in the database
-(/97/ at time of writing), but the feature set will be reduced in
-future iterations as I find the features which are most useful to
-me. As for the extraction algorithms, My plan is to RiiR[fn:5] and
-reduce DB size by applying zstd[fn:6] compression.
+The MIR[fn:3] tool (=mpk_extract.py=) uses Python as a bridge between
+Essentia[fn:4] for feature extraction and the MPK database. There are
+a huge amount of features stored in the database (/97/ at time of
+writing), but the feature set will be reduced in future iterations as
+I find the features which are most useful to me. As for the extraction
+algorithms, My plan is to RWiR[fn:5] and reduce DB size by applying
+zstd[fn:6] compression.
 
 #+begin_src artist
            +------------------+                             
