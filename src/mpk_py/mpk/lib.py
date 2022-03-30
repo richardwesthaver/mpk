@@ -1,5 +1,5 @@
 try:
-    from ._mpk import lib, ffi
+    from _mpk import lib, ffi
 except ImportError:
     print("mpk python bindings missing")
 
@@ -124,8 +124,25 @@ class Mdb:
         print("inserting spectrograms for sample_id:", id)
         return lib.mdb_insert_sample_images(self.db, id, images)
 
+    def query_check_file(self, path, checksum, ty):
+      """check for the status of a file in the database given PATH,
+      CHECKSUM, and TY of either 'track' or 'sample', returning
+      'found' if file and checksum match existing row, 'modified' if
+      paths match but checksum doesn't, 'moved' if checksums match but
+      path doesn't, and 'not found' otherwise.
+
+      """
+      return ffi.string(lib.mdb_query_check_file(self.db, path.encode(), checksum, ty.encode())).decode()
+      
+def checksum(path):
+      """get the checksum of file contents PATH. This will crash
+      Python if PATH does not exist.
+
+      """
+      return lib.mpk_checksum_path(path.encode())
 
 def vectorize(arr):
+    """convert ARR (list or array) into CVecReal."""
     if type(arr) is list:
         arr = np.float32(arr).flatten()
     buf = ffi.from_buffer("float[]", arr)
@@ -133,6 +150,7 @@ def vectorize(arr):
 
 
 def matrixize(mtx):
+    """convert MTX (list or array) into CMatrixReal. Same data structure as CVecReal, just an alias."""
     if type(mtx) is list:
         mtx = np.float32(mtx).flatten()
     buf = ffi.from_buffer("float[]", mtx)

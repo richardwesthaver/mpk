@@ -20,16 +20,18 @@ use libc::{c_char, c_int, size_t};
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 use mpk_db::{
   AudioData, LowlevelFeatures, MatrixReal, Mdb, MusicbrainzTags, RhythmFeatures,
-  SfxFeatures, Spectrograms, TonalFeatures, TrackTags, Uuid, VecReal, VecText,
+  SfxFeatures, Spectrograms, TonalFeatures, TrackTags, Uuid, VecReal, VecText, AudioType,
 };
 use mpk_hash::Checksum;
 use std::ffi::{CStr, CString, OsStr};
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::slice;
+use std::str::FromStr;
 
 /// An array of bytes with a fixed length. Reprersents a BLAKE3 hash value
 #[repr(C)]
+#[derive(Copy, Clone, Debug)]
 pub struct CChecksum {
   pub ptr: *const u8,
   pub len: size_t,
@@ -57,6 +59,7 @@ impl From<Checksum> for CChecksum {
 /// A f32 vector. In C this is represented as a raw pointer and
 /// length.
 #[repr(C)]
+#[derive(Copy, Clone, Debug)]
 pub struct CVecReal {
   pub ptr: *const f32,
   pub len: size_t,
@@ -84,6 +87,7 @@ impl From<CVecReal> for VecReal {
 /// developer's responsibility to capture the 'frame' or row size and
 /// provide it to MatrixReal initializers.
 #[repr(C)]
+#[derive(Copy, Clone, Debug)]
 pub struct CMatrixReal {
   pub ptr: *const f32,
   pub len: size_t,
@@ -987,6 +991,27 @@ pub extern "C" fn mdb_insert_sample_images(
   let images = unsafe { &*images };
   let mdb = unsafe { &*db };
   mdb.insert_sample_images(id, images).unwrap();
+}
+
+#[no_mangle]
+pub extern "C" fn mdb_query_check_file(
+  db: *const Mdb,
+  path: *const c_char,
+  checksum: CChecksum,
+  ty: *const c_char,
+) -> *mut c_char {
+  let p = unsafe {
+    assert!(!path.is_null());
+    CStr::from_ptr(path).to_str().unwrap()
+  };
+  let t = AudioType::from_str(unsafe {
+    assert!(!ty.is_null());
+    CStr::from_ptr(ty).to_str().unwrap()
+  }).unwrap();
+  let c = checksum.into();
+  let db = unsafe { &*db };
+  let res = db.query_check_file(p, c, t).unwrap();
+  CString::new(res.as_bytes()).unwrap().into_raw()
 }
 
 #[no_mangle]

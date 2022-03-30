@@ -26,12 +26,6 @@ def run():
         choices=["track", "sample"],
     )
     parser.add_argument(
-        "--db",
-        action=argparse.BooleanOptionalAction,
-        help="write output to MDB",
-        default=True,
-    )
-    parser.add_argument(
         "-d",
         help="descriptors to include",
         choices=[
@@ -59,7 +53,7 @@ def run():
         "-bs", "--batch_size", type=int, default=1, help="size of batch"
     )
     parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
-
+    parser.add_argument("-f", "--force", help="skip file check, force insert or update")
     return parser.parse_args()
 
 

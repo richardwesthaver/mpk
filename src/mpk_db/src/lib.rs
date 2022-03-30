@@ -965,13 +965,39 @@ where sample_id = ?1",
       "select * from sample_images where sample_id = ?",
       [id],
       |row| {
-        Ok(Spectrograms {
-          mel_spec: Some(MatrixReal::new(row.get(2)?, row.get(1)?)),
-          log_spec: Some(MatrixReal::new(row.get(4)?, row.get(3)?)),
-          freq_spec: Some(MatrixReal::new(row.get(6)?, row.get(5)?)),
-        })
-      },
+	let mut specs = Spectrograms::default();
+	for i in [1,3,5] {
+	  let val = match row.get(i) {
+	    Ok(v) => Some(MatrixReal::new(row.get(i+1)?, v)),
+	    Err(_) => None,
+	  };
+	  match i {
+	    1 => specs.mel_spec = val,
+	    3 => specs.log_spec = val,
+	    5 => specs.freq_spec = val,
+	    _ => (),
+	  }
+	}
+        Ok(specs)
+      }
     )?;
+    Ok(res)
+  }
+
+  pub fn query_check_file<P: AsRef<Path>>(&self, path: P, checksum: Checksum, ty: AudioType) -> Result<String> {
+    let q = format!("select case when path = ?1 and checksum = ?2 then 'found'
+when path = ?1 and checksum != ?2 then 'modified'
+when path != ?1 and checksum = ?2 then 'moved'
+end result
+from {}
+where path = ?1
+or checksum = ?1", ty.table_name());
+    let res = self.conn.query_row(
+      &q,
+      [path.as_ref().to_str().unwrap(), checksum.to_hex().as_str()], |row| {
+	let row = row.get::<_, String>(0)?;
+	Ok(row)
+      }).unwrap_or("not found".into());
     Ok(res)
   }
 
@@ -1115,5 +1141,18 @@ mod tests {
     let vec = VecReal(vec![300.; 10000]);
     let mtx = MatrixReal::new(vec.clone(), 100);
     assert_eq!(vec, mtx.vec);
+  }
+
+  #[test]
+  fn test_check_file() {
+    let db = new_mem_db();
+    let checksum = Checksum::rand();
+    let d = ("/tmp/file", checksum);
+    assert_eq!(db.query_check_file(d.0, d.1, AudioType::Track).unwrap(), "not found");
+    let mut data = AudioData::default();
+    data.path = d.0.to_string();
+    data.checksum = Some(checksum);
+    db.insert_track(&data).unwrap();
+    assert_eq!(db.query_check_file(d.0,d.1,AudioType::Track).unwrap(), "found");
   }
 }

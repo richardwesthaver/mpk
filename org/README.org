@@ -69,17 +69,19 @@ Run =nim help= to see the other commands and flags available.
 Once the binary is installed run =mpk init= to initialize the app
 directories at =~/mpk= as well as the database and TOML config file.
 
-#+begin_src shell :exports results
+#+begin_src shell :exports results :results code
 ls ~/mpk
 #+end_src
 #+RESULTS:
-| mpk.db   |
-| mpk.toml |
-| patches  |
-| plugins  |
-| projects |
-| samples  |
-| tracks   |
+#+begin_src shell
+mpk.db
+mpk.toml
+patches
+plugins
+projects
+samples
+tracks
+#+end_src
 ** Configuration
 The default =mpk.toml= config file looks like this:
 #+begin_src conf-toml
@@ -161,11 +163,11 @@ track_tags and track_tags_musicbrainz since they don't require heavy
 processing.
 
 You can interact with the database via CLI:
-#+begin_src shell :exports results :results drawer
+#+begin_src shell :exports results :results pp
 mpk db --help
 #+end_src
 #+RESULTS:
-:results:
+#+begin_example
 mpk-db 
 
 USAGE:
@@ -180,7 +182,7 @@ SUBCOMMANDS:
     query      Query DB
     restore    
     sync       Sync resources with DB
-:end:
+#+end_example
 *** Sync
 You can populate the database using =mpk db sync= which executes the
 =mpk_extract.py= script and updates any files that have changed based
@@ -188,15 +190,15 @@ on checksums.
 *** Query
 Use =mpk db query= to query the database directly. You can get
 formatted output with the built-in commands. Raw queries are also
-supported but the output for non-UUID Blobs are summarized with a
-length in bytes.
+supported but the output for Blobs are summarized with a length in
+bytes.
 *** Backup/Restore
 Use =mpk db backup= to backup the current database and =mpk db
 restore= to restore from a backup.
 ** TODO Projects
 
 * Dependencies
-=*= -- /use your OS package manager (apt, brew, pacman, etc)/
+=*= := /use your OS package manager (apt, brew, pacman, etc)/
 - [[https://www.rust-lang.org/tools/install][Rust]] :: install with [[https://rustup.rs/][rustup.rs]]
 - [[https://www.python.org/][Python]]3.9 :: *
 - C Compiler :: [[https://gcc.gnu.org/][GCC]] or [[https://llvm.org/][LLVM]] *
@@ -850,6 +852,17 @@ SELECT substr(hex(artistid), 1, 8)
 FROM [track_tags_musicbrainz]
   #+end_src
 
+*** db sync
+#+begin_src sql
+  select case when path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.flac' and checksum = '69fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'found'
+  when path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.flac' and checksum != '69fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'modified'
+  when path != '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.flac' and checksum = '69fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'moved'
+  else 'not found'
+  end result
+  from tracks
+  where path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.flac'
+  or checksum = '69fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03';
+#+end_src
 ** local_vars
 #+begin_comment
 Local variables:

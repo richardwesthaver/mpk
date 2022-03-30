@@ -138,7 +138,7 @@ impl From<MatrixReal> for VecReal {
 }
 
 /// A Matrix of f32s for SQLite. Implemented as a flat Vec with a frame_size
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct MatrixReal {
   pub vec: VecReal,
   pub frame_size: usize,
@@ -712,23 +712,59 @@ impl fmt::Display for Spectrograms {
       "mel_spec: {}
 log_spec: {}
 freq_spec: {}",
-      self.mel_spec.as_ref().unwrap(),
-      self.log_spec.as_ref().unwrap(),
-      self.freq_spec.as_ref().unwrap()
+      self.mel_spec.as_ref().map(|s| s.to_string()).unwrap_or("NULL".to_string()),
+      self.log_spec.as_ref().map(|s| s.to_string()).unwrap_or("NULL".to_string()),
+      self.freq_spec.as_ref().map(|s| s.to_string()).unwrap_or("NULL".to_string()),
     )
   }
 }
 
 /// An identifier for spectrograms. Currently unused.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum SpecType {
   Mel,
   Log,
   Freq,
 }
 
+/// An identifier for audio types.
+#[derive(Debug, Copy, Clone)]
+pub enum AudioType {
+  Track,
+  Sample,
+}
+
+impl AudioType {
+  pub fn table_name(&self) -> &str {
+    match self {
+      AudioType::Track => "tracks",
+      AudioType::Sample => "samples",
+    }
+  }
+}
+
+impl FromStr for AudioType {
+  type Err = Error;
+  fn from_str(input: &str) -> Result<AudioType> {
+    match input {
+      "track" | "tracks" => Ok(AudioType::Track),
+      "sample" | "samples" => Ok(AudioType::Sample),
+      e => Err(Error::BadType(e.to_string())),
+    }
+  }
+}
+
+impl fmt::Display for AudioType {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match self {
+      AudioType::Track => write!(f, "track"),
+      AudioType::Sample => write!(f, "sample"),
+    }
+  }
+}
+
 /// Columns to query by.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum QueryBy {
   Id,
   Path,
@@ -756,13 +792,13 @@ impl FromStr for QueryBy {
       "samplerate" | "sr" => Ok(QueryBy::SampleRate),
       "bpm" => Ok(QueryBy::Bpm),
       "label" => Ok(QueryBy::Label),
-      e => Err(Error::BadQType(e.to_string())),
+      e => Err(Error::BadType(e.to_string())),
     }
   }
 }
 
 /// The type of query. Determines which tables are returned by a query.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum QueryType {
   Info,
   Tags,
@@ -790,7 +826,7 @@ impl FromStr for QueryType {
       "spectrograms" | "specs" => Ok(QueryType::Spectrograms),
       "all" => Ok(QueryType::All),
       "raw" => Ok(QueryType::Raw),
-      e => Err(Error::BadQType(e.to_string())),
+      e => Err(Error::BadType(e.to_string())),
     }
   }
 }
