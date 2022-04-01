@@ -2,7 +2,7 @@ use clap::{AppSettings, Parser, Subcommand};
 use mpk::Result;
 use mpk_audio::gen::SampleChain;
 use mpk_config::{expand_tilde, Config};
-use mpk_db::{Mdb, QueryFor, QueryBy, AudioType};
+use mpk_db::{AudioType, Mdb, QueryBy, QueryFor};
 use std::io;
 use std::path::PathBuf;
 use std::sync::mpsc::sync_channel;
@@ -136,9 +136,9 @@ enum DbCmd {
     album: Option<String>,
     #[clap(long)]
     genre: Option<String>,
-    #[clap(long)]    
+    #[clap(long)]
     date: Option<String>,
-    #[clap(long)]    
+    #[clap(long)]
     sr: Option<u32>,
     #[clap(long)]
     bpm: Option<f64>,
@@ -268,50 +268,52 @@ fn main() -> Result<()> {
 
       match cmd {
         DbCmd::Query {
-	  ty,
+          ty,
           query,
-	  id,
-	  path,
-	  title,
-	  artist,
-	  album,
-	  genre,
-	  date,
-	  sr,
-	  bpm,
-	  label,
+          id,
+          path,
+          title,
+          artist,
+          album,
+          genre,
+          date,
+          sr,
+          bpm,
+          label,
           raw,
         } => {
-	  let by: Option<QueryBy> = if let Some(n) = id {
-	    Some(QueryBy::Id(n))
-	  } else if let Some(p) = path {
-	    Some(QueryBy::Path(p))
-	  } else if let Some(s) = title {
-	    Some(QueryBy::Title(s))
-	  } else if let Some(s) = artist {
-	    Some(QueryBy::Artist(s))
-	  } else if let Some(s) = album {
-	    Some(QueryBy::Album(s))
-	  } else if let Some(s) = genre {
-	    Some(QueryBy::Genre(s))
-	  } else if let Some(s) = date {
-	    Some(QueryBy::Date(s))
-	  } else if let Some(n) = sr {
-	    Some(QueryBy::SampleRate(n))
-	  } else if let Some(n) = bpm {
-	    Some(QueryBy::Bpm(n))
-	  } else if let Some(s) = label {
-	    Some(QueryBy::Label(s))
-	  } else {None};
+          let by: Option<QueryBy> = if let Some(n) = id {
+            Some(QueryBy::Id(n))
+          } else if let Some(p) = path {
+            Some(QueryBy::Path(p))
+          } else if let Some(s) = title {
+            Some(QueryBy::Title(s))
+          } else if let Some(s) = artist {
+            Some(QueryBy::Artist(s))
+          } else if let Some(s) = album {
+            Some(QueryBy::Album(s))
+          } else if let Some(s) = genre {
+            Some(QueryBy::Genre(s))
+          } else if let Some(s) = date {
+            Some(QueryBy::Date(s))
+          } else if let Some(n) = sr {
+            Some(QueryBy::SampleRate(n))
+          } else if let Some(n) = bpm {
+            Some(QueryBy::Bpm(n))
+          } else if let Some(s) = label {
+            Some(QueryBy::Label(s))
+          } else {
+            None
+          };
 
-	  if let Some(by) = by {
-	    println!("{}", by.as_query(ty.unwrap(), query.unwrap()).unwrap());
-	    println!("{:?}", conn.query(ty.unwrap(), by , query.unwrap())?);
-	  }
-	  if let Some(q) = raw {
-	    println!("{}", conn.query_raw(&q)?);
-	  }
-	},
+          if let Some(by) = by {
+            println!("{}", by.as_query(ty.unwrap(), query.unwrap()).unwrap());
+            println!("{:?}", conn.query(ty.unwrap(), by, query.unwrap())?);
+          }
+          if let Some(q) = raw {
+            println!("{}", conn.query_raw(&q)?);
+          }
+        }
         DbCmd::Sync {
           tracks,
           samples,
@@ -324,33 +326,33 @@ fn main() -> Result<()> {
           if tracks {
             let mut cmd = std::process::Command::new(&script);
             let tracks = cfg.fs.get_path("tracks")?;
-	    cmd.arg(tracks.to_str().unwrap());
-	    if ext {
-	      if let Some(v) = cfg.fs.get_ext_paths("tracks") {
-	      cmd.args(v);
-	      }
-	    }
+            cmd.arg(tracks.to_str().unwrap());
+            if ext {
+              if let Some(v) = cfg.fs.get_ext_paths("tracks") {
+                cmd.args(v);
+              }
+            }
             cmd.args(["-t", "track", "-d"]);
             cmd.args(&descriptors);
-	    if force {
-	      cmd.arg("--force");
-	    }
+            if force {
+              cmd.arg("--force");
+            }
             cmd.status()?;
           }
           if samples {
             let mut cmd = std::process::Command::new(&script);
             let samps = cfg.fs.get_path("samples")?;
-	    cmd.arg(samps.to_str().unwrap());
-	    if ext {
-	      if let Some(v) = cfg.fs.get_ext_paths("samples") {
-	      cmd.args(v);
-	      }
-	    }
+            cmd.arg(samps.to_str().unwrap());
+            if ext {
+              if let Some(v) = cfg.fs.get_ext_paths("samples") {
+                cmd.args(v);
+              }
+            }
             cmd.args(["-t", "sample", "-d"]);
             cmd.args(&descriptors);
-	    if force {
-	      cmd.arg("--force");
-	    }
+            if force {
+              cmd.arg("--force");
+            }
             cmd.status()?;
           }
           if projects {

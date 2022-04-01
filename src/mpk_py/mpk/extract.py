@@ -66,27 +66,33 @@ def bulk_extract(files, sr=44100, mono=False, descs=None):
                 print("extracting:", f)
                 if descs is not None:
                     if "all" in descs:
-                      extractor.metadata()
-                      extractor.features()
-                      extractor.mel_spec()
-                      extractor.freq_spec()
-                      extractor.log_spec()
-                    else:
-                      if "info" in descs or "tags" in descs:
                         extractor.metadata()
-                        if "features" in descs or "rhythm" in descs or "lowlevel" in descs or "sfx" in descs or "tonal" in descs:
-                          extractor.features()
-                        if "specs" in descs:
-                          extractor.mel_spec()
-                          extractor.freq_spec()
-                          extractor.log_spec()
-                        elif "specs" not in descs:
-                          if "mel_spec" in descs:
-                            extractor.mel_spec()
-                          if "freq_spec" in descs:
-                            extractor.freq_spec()
-                          if "log_spec" in descs:
-                            extractor.log_spec()
+                        extractor.features()
+                        extractor.mel_spec()
+                        extractor.freq_spec()
+                        extractor.log_spec()
+                    else:
+                        if "info" in descs or "tags" in descs:
+                            extractor.metadata()
+                            if (
+                                "features" in descs
+                                or "rhythm" in descs
+                                or "lowlevel" in descs
+                                or "sfx" in descs
+                                or "tonal" in descs
+                            ):
+                                extractor.features()
+                            if "specs" in descs:
+                                extractor.mel_spec()
+                                extractor.freq_spec()
+                                extractor.log_spec()
+                            elif "specs" not in descs:
+                                if "mel_spec" in descs:
+                                    extractor.mel_spec()
+                                if "freq_spec" in descs:
+                                    extractor.freq_spec()
+                                if "log_spec" in descs:
+                                    extractor.log_spec()
                 else:
                     return result
                 result.update({f: pool_to_dict(extractor.pool)})
@@ -102,7 +108,9 @@ class AudioFile(object):
         self.path = os.path.realpath(path)
         self.filesize = os.path.getsize(file)
         self.original_sr = lr.get_samplerate(file)
-        self.duration = lr.get_duration(y=audio, sr=self.original_sr)*1000 # duration in ms
+        self.duration = (
+            lr.get_duration(y=audio, sr=self.original_sr) * 1000
+        )  # duration in ms
         self.sr = sr
         self.audio = audio
 

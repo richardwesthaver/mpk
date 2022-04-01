@@ -88,9 +88,23 @@ impl Mdb {
     self.exec_batch(sql)
   }
 
-  pub fn update_path<P: AsRef<Path>>(&self, path: P, checksum: Checksum, ty: AudioType) -> Result<()> {
-    let sql = format!("update {} set path = ?1 where checksum = ?2", ty.table_name());
-    self.exec(&sql, &[&path.as_ref().to_str().unwrap(), &checksum.to_hex().as_str()])?;
+  pub fn update_path<P: AsRef<Path>>(
+    &self,
+    path: P,
+    checksum: Checksum,
+    ty: AudioType,
+  ) -> Result<()> {
+    let sql = format!(
+      "update {} set path = ?1 where checksum = ?2",
+      ty.table_name()
+    );
+    self.exec(
+      &sql,
+      &[
+        &path.as_ref().to_str().unwrap(),
+        &checksum.to_hex().as_str(),
+      ],
+    )?;
     Ok(())
   }
 
@@ -746,27 +760,26 @@ where id = ?1",
   }
 
   pub fn query_track_tags(&self, id: i64) -> Result<TrackTags> {
-    let res = self.conn.query_row(
-      "select * from track_tags where id = ?",
-      [id],
-      |row| {
-        Ok(TrackTags {
-          artist: row.get(1)?,
-          title: row.get(2)?,
-          album: row.get(3)?,
-          genre: row.get(4)?,
-          date: row.get(5)?,
-          tracknumber: row.get(6)?,
-          format: row.get(7)?,
-          language: row.get(8)?,
-          country: row.get(9)?,
-          label: row.get(10)?,
-          producer: row.get(11)?,
-          engineer: row.get(12)?,
-          mixer: row.get(13)?,
-        })
-      },
-    )?;
+    let res =
+      self
+        .conn
+        .query_row("select * from track_tags where id = ?", [id], |row| {
+          Ok(TrackTags {
+            artist: row.get(1)?,
+            title: row.get(2)?,
+            album: row.get(3)?,
+            genre: row.get(4)?,
+            date: row.get(5)?,
+            tracknumber: row.get(6)?,
+            format: row.get(7)?,
+            language: row.get(8)?,
+            country: row.get(9)?,
+            label: row.get(10)?,
+            producer: row.get(11)?,
+            engineer: row.get(12)?,
+            mixer: row.get(13)?,
+          })
+        })?;
     Ok(res)
   }
 
@@ -868,17 +881,16 @@ where id = ?1",
   }
 
   pub fn query_track_images(&self, id: i64) -> Result<Spectrograms> {
-    let res = self.conn.query_row(
-      "select * from track_images where id = ?",
-      [id],
-      |row| {
-        Ok(Spectrograms {
-          mel_spec: Some(MatrixReal::new(row.get(2)?, row.get(1)?)),
-          log_spec: Some(MatrixReal::new(row.get(4)?, row.get(3)?)),
-          freq_spec: Some(MatrixReal::new(row.get(6)?, row.get(5)?)),
-        })
-      },
-    )?;
+    let res =
+      self
+        .conn
+        .query_row("select * from track_images where id = ?", [id], |row| {
+          Ok(Spectrograms {
+            mel_spec: Some(MatrixReal::new(row.get(2)?, row.get(1)?)),
+            log_spec: Some(MatrixReal::new(row.get(4)?, row.get(3)?)),
+            freq_spec: Some(MatrixReal::new(row.get(6)?, row.get(5)?)),
+          })
+        })?;
     Ok(res)
   }
 
@@ -975,26 +987,25 @@ where id = ?1",
   }
 
   pub fn query_sample_images(&self, id: i64) -> Result<Spectrograms> {
-    let res = self.conn.query_row(
-      "select * from sample_images where id = ?",
-      [id],
-      |row| {
-        let mut specs = Spectrograms::default();
-        for i in [1, 3, 5] {
-          let val = match row.get(i) {
-            Ok(v) => Some(MatrixReal::new(row.get(i + 1)?, v)),
-            Err(_) => None,
-          };
-          match i {
-            1 => specs.mel_spec = val,
-            3 => specs.log_spec = val,
-            5 => specs.freq_spec = val,
-            _ => (),
+    let res =
+      self
+        .conn
+        .query_row("select * from sample_images where id = ?", [id], |row| {
+          let mut specs = Spectrograms::default();
+          for i in [1, 3, 5] {
+            let val = match row.get(i) {
+              Ok(v) => Some(MatrixReal::new(row.get(i + 1)?, v)),
+              Err(_) => None,
+            };
+            match i {
+              1 => specs.mel_spec = val,
+              3 => specs.log_spec = val,
+              5 => specs.freq_spec = val,
+              _ => (),
+            }
           }
-        }
-        Ok(specs)
-      },
-    )?;
+          Ok(specs)
+        })?;
     Ok(res)
   }
 
@@ -1028,7 +1039,12 @@ or checksum = ?2",
     Ok(res)
   }
 
-  pub fn query(&self, ty: AudioType, by: QueryBy, fr: QueryFor) -> Result<Vec<(i64, String)>> {
+  pub fn query(
+    &self,
+    ty: AudioType,
+    by: QueryBy,
+    fr: QueryFor,
+  ) -> Result<Vec<(i64, String)>> {
     let sql = by.as_query(ty, fr)?;
     let mut stmt = self.conn.prepare(sql.as_str())?;
     let q = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;

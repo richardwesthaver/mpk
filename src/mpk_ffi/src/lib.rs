@@ -1011,7 +1011,7 @@ pub extern "C" fn mdb_update_path(
   .unwrap();
   let c = Checksum::from_path(p);
   let db = unsafe { &*db };
-  db.update_path(p,c,t).unwrap()
+  db.update_path(p, c, t).unwrap()
 }
 
 #[no_mangle]

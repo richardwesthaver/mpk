@@ -28,8 +28,8 @@ use mpk_hash::Checksum;
 use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, Value, ValueRef};
 use std::fmt;
 use std::ops::{Index, Range};
-use std::str::FromStr;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::Duration;
 pub use uuid::Uuid;
 
@@ -757,12 +757,8 @@ impl AudioType {
   }
   pub fn track_else(&self, sql: &str) -> Result<String> {
     match self {
-      AudioType::Track => {
-	Ok(sql.into())
-      },
-      AudioType::Sample => {
-	Err(Error::BadType("sample".into()))
-      }
+      AudioType::Track => Ok(sql.into()),
+      AudioType::Sample => Err(Error::BadType("sample".into())),
     }
   }
 }
@@ -818,47 +814,73 @@ pub enum QueryBy {
 impl QueryBy {
   pub fn as_query(&self, ty: AudioType, fr: QueryFor) -> Result<String> {
     match self {
-      QueryBy::Id(n) => {
-	Ok(format!("{} where id = {}", fr.as_query(ty)?, n))
-      },
-      QueryBy::Path(p) => {
-	Ok(format!("{} where id in (select id from {} where path = '{}')", fr.as_query(ty)?, ty.table_name(), p.display()))
-      },
-      QueryBy::Title(s) => {
-	ty.track_else(
-	  format!("{} where id in (select id from track_tags where title = '{}')", fr.as_query(ty)?, s).as_str()
-	)
-      },
-      QueryBy::Artist(s) => {
-	ty.track_else(
-	  format!("{} where id in (select id from track_tags where artist = '{}')", fr.as_query(ty)?, s).as_str()
-	)
-      },
-      QueryBy::Album(s) => {
-	ty.track_else(
-	  format!("{} where id in (select id from track_tags where album = '{}')", fr.as_query(ty)?, s).as_str()
-	)
-      },
-      QueryBy::Genre(s) => {
-	ty.track_else(
-	  format!("{} where id in (select id from track_tags where genre = '{}')", fr.as_query(ty)?, s).as_str()
-	)
-      },
-      QueryBy::Date(s) => {
-	ty.track_else(
-	  format!("{} where id in (select id from track_tags where date = '{}')", fr.as_query(ty)?, s).as_str()
-	)
-      },
-      QueryBy::SampleRate(n) => {
-	Ok(format!("{} where id in (select id from {} where samplerate = {})", fr.as_query(ty)?, ty.table_name(), n))	
-      },
-      QueryBy::Bpm(n) => {
-	Ok(format!("{} where id in (select id from {}_features_rhythm where bpm = {})", fr.as_query(ty)?, ty, n))	      },
-      QueryBy::Label(s) => {
-	ty.track_else(
-	  format!("{} where id in (select id from track_tags where label = '{}')", fr.as_query(ty)?, s).as_str()
-	)
-      },
+      QueryBy::Id(n) => Ok(format!("{} where id = {}", fr.as_query(ty)?, n)),
+      QueryBy::Path(p) => Ok(format!(
+        "{} where id in (select id from {} where path = '{}')",
+        fr.as_query(ty)?,
+        ty.table_name(),
+        p.display()
+      )),
+      QueryBy::Title(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where title = '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
+      QueryBy::Artist(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where artist = '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
+      QueryBy::Album(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where album = '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
+      QueryBy::Genre(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where genre = '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
+      QueryBy::Date(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where date = '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
+      QueryBy::SampleRate(n) => Ok(format!(
+        "{} where id in (select id from {} where samplerate = {})",
+        fr.as_query(ty)?,
+        ty.table_name(),
+        n
+      )),
+      QueryBy::Bpm(n) => Ok(format!(
+        "{} where id in (select id from {}_features_rhythm where bpm = {})",
+        fr.as_query(ty)?,
+        ty,
+        n
+      )),
+      QueryBy::Label(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where label = '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
     }
   }
 }
@@ -880,43 +902,35 @@ pub enum QueryFor {
 impl QueryFor {
   pub fn as_query(&self, ty: AudioType) -> Result<String> {
     match self {
-      QueryFor::Info => {
-	Ok(format!("select * from {}", ty.table_name()))
-      },
-      QueryFor::Tags => {
-	ty.track_else("select * from track_tags")
-      },
-      QueryFor::Musicbrainz => {
-	ty.track_else("select * from track_tags_musicbrainz")
-      },
-      QueryFor::Lowlevel => {
-	Ok(format!("select * from {}_features_lowlevel", ty))
-      },
-      QueryFor::Rhythm => {
-	Ok(format!("select * from {}_features_rhythm", ty))
-      },
-      QueryFor::Sfx => {
-	Ok(format!("select * from {}_features_sfx", ty))
-      },
-      QueryFor::Tonal => {
-	Ok(format!("select * from {}_features_tonal", ty))
-      },
-      QueryFor::Spectrograms => {
-	Ok(format!("select * from {}_images", ty))
-      },
+      QueryFor::Info => Ok(format!("select * from {}", ty.table_name())),
+      QueryFor::Tags => ty.track_else("select * from track_tags"),
+      QueryFor::Musicbrainz => ty.track_else("select * from track_tags_musicbrainz"),
+      QueryFor::Lowlevel => Ok(format!("select * from {}_features_lowlevel", ty)),
+      QueryFor::Rhythm => Ok(format!("select * from {}_features_rhythm", ty)),
+      QueryFor::Sfx => Ok(format!("select * from {}_features_sfx", ty)),
+      QueryFor::Tonal => Ok(format!("select * from {}_features_tonal", ty)),
+      QueryFor::Spectrograms => Ok(format!("select * from {}_images", ty)),
       QueryFor::All => {
-	let mut q = format!("select * from {} ", ty.table_name());
-	if ty == AudioType::Track {
-	  q.push_str("join track_tags on tracks.id = track_tags
+        let mut q = format!("select * from {} ", ty.table_name());
+        if ty == AudioType::Track {
+          q.push_str(
+            "join track_tags on tracks.id = track_tags
 join track_tags_musicbrainz on tracks.id = track_tags_musicbrainz.track_id
-");
-	}
-	q.push_str(format!("join {ty}_features_lowlevel on tracks.id = {ty}_features_lowlevel.{ty}_id
+",
+          );
+        }
+        q.push_str(
+          format!(
+            "join {ty}_features_lowlevel on tracks.id = {ty}_features_lowlevel.{ty}_id
 join {ty}_features_rhythm on {typ}.id = {ty}_features_rhythm.{ty}_id
 join {ty}_features_sfx on {typ}.id = {ty}_features_sfx.{ty}_id
 join {ty}_features_tonal on {typ}.id = {ty}_features_sfx.{ty}_id
-join {ty}_images on {typ}.id = {ty}_images.{ty}_id", typ = ty.table_name()).as_str());	
-	Ok(q)
+join {ty}_images on {typ}.id = {ty}_images.{ty}_id",
+            typ = ty.table_name()
+          )
+          .as_str(),
+        );
+        Ok(q)
       }
     }
   }
