@@ -27,15 +27,17 @@ def run():
     )
     parser.add_argument(
         "-d",
+        nargs="*",
         help="descriptors to include",
         choices=[
-            "metadata",
+            "info",
+            "tags",
             "features",
             "lowlevel",
             "rhythm",
             "sfx",
             "tonal",
-            "spectrograms",
+            "specs",
             "mel_spec",
             "log_spec",
             "freq_spec",
@@ -52,26 +54,33 @@ def run():
         "-bs", "--batch_size", type=int, default=1, help="size of batch"
     )
     parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
-    parser.add_argument("-f", "--force", help="skip file check, force insert or update")
+    parser.add_argument("-f", "--force", action=argparse.BooleanOptionalAction, help="skip file check, force insert or update")
     return parser.parse_args()
 
 
-def get_audio_data(v):
-    metadata = v["metadata"]["tags"]
-    return audio_data(
-        metadata["path"][0],
-        int(metadata["filesize"][0]),
-        metadata["duration"][0],
-        int(metadata["channels"][0]),
-        int(metadata["bitrate"][0]),
-        int(metadata["samplerate"][0]),
-    )
+def get_info(v, descs):
+    info = None
+    if descs is not None:
+      if "info" in descs or "all" in descs:
+        metadata = v["metadata"]["tags"]
+        info = audio_data(
+          metadata["path"][0],
+          int(metadata["filesize"][0]),
+          metadata["duration"][0],
+          int(metadata["channels"][0]),
+          int(metadata["bitrate"][0]),
+          int(metadata["samplerate"][0]),
+        )
+    return info
 
 
-def get_lowlevel_features(v):
-    ll = v["lowLevel"]
-    return lowlevel_features(
-        [
+def get_lowlevel_features(v, descs):
+    lowlevel = None
+    if descs is not None:
+      if "lowlevel" in descs or "all" in descs or "features" in descs:
+        ll = v["lowLevel"]
+        lowlevel = lowlevel_features(
+          [
             ll["average_loudness"],
             ll["barkbands_kurtosis"],
             ll["barkbands_skewness"],
@@ -110,49 +119,58 @@ def get_lowlevel_features(v):
             ll["sccoeffs"],
             len(ll["scvalleys"][0]),
             ll["scvalleys"],
-        ]
-    )
+          ]
+        )
+    return lowlevel
 
-
-def get_rhythm_features(v):
-    rhythm = []
-    for i in (
-        "bpm",
-        "confidence",
-        "onset_rate",
-        "beats_loudness",
-        "first_peak_bpm",
-        "first_peak_spread",
-        "first_peak_weight",
-        "second_peak_bpm",
-        "second_peak_spread",
-        "second_peak_weight",
-        "beats_position",
-        "bpm_estimates",
-        "bpm_intervals",
-        "onset_times",
-        "beats_loudness_band_ratio",
-        "histogram",
-    ):
-        if i in v["rhythm"]:
+def get_rhythm_features(v, descs):
+    rhythm = None
+    if descs is not None:
+      if "rhythm" in descs or "all" in descs or "features" in descs:
+        rhythm = []
+        for i in (
+            "bpm",
+            "confidence",
+            "onset_rate",
+            "beats_loudness",
+            "first_peak_bpm",
+            "first_peak_spread",
+            "first_peak_weight",
+            "second_peak_bpm",
+            "second_peak_spread",
+            "second_peak_weight",
+            "beats_position",
+            "bpm_estimates",
+            "bpm_intervals",
+            "onset_times",
+            "beats_loudness_band_ratio",
+            "histogram",
+        ):
+          if i in v["rhythm"]:
             if i == "beats_loudness_band_ratio":
                 rhythm.append(len(v["rhythm"][i][0]))
             rhythm.append(v["rhythm"][i])
-        else:
+          else:
             rhythm.append(None)
     rhythm = rhythm_features(rhythm)
     return rhythm
 
 
-def get_sfx_features(v):
-    sfx = sfx_features(list(v["sfx"].values()))
+def get_sfx_features(v, descs):
+    sfx = None
+    if descs is not None:
+      if "sfx" in descs or "all" in descs or "features" in descs:
+        sfx = sfx_features(list(v["sfx"].values()))
     return sfx
 
 
-def get_tonal_features(v):
-    tl = v["tonal"]
-    tonal = tonal_features(
-        [
+def get_tonal_features(v, descs):
+    tonal = None
+    if descs is not None:
+      if "tonal" in descs or "all" in descs or "features" in descs:
+        tl = v["tonal"]
+        tonal = tonal_features(
+          [
             tl["chords_changes_rate"],
             tl["chords_number_rate"],
             tl["key_strength"],
@@ -170,93 +188,92 @@ def get_tonal_features(v):
             tl["key_key"],
             tl["key_scale"],
             tl["chords_progression"],
-        ]
-    )
+          ]
+        )
     return tonal
 
 
 def get_spectrograms(v, descs):
     specs = [None, None, None, None, None, None]
     if descs is not None:
-        if "mel_spec" in descs:
-            specs[0:2] = [len(v["mel_spec"][0]), v["mel_spec"]]
-        if "log_spec" in descs:
-            specs[2:4] = [len(v["log_spec"][0]), v["log_spec"]]
-
-        if "freq_spec" in descs:
-            specs[4:6] = [len(v["freq_spec"][0]), v["freq_spec"]]
-    else:
-        specs = [
+        if "specs" in descs or "all" in descs:
+          specs = [
             len(v["mel_spec"][0]),
             v["mel_spec"],
             len(v["log_spec"][0]),
             v["log_spec"],
             len(v["freq_spec"][0]),
             v["freq_spec"],
-        ]
-    specs = spectrograms(specs)
+          ]
+        else:
+          if "mel_spec" in descs:
+            specs[0:2] = [len(v["mel_spec"][0]), v["mel_spec"]]
+          if "log_spec" in descs:
+            specs[2:4] = [len(v["log_spec"][0]), v["log_spec"]]
+          if "freq_spec" in descs:
+            specs[4:6] = [len(v["freq_spec"][0]), v["freq_spec"]]
+
+        specs = spectrograms(specs)
     return specs
 
 
-def get_musicbrainz_tags(v):
+def get_musicbrainz_tags(v, descs):
     mb_tags = []
-    for i in (
-        "musicbrainz_albumartistid",
-        "musicbrainz_albumid",
-        "musicbrainz_albumstatus",
-        "musicbrainz_albumtype",
-        "musicbrainz_artistid",
-        "musicbrainz_releasegroupid",
-        "musicbrainz_releasetrackid",
-        "musicbrainz_trackid",
-        "asin",
-        "musicip_puid text",
-    ):
-        if i in v["metadata"]["tags"]:
+    if descs is not None:
+      if "tags" in descs or "all" in descs:
+        for i in (
+            "musicbrainz_albumartistid",
+            "musicbrainz_albumid",
+            "musicbrainz_albumstatus",
+            "musicbrainz_albumtype",
+            "musicbrainz_artistid",
+            "musicbrainz_releasegroupid",
+            "musicbrainz_releasetrackid",
+            "musicbrainz_trackid",
+            "asin",
+            "musicip_puid text",
+        ):
+          if i in v["metadata"]["tags"]:
             mb_tags.append(v["metadata"]["tags"][i][0])
-        else:
+          else:
             mb_tags.append(None)
     mb_tags = musicbrainz_tags(mb_tags)
     return mb_tags
 
 
-def get_track_tags(v):
+def get_track_tags(v, descs):
     tags = []
-    for i in (
-        "artist",
-        "title",
-        "album",
-        "genre",
-        "date",
-        "tracknumber",
-        "format",
-        "language",
-        "releasecountry",
-        "label",
-        "producer",
-        "engineer",
-        "mixer",
-    ):
-        if i in v["metadata"]["tags"]:
+    if descs is not None:
+      if "tags" in descs or "all" in descs:
+        for i in (
+            "artist",
+            "title",
+            "album",
+            "genre",
+            "date",
+            "tracknumber",
+            "format",
+            "language",
+            "releasecountry",
+            "label",
+            "producer",
+            "engineer",
+            "mixer",
+        ):
+          if i in v["metadata"]["tags"]:
             tags.append(v["metadata"]["tags"][i][0])
-        else:
+          else:
             tags.append(None)
     tags = track_tags(tags)
     return tags
 
 
 def prep_common(v, descs):
-    audiodata = get_audio_data(v)
-    lowlevel = None
-    rhythm = None
-    sfx = None
-    tonal = None
-    if descs is not None:
-        if "features" in descs:
-            lowlevel = get_lowlevel_features(v)
-            rhythm = get_rhythm_features(v)
-            sfx = get_sfx_features(v)
-            tonal = get_tonal_features(v)
+    audiodata = get_info(v, descs)
+    lowlevel = get_lowlevel_features(v,descs)
+    rhythm = get_rhythm_features(v,descs)
+    sfx = get_sfx_features(v, descs)
+    tonal = get_tonal_features(v,descs)
     specs = get_spectrograms(v, descs)
     return (audiodata, lowlevel, rhythm, sfx, tonal, specs)
 
@@ -264,8 +281,8 @@ def prep_common(v, descs):
 def prep_track(v, descs):
     # collect common
     common = prep_common(v, descs)
-    tags = get_track_tags(v)
-    mb_tags = get_musicbrainz_tags(v)
+    tags = get_track_tags(v, descs)
+    mb_tags = get_musicbrainz_tags(v, descs)
     return common + (tags, mb_tags)
 
 
@@ -350,7 +367,6 @@ if __name__ == "__main__":
 
     files = [i for s in [collect_files(f) for f in args.input] for i in s]
     new = []
-    modified = []
     moved = []
 
     if not args.force:
@@ -363,7 +379,7 @@ if __name__ == "__main__":
           print("%d: file found: %s" % (idx, f))
         elif q == "modified":
           print("%d: file modified: %s" % (idx, f))
-          modified.append(f)
+          new.append(f)
         elif q == "moved":
           print("%d: file moved: %s" % (idx, f))
           moved.append(f)
@@ -377,19 +393,25 @@ if __name__ == "__main__":
     else:
         descs = None
 
-    if not new or modified or moved:
+    if not new and not moved:
         quit()
+    elif moved:
+      # process moved files
+      for p in moved:
+        db.update_path(p, args.type)
+      print("moved %d files" % len(moved))
 
     print(
-        "processing %d new, %d modified, %d moved..."
-        % (len(new), len(modified), len(moved))
+      "processing %d files..."
+      % len(new)
     )
 
+    # process new files
     with mp.Pool(processes=args.jobs) as pool:
         queue_size = args.queue_size
-        if queue_size > len(new):
-            queue_size = len(new)
         batch_size = args.batch_size
+        if queue_size > len(new):
+            new_queue_size = len(new)
         for i in range(0, len(new), queue_size):
             batch_files = new[i : i + queue_size]
             res = [

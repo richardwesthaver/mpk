@@ -88,6 +88,12 @@ impl Mdb {
     self.exec_batch(sql)
   }
 
+  pub fn update_path<P: AsRef<Path>>(&self, path: P, checksum: Checksum, ty: AudioType) -> Result<()> {
+    let sql = format!("update {} set path = ?1 where checksum = ?2", ty.table_name());
+    self.exec(&sql, &[&path.as_ref().to_str().unwrap(), &checksum.to_hex().as_str()])?;
+    Ok(())
+  }
+
   pub fn insert_track(&self, file: &AudioData) -> Result<i64> {
     self.exec(
       "insert into tracks (path, filesize, duration, channels, bitrate, samplerate, checksum) values (?1,?2,?3,?4,?5,?6,?7)
@@ -122,7 +128,7 @@ set artist = ?2,
     producer = ?12,
     engineer = ?13,
     mixer = ?14
-where track_id = ?1",
+where id = ?1",
       &[
         &id,
         &tags.artist,
@@ -162,7 +168,7 @@ releasetrackid = ?8,
 trackid = ?9,
 asin = ?10,
 musicip_puid = ?11
-where track_id = ?1",
+where id = ?1",
       &[
         &id,
         &tags.albumartistid,
@@ -226,7 +232,7 @@ sccoeffs_frame_size = ?36,
 sccoeffs = ?37,
 scvalleys_frame_size = ?38,
 scvalleys = ?39
-where track_id = ?1",
+where id = ?1",
 	      &[&id,
 		&features.average_loudness,
 		&features.barkbands_kurtosis,
@@ -295,7 +301,7 @@ onset_times = ?15,
 beats_loudness_band_ratio_frame_size = ?16,
 beats_loudness_band_ratio = ?17,
 histogram = ?18
-where track_id = ?1",
+where id = ?1",
       &[
         &id,
         &features.bpm,
@@ -336,7 +342,7 @@ pitch_min_to_total = ?5,
 inharmonicity = ?6,
 oddtoevenharmonicenergyratio = ?7,
 tristimulus = ?8
-where track_id = ?1
+where id = ?1
 ",
       &[
         &id,
@@ -378,7 +384,7 @@ chords_scale = ?15,
 key_key = ?16,
 key_scale = ?17,
 chords_progression = ?18
-where track_id = ?1",
+where id = ?1",
       &[
         &id,
         &features.chords_changes_rate,
@@ -413,7 +419,7 @@ log_frame_size = ?4,
 log_spec = ?5,
 freq_frame_size = ?6,
 freq_spec = ?7
-where track_id = ?1",
+where id = ?1",
       &[
         &id,
         &images.mel_spec.as_ref().map(|s| s.frame_size),
@@ -496,7 +502,7 @@ sccoeffs_frame_size = ?36,
 sccoeffs = ?37,
 scvalleys_frame_size = ?38,
 scvalleys = ?39
-where sample_id = ?1",
+where id = ?1",
 	      &[&id,
 		&features.average_loudness,
 		&features.barkbands_kurtosis,
@@ -565,7 +571,7 @@ onset_times = ?15,
 beats_loudness_band_ratio_frame_size = ?16,
 beats_loudness_band_ratio = ?17,
 histogram = ?18
-where sample_id = ?1",
+where id = ?1",
       &[
         &id,
         &features.bpm,
@@ -606,7 +612,7 @@ pitch_min_to_total = ?5,
 inharmonicity = ?6,
 oddtoevenharmonicenergyratio = ?7,
 tristimulus = ?8
-where sample_id = ?1
+where id = ?1
 ",
       &[
         &id,
@@ -648,7 +654,7 @@ chords_scale = ?15,
 key_key = ?16,
 key_scale = ?17,
 chords_progression = ?18
-where sample_id = ?1",
+where id = ?1",
       &[
         &id,
         &features.chords_changes_rate,
@@ -683,7 +689,7 @@ log_frame_size = ?4,
 log_spec = ?5,
 freq_frame_size = ?6,
 freq_spec = ?7
-where sample_id = ?1",
+where id = ?1",
       &[
         &id,
         &images.mel_spec.as_ref().map(|s| s.frame_size),
@@ -741,7 +747,7 @@ where sample_id = ?1",
 
   pub fn query_track_tags(&self, id: i64) -> Result<TrackTags> {
     let res = self.conn.query_row(
-      "select * from track_tags where track_id = ?",
+      "select * from track_tags where id = ?",
       [id],
       |row| {
         Ok(TrackTags {
@@ -766,7 +772,7 @@ where sample_id = ?1",
 
   pub fn query_track_tags_musicbrainz(&self, id: i64) -> Result<MusicbrainzTags> {
     let res = self.conn.query_row(
-      "select * from track_tags_musicbrainz where track_id = ?",
+      "select * from track_tags_musicbrainz where id = ?",
       [id],
       |row| {
         Ok(MusicbrainzTags {
@@ -788,7 +794,7 @@ where sample_id = ?1",
 
   pub fn query_track_features_lowlevel(&self, id: i64) -> Result<LowlevelFeatures> {
     let res = self.conn.query_row(
-      "select * from track_features_lowlevel where track_id = ?",
+      "select * from track_features_lowlevel where id = ?",
       [id],
       |row| {
         let barkbands = MatrixReal::new(row.get(6)?, row.get(5)?);
@@ -835,7 +841,7 @@ where sample_id = ?1",
 
   pub fn query_track_features_rhythm(&self, id: i64) -> Result<RhythmFeatures> {
     let res = self.conn.query_row(
-      "select * from track_features_rhythm where track_id = ?",
+      "select * from track_features_rhythm where id = ?",
       [id],
       |row| {
         Ok(RhythmFeatures {
@@ -863,7 +869,7 @@ where sample_id = ?1",
 
   pub fn query_track_images(&self, id: i64) -> Result<Spectrograms> {
     let res = self.conn.query_row(
-      "select * from track_images where track_id = ?",
+      "select * from track_images where id = ?",
       [id],
       |row| {
         Ok(Spectrograms {
@@ -896,7 +902,7 @@ where sample_id = ?1",
 
   pub fn query_sample_features_lowlevel(&self, id: i64) -> Result<LowlevelFeatures> {
     let res = self.conn.query_row(
-      "select * from sample_features_lowlevel where sample_id = ?",
+      "select * from sample_features_lowlevel where id = ?",
       [id],
       |row| {
         Ok(LowlevelFeatures {
@@ -942,7 +948,7 @@ where sample_id = ?1",
 
   pub fn query_sample_features_rhythm(&self, id: i64) -> Result<RhythmFeatures> {
     let res = self.conn.query_row(
-      "select * from sample_features_rhythm where sample_id = ?",
+      "select * from sample_features_rhythm where id = ?",
       [id],
       |row| {
         Ok(RhythmFeatures {
@@ -970,7 +976,7 @@ where sample_id = ?1",
 
   pub fn query_sample_images(&self, id: i64) -> Result<Spectrograms> {
     let res = self.conn.query_row(
-      "select * from sample_images where sample_id = ?",
+      "select * from sample_images where id = ?",
       [id],
       |row| {
         let mut specs = Spectrograms::default();
@@ -1022,10 +1028,15 @@ or checksum = ?2",
     Ok(res)
   }
 
-  pub fn query(&self, ty: AudioType, by: QueryBy, fr: QueryFor) -> Result<()> {
+  pub fn query(&self, ty: AudioType, by: QueryBy, fr: QueryFor) -> Result<Vec<(i64, String)>> {
     let sql = by.as_query(ty, fr)?;
     let mut stmt = self.conn.prepare(sql.as_str())?;
-    Ok(())
+    let q = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+    let mut rows = Vec::new();
+    for i in q {
+      rows.push(i?)
+    }
+    Ok(rows)
   }
 
   pub fn query_raw(&self, sql: &str) -> Result<DbValues> {

@@ -64,21 +64,31 @@ def bulk_extract(files, sr=44100, mono=False, descs=None):
         try:
             with Extract(f, sr, mono) as extractor:
                 print("extracting:", f)
-                extractor.metadata()
                 if descs is not None:
-                    if "features" in descs:
-                        extractor.features()
-                    if "mel_spec" in descs:
-                        extractor.mel_spec()
-                    if "freq_spec" in descs:
-                        extractor.freq_spec()
-                    if "log_spec" in descs:
-                        extractor.log_spec()
+                    if "all" in descs:
+                      extractor.metadata()
+                      extractor.features()
+                      extractor.mel_spec()
+                      extractor.freq_spec()
+                      extractor.log_spec()
+                    else:
+                      if "info" in descs or "tags" in descs:
+                        extractor.metadata()
+                        if "features" in descs or "rhythm" in descs or "lowlevel" in descs or "sfx" in descs or "tonal" in descs:
+                          extractor.features()
+                        if "specs" in descs:
+                          extractor.mel_spec()
+                          extractor.freq_spec()
+                          extractor.log_spec()
+                        elif "specs" not in descs:
+                          if "mel_spec" in descs:
+                            extractor.mel_spec()
+                          if "freq_spec" in descs:
+                            extractor.freq_spec()
+                          if "log_spec" in descs:
+                            extractor.log_spec()
                 else:
-                    extractor.features()
-                    extractor.mel_spec()
-                    extractor.freq_spec()
-                    extractor.log_spec()
+                    return result
                 result.update({f: pool_to_dict(extractor.pool)})
         except Exception as e:
             print(str(e))
@@ -91,8 +101,8 @@ class AudioFile(object):
         audio, sr = lr.load(path, sr=sr, mono=mono)
         self.path = os.path.realpath(path)
         self.filesize = os.path.getsize(file)
-        self.duration = lr.get_duration(y=audio, sr=sr)
         self.original_sr = lr.get_samplerate(file)
+        self.duration = lr.get_duration(y=audio, sr=self.original_sr)*1000 # duration in ms
         self.sr = sr
         self.audio = audio
 
@@ -118,9 +128,9 @@ class Extract(AudioFile):
         metadata = es.MetadataReader(filename=self.path)()
         self.pool.merge(metadata[7])
         self.pool.add("metadata.tags.filesize", self.filesize)
-        self.pool.add("metadata.tags.duration", metadata[8])
+        self.pool.add("metadata.tags.duration", self.duration)
         self.pool.add("metadata.tags.bitrate", metadata[9])
-        self.pool.add("metadata.tags.samplerate", metadata[10])
+        self.pool.add("metadata.tags.samplerate", self.original_sr)
         self.pool.add("metadata.tags.channels", metadata[11])
         self.pool.add("metadata.tags.path", self.path)
         print("added metadata to pool.")

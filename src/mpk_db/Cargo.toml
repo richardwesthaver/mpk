@@ -8,3 +8,4 @@ mpk_config = { path = "../mpk_config" }
 mpk_hash = { path = "../mpk_hash" }
 rusqlite = { version = "0.26", features = ["blob", "trace", "uuid", "hooks", "chrono", "backup"] }
 uuid = "0.8"
+chrono = "0.4"

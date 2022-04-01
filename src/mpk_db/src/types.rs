@@ -30,6 +30,7 @@ use std::fmt;
 use std::ops::{Index, Range};
 use std::str::FromStr;
 use std::path::PathBuf;
+use std::time::Duration;
 pub use uuid::Uuid;
 
 /// Display wrapper for SQLite Value
@@ -284,11 +285,11 @@ impl fmt::Display for AudioData {
     write!(
       f,
       "path: {}
-filesize: {}
-duration: {}
+filesize: {} bytes
+duration: {} ms
 channels: {}
 bitrate: {}
-samplerate: {}
+samplerate: {} hz
 checksum: {}",
       self.path, filesize, duration, channels, bitrate, samplerate, checksum
     )
@@ -821,31 +822,42 @@ impl QueryBy {
 	Ok(format!("{} where id = {}", fr.as_query(ty)?, n))
       },
       QueryBy::Path(p) => {
-	Ok(format!("{} where path = {}", fr.as_query(ty)?, p.display()))
+	Ok(format!("{} where id in (select id from {} where path = '{}')", fr.as_query(ty)?, ty.table_name(), p.display()))
       },
       QueryBy::Title(s) => {
-	Ok(format!("{} where title = {}", fr.as_query(ty)?, s))
+	ty.track_else(
+	  format!("{} where id in (select id from track_tags where title = '{}')", fr.as_query(ty)?, s).as_str()
+	)
       },
       QueryBy::Artist(s) => {
-	Ok(format!("{} where artist = {}", fr.as_query(ty)?, s))
+	ty.track_else(
+	  format!("{} where id in (select id from track_tags where artist = '{}')", fr.as_query(ty)?, s).as_str()
+	)
       },
       QueryBy::Album(s) => {
-	Ok(format!("{} where album = {}", fr.as_query(ty)?, s))
+	ty.track_else(
+	  format!("{} where id in (select id from track_tags where album = '{}')", fr.as_query(ty)?, s).as_str()
+	)
       },
       QueryBy::Genre(s) => {
-	Ok(format!("{} where genre = {}", fr.as_query(ty)?, s))	
+	ty.track_else(
+	  format!("{} where id in (select id from track_tags where genre = '{}')", fr.as_query(ty)?, s).as_str()
+	)
       },
       QueryBy::Date(s) => {
-	Ok(format!("{} where date = {}", fr.as_query(ty)?, s))	
+	ty.track_else(
+	  format!("{} where id in (select id from track_tags where date = '{}')", fr.as_query(ty)?, s).as_str()
+	)
       },
       QueryBy::SampleRate(n) => {
-	Ok(format!("{} where samplerate = {}", fr.as_query(ty)?, n))	
+	Ok(format!("{} where id in (select id from {} where samplerate = {})", fr.as_query(ty)?, ty.table_name(), n))	
       },
       QueryBy::Bpm(n) => {
-	Ok(format!("{} where bpm = {}", fr.as_query(ty)?, n))	
-      },
+	Ok(format!("{} where id in (select id from {}_features_rhythm where bpm = {})", fr.as_query(ty)?, ty, n))	      },
       QueryBy::Label(s) => {
-	Ok(format!("{} where label = {}", fr.as_query(ty)?, s))	
+	ty.track_else(
+	  format!("{} where id in (select id from track_tags where label = '{}')", fr.as_query(ty)?, s).as_str()
+	)
       },
     }
   }

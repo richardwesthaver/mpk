@@ -144,6 +144,7 @@ enum DbCmd {
     bpm: Option<f64>,
     #[clap(long)]
     label: Option<String>,
+    #[clap(short, long)]
     raw: Option<String>,
   },
   /// Sync resources with DB
@@ -305,6 +306,10 @@ fn main() -> Result<()> {
 
 	  if let Some(by) = by {
 	    println!("{}", by.as_query(ty.unwrap(), query.unwrap()).unwrap());
+	    println!("{:?}", conn.query(ty.unwrap(), by , query.unwrap())?);
+	  }
+	  if let Some(q) = raw {
+	    println!("{}", conn.query_raw(&q)?);
 	  }
 	},
         DbCmd::Sync {
@@ -319,15 +324,33 @@ fn main() -> Result<()> {
           if tracks {
             let mut cmd = std::process::Command::new(&script);
             let tracks = cfg.fs.get_path("tracks")?;
-            cmd.args([tracks.to_str().unwrap(), "-t", "track", "-d"]);
+	    cmd.arg(tracks.to_str().unwrap());
+	    if ext {
+	      if let Some(v) = cfg.fs.get_ext_paths("tracks") {
+	      cmd.args(v);
+	      }
+	    }
+            cmd.args(["-t", "track", "-d"]);
             cmd.args(&descriptors);
+	    if force {
+	      cmd.arg("--force");
+	    }
             cmd.status()?;
           }
           if samples {
             let mut cmd = std::process::Command::new(&script);
             let samps = cfg.fs.get_path("samples")?;
-            cmd.args([samps.to_str().unwrap(), "-t", "sample", "-d"]);
+	    cmd.arg(samps.to_str().unwrap());
+	    if ext {
+	      if let Some(v) = cfg.fs.get_ext_paths("samples") {
+	      cmd.args(v);
+	      }
+	    }
+            cmd.args(["-t", "sample", "-d"]);
             cmd.args(&descriptors);
+	    if force {
+	      cmd.arg("--force");
+	    }
             cmd.status()?;
           }
           if projects {

@@ -5,7 +5,7 @@ create table if not exists tracks (
 id integer primary key,
 path text not null unique,
 filesize integer,
-duration integer,
+duration real,
 channels integer,
 bitrate integer,
 samplerate integer,
@@ -13,7 +13,7 @@ checksum text,
 updated datetime default current_timestamp not null);
 
 create table if not exists track_tags (
-track_id integer unique,
+id integer unique,
 artist text,
 title text,
 album text,
@@ -30,7 +30,7 @@ mixer text,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_tags_musicbrainz (
-track_id integer unique,
+id integer unique,
 albumartistid text,
 albumid text,
 albumstatus text,
@@ -44,7 +44,7 @@ musicip_puid text,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_features_lowlevel (
-track_id integer unique,
+id integer unique,
 average_loudness real,
 barkbands_kurtosis blob,
 barkbands_skewness blob,
@@ -86,7 +86,7 @@ scvalleys blob,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_features_rhythm (
-track_id integer unique,
+id integer unique,
 bpm real,
 confidence real,
 onset_rate real,
@@ -107,7 +107,7 @@ histogram blob,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_features_sfx (
-track_id integer unique,
+id integer unique,
 pitch_after_max_to_before_max_energy_ratio real,
 pitch_centroid real,
 pitch_max_to_total real,
@@ -118,7 +118,7 @@ tristimulus blob,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_features_tonal (
-track_id integer unique,
+id integer unique,
 chords_changes_rate real,
 chords_number_rate real,
 key_strength real,
@@ -139,7 +139,7 @@ chords_progression blob,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_images (
-track_id integer unique,
+id integer unique,
 mel_frame_size integer,
 mel_spec blob,
 log_frame_size integer,
@@ -149,7 +149,7 @@ freq_spec blob,
 foreign key(track_id) references tracks(id));
 
 create table if not exists track_user_data (
-track_id integer unique,
+id integer unique,
 user_tags text,
 notes text,
 foreign key(track_id) references tracks(id));
@@ -158,7 +158,7 @@ create table if not exists samples (
 id integer primary key,
 path text not null unique,
 filesize integer,
-duration integer,
+duration real,
 channels integer,
 bitrate integer,
 samplerate integer,
@@ -166,7 +166,7 @@ checksum text,
 updated datetime default current_timestamp not null);
 
 create table if not exists sample_features_lowlevel (
-sample_id integer unique,
+id integer unique,
 average_loudness real,
 barkbands_kurtosis blob,
 barkbands_skewness blob,
@@ -208,7 +208,7 @@ scvalleys blob,
 foreign key(sample_id) references samples(id));
 
 create table if not exists sample_features_rhythm (
-sample_id integer unique,
+id integer unique,
 bpm real,
 confidence real,
 onset_rate real,
@@ -229,7 +229,7 @@ histogram blob,
 foreign key(sample_id) references samples(id));
 
 create table if not exists sample_features_sfx (
-sample_id integer unique,
+id integer unique,
 pitch_after_max_to_before_max_energy_ratio real,
 pitch_centroid real,
 pitch_max_to_total real,
@@ -240,7 +240,7 @@ tristimulus blob,
 foreign key(sample_id) references samples(id));
 
 create table if not exists sample_features_tonal (
-sample_id integer unique,
+id integer unique,
 chords_changes_rate real,
 chords_number_rate real,
 key_strength real,
@@ -261,7 +261,7 @@ chords_progression blob,
 foreign key(sample_id) references samples(id));
 
 create table if not exists sample_images (
-sample_id integer unique,
+id integer unique,
 mel_frame_size integer,
 mel_spec blob,
 log_frame_size integer,
@@ -271,7 +271,7 @@ freq_spec blob,
 foreign key(sample_id) references samples(id));
 
 create table if not exists sample_user_data (
-sample_id integer unique,
+id integer unique,
 user_tags text,
 notes text,
 foreign key(sample_id) references samples(id));
@@ -284,7 +284,7 @@ type text not null,
 updated datetime default current_timestamp not null);
 
 create table if not exists project_user_data (
-project_id integer unique,
+id integer unique,
 user_tags text,
 notes text,
 foreign key(project_id) references projects(id));

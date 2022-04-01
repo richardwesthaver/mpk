@@ -997,6 +997,24 @@ pub extern "C" fn mdb_insert_sample_images(
 }
 
 #[no_mangle]
+pub extern "C" fn mdb_update_path(
+  db: *const Mdb,
+  path: *const c_char,
+  ty: *const c_char,
+) {
+  let cstr = unsafe { CStr::from_ptr(path) };
+  let p: &Path = Path::new(OsStr::from_bytes(cstr.to_bytes()));
+  let t = AudioType::from_str(unsafe {
+    assert!(!ty.is_null());
+    CStr::from_ptr(ty).to_str().unwrap()
+  })
+  .unwrap();
+  let c = Checksum::from_path(p);
+  let db = unsafe { &*db };
+  db.update_path(p,c,t).unwrap()
+}
+
+#[no_mangle]
 pub extern "C" fn mdb_query_check_file(
   db: *const Mdb,
   path: *const c_char,

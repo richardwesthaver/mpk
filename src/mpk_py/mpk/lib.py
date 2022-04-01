@@ -56,9 +56,17 @@ class Mdb:
     def exec_batch(self, sql):
         return lib.mdb_exec_batch(self.db, sql.encode())
 
+    def update_path(self, path, ty):
+        print("updating path:", path)
+        return lib.mdb_update_path(self.db, path.encode(), ty.encode())
+
     def insert_track(self, data):
-        print("inserting track:", data)
-        return lib.mdb_insert_track(self.db, data)
+        if data is None:
+            print("no info found for track")
+            return
+        else:
+          print("inserting track:", data)
+          return lib.mdb_insert_track(self.db, data)
 
     def insert_track_tags(self, id, tags):
         if tags is None:
@@ -85,44 +93,76 @@ class Mdb:
             return lib.mdb_insert_track_features_rhythm(self.db, id, features)
 
     def insert_track_features_sfx(self, id, features):
-        print("inserting sfx_features:", features, "for track_id:", id)
-        return lib.mdb_insert_track_features_sfx(self.db, id, features)
+        if features is None:
+            print("no track_features_sfx found for track_id:", id)
+            return
+        else:
+          print("inserting sfx_features:", features, "for track_id:", id)
+          return lib.mdb_insert_track_features_sfx(self.db, id, features)
 
     def insert_track_features_tonal(self, id, features):
-        print("inserting tonal_features:", features, "for track_id:", id)
-        return lib.mdb_insert_track_features_tonal(self.db, id, features)
+        if features is None:
+            print("no track_features_tonal found for track_id:", id)
+            return
+        else:
+          print("inserting tonal_features:", features, "for track_id:", id)
+          return lib.mdb_insert_track_features_tonal(self.db, id, features)
 
     def insert_track_images(self, id, images):
-        print("inserting spectrograms:", images, "for track_id:", id)
-        return lib.mdb_insert_track_images(self.db, id, images)
+        if images is None:
+            print("no specs found for track_id:", id)
+            return
+        else:
+          print("inserting spectrograms:", images, "for track_id:", id)
+          return lib.mdb_insert_track_images(self.db, id, images)
 
     def insert_sample(self, data):
-        print("inserting sample:", data)
-        return lib.mdb_insert_sample(self.db, data)
+        if data is None:
+            print("no info found for track")
+            return
+        else:
+            print("inserting sample:", data)
+            return lib.mdb_insert_sample(self.db, data)
 
     def insert_sample_featues_lowlevel(self, id, features):
-        print("inserting lowlevel_features for sample_id:", id)
-        return lib.mdb_insert_sample_features_lowlevel(self.db, id, features)
+        if features is None:
+            print("no sample_features_lowlevel found for sample_id:", id)
+            return
+        else:
+          print("inserting lowlevel_features for sample_id:", id)
+          return lib.mdb_insert_sample_features_lowlevel(self.db, id, features)
 
     def insert_sample_features_rhythm(self, id, features):
         if features is None:
-            print("no sample_features_rhythm found for track_id:", id)
+            print("no sample_features_rhythm found for sample_id:", id)
             return
         else:
             print("inserting rhythm_features for sample_id:", id)
             return lib.mdb_insert_sample_features_rhythm(self.db, id, features)
 
     def insert_sample_features_sfx(self, id, features):
-        print("inserting sfx_features for sample_id:", id)
-        return lib.mdb_insert_sample_features_sfx(self.db, id, features)
+        if features is None:
+            print("no sample_features_sfx found for sample_id:", id)
+            return
+        else:
+          print("inserting sfx_features for sample_id:", id)
+          return lib.mdb_insert_sample_features_sfx(self.db, id, features)
 
     def insert_sample_features_tonal(self, id, features):
-        print("inserting tonal_features for sample_id:", id)
-        return lib.mdb_insert_sample_features_tonal(self.db, id, features)
+        if features is None:
+            print("no sample_features_tonal found for sample_id:", id)
+            return
+        else:
+          print("inserting tonal_features for sample_id:", id)
+          return lib.mdb_insert_sample_features_tonal(self.db, id, features)
 
     def insert_sample_images(self, id, images):
-        print("inserting spectrograms for sample_id:", id)
-        return lib.mdb_insert_sample_images(self.db, id, images)
+        if images is None:
+            print("no specs found for track_id:", id)
+            return
+        else:
+          print("inserting spectrograms for sample_id:", id)
+          return lib.mdb_insert_sample_images(self.db, id, images)
 
     def query_check_file(self, path, ty):
         """check for the status of a file in the database given PATH,
@@ -162,9 +202,12 @@ def matrixize(mtx):
 
 
 def audio_data(path, filesize, duration, channels, bitrate, samplerate):
-    return lib.mdb_audio_data_new(
+    if any(i is None for i in (path, filesize, duration, channels, bitrate, samplerate)):
+      return
+    else:
+      return lib.mdb_audio_data_new(
         path.encode(), filesize, duration, channels, bitrate, samplerate
-    )
+      )
 
 
 def track_tags(tags):
@@ -218,12 +261,16 @@ def rhythm_features(features):
 
 
 def sfx_features(features):
+    if features is None:
+      return
     features[4:6] = [vectorize(x) for x in features[4:6]]
     features[6] = matrixize(features[6])
     return lib.mdb_sfx_features_new(*features)
 
 
 def tonal_features(features):
+    if features is None:
+      return
     features[7:10] = [vectorize(x) for x in features[7:10]]
     features[11] = matrixize(features[11])
     features[12:16] = [x.encode() for x in features[12:16]]
@@ -232,6 +279,8 @@ def tonal_features(features):
 
 
 def spectrograms(specs):
+    if specs is None:
+      return
     for idx, v in enumerate(specs):
         if idx in [1, 3, 5]:
             if v is not None:
