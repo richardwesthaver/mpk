@@ -75,9 +75,12 @@ mod tests {
 
   #[test]
   fn path_checksum() {
-    let checksum = Checksum::from_path("Cargo.toml");
-    dbg!(checksum);
-    let checksum = Checksum::from_file(File::open("src/lib.rs").unwrap());
-    dbg!(checksum);
+    let cs1 = Checksum::from_path("Cargo.toml");
+    let cs2 = Checksum::from_path("./Cargo.toml");
+    let cs3 = Checksum::from_file(File::open("./src/lib.rs").unwrap());
+    let cs4 = Checksum::from_file(File::open("src/lib.rs").unwrap());
+    assert_eq!(cs1, cs2);
+    assert_ne!(cs2, cs3);
+    assert_eq!(cs3, cs4);
   }
 }

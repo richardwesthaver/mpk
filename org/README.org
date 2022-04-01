@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-03-30
+#+DATE: 2022-03-31
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
@@ -32,11 +32,61 @@ Once I'm happy with the database I'll work on the MIDI module
 functionality ([[*=mpk_sesh=][mpk_sesh]]).
 
 [fn:1] [[https://www.sqlite.org/index.html][SQLite Home Page]]
-* TODO On DAWs and other production tools
-** Analog Modeling
-** Commercial Workstations
-** Patchers
+* TODO On Digital Audio Workstations
+  The DAW (Digital Audio Workstation) has existed for only a moment in
+  the continuum of creative mediums. DAWs started appearing in the
+  late 1970's, thanks to developments made by dedicated engineers such
+  as Max Matthews (AT&T), Hal Chamberlin, and David Cox (MTU). These
+  early DAWs were born from the commercial need for precise control of
+  audio on computers; government funded speech research, commercial
+  telephone research, and University computer music synthesis
+  centers. The very first DAWs were actually used in US Government
+  funded Speech Research for Sonar and the CIA[fn:2].
+
+  Nowadays the DAW is the cornerstone of the studio. It handles audio
+  recording, sequencing, mixing and resource management. With such a
+  powerful tool, there's rarely a need to work outside of the
+  'box'. With a laptop and some inspiration you can get a lot done.
+
+  Like any analog equivalent that has been digitized, users have
+  thoroughly benefited from the convenience and ease of use that the
+  DAW provides. While at UConn, I would often go to the library and
+  make beats on my laptop between classes, sometimes I would even do
+  so while attending class. This level of creative portability was
+  unheard of 30 years ago, and will only get better as mobile device
+  manufacturers develop smaller and more powerful chips.
+
+  Another benefit of the DAW is its efficacy in education. Most Music
+  Production classes today can be taught without ever entering an
+  analog studio. Lectures become project templates and students can
+  follow along in their own in-box studios. It has never been easier
+  to learn how to make music.
+
+  Indeed, the DAW has been an important evolution in the ways we make
+  music. For all the luxuries it endows us with, there's hardly an
+  argument to be made against the paradigm. Despite this, I do think
+  there is one: The DAW prevents Music Producers from being Music
+  Programmers.
+
+[fn:2] [[http://www.mtu.com/support/mtudawevolution.htm][Digital Audio Workstation - The Evolution]]
+
+** The Music Programmer
+
+  - [[https://en.wikipedia.org/wiki/Digital_sound_revolution][Digital sound revolution - Wikipedia]]
+  - [[https://ccrma.stanford.edu/courses/192b/ProTools-Logic%20Lec.pdf][CCRMA - Music 192B: Week 2, Digital Audio Workstations]]
+
+*** Trackers
+  - [[https://www.salon.com/1999/04/29/mod_trackers/][Mod love | Salon.com]]
+*** Patchers
+  - [[https://web.archive.org/web/20090603230029/http://freesoftware.ircam.fr/article.php3?id_article=5][freesoftware@ircam - A brief history of MAX]]
+  - [[http://msp.ucsd.edu/Publications/icmc88.pdf][Miller Puckette, IRCAM - The Patcher]]
+
 ** A new paradigm
+  - [[https://jackaudio.org/api/][JACK Audio Connection Kit API]]
+  - [[https://gitlab.freedesktop.org/pipewire/pipewire/-/wikis/FAQ][FAQ · Wiki · PipeWire]]
+  - [[http://manpages.ubuntu.com/manpages/bionic/man1/zita-njbridge.1.html][zita-j2n, zita-n2j - Manpage]]
+  - [[http://non.tuxfamily.org/nsm/API.html][Non Session Management API]]
+  - [[https://ccrma.stanford.edu/groups/osc/index.html][OpenSoundControl.org]]
 * Usage
 MPK is meant to be used on a Linux box. In this example we'll be using
 Arch Linux.
@@ -129,11 +179,11 @@ mel_bands = 96
 lf_bound = 0
 hf_bound = 11000
 #+end_src
-
+XC
 Much of the configuration can be overridden by CLI flags but you may
 want to change some of the default values. Some of the optional
 settings aren't included in the default file:
-- =ext_samples=, =ext_tracks=, =ext_projects=, =ext_plugins=, =ext_patches= :: external directories
+- fs.{=ext_samples=, =ext_tracks=, =ext_projects=, =ext_plugins=, =ext_patches=} :: external directories
 - =extractor.path= :: path to the =mpk_extract.py= script
 - =metro.tic= :: audio file to play on metro downbeats
 - =metro.toc= :: audio file to play on metro upbeats
@@ -200,21 +250,19 @@ restore= to restore from a backup.
 * Dependencies
 =*= := /use your OS package manager (apt, brew, pacman, etc)/
 - [[https://www.rust-lang.org/tools/install][Rust]] :: install with [[https://rustup.rs/][rustup.rs]]
-- [[https://www.python.org/][Python]]3.9 :: *
+- [[https://www.python.org/][Python]]3.9 :: use [[https://github.com/pyenv/pyenv][pyenv]] to switch Python version globally. Python 3.10 is not supported. *
 - C Compiler :: [[https://gcc.gnu.org/][GCC]] or [[https://llvm.org/][LLVM]] *
 - [[https://nim-lang.org/][Nim]] :: *
   - used as a build tool via [[https://nim-lang.org/docs/nims.html][NimScript]].
-- [[https://essentia.upf.edu/][essentia]] :: try a =pip install= from the [[https://github.com/MTG/essentia][github repo]], if that
-  doesn't work you will need to [[https://essentia.upf.edu/installing.html][install from source]]. If you have
-  issues just contact me.
-  - [[https://numpy.org/][numpy]] :: you will need a version <1.22, for example =pip install
-    numpy==1.21.5=.
 - [[https://www.sqlite.org/index.html][SQLite]] :: *
 - [[https://jackaudio.org/][JACK]] :: *
 - [[https://new-session-manager.jackaudio.org][NSM]] :: *
 - _Dev Dependencies_
   - [[https://python-poetry.org/][poetry]] :: =pip= or *
   - [[https://black.readthedocs.io/en/stable/][black]] :: =pip= or *
+  - [[https://essentia.upf.edu/][essentia]] :: try a =pip install= from the [[https://github.com/MTG/essentia][github repo]], if that
+    doesn't work you will need to [[https://essentia.upf.edu/installing.html][install from source]]. If you have
+    issues just contact me.
   - [[https://valgrind.org/][Valgrind]] :: *
     - used to detect issues with FFI memory management.
 * Crates
@@ -592,9 +640,9 @@ cases such as playing an audio file on disk and isn't designed for
 low-level DSP.
 - *Modules*
   - metro :: a convenient metronome
-  - chain :: sample chainer[fn:2]
+  - chain :: sample chainer[fn:7]
 
-[fn:2] [[https://github.com/KaiDrange/OctaChainer][GitHub - KaiDrange/OctaChainer]] 
+[fn:7] [[https://github.com/KaiDrange/OctaChainer][GitHub - KaiDrange/OctaChainer]] 
 ** =mpk_flate=
 Zstd compression and Tar archival utilities.
 ** =mpk_codec=
@@ -854,14 +902,13 @@ FROM [track_tags_musicbrainz]
 
 *** db sync
 #+begin_src sql
-  select case when path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.flac' and checksum = '69fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'found'
-  when path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.flac' and checksum != '69fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'modified'
-  when path != '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.flac' and checksum = '69fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'moved'
-  else 'not found'
+  select case when path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.fla' and checksum = '9fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'found'
+  when path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.fla' and checksum != '9fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'modified'
+  when path != '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.fla' and checksum = '9fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'moved'
   end result
   from tracks
-  where path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.flac'
-  or checksum = '69fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03';
+  where path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.fla'
+  or checksum = '9fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03';
 #+end_src
 ** local_vars
 #+begin_comment

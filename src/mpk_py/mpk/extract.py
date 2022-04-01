@@ -5,7 +5,7 @@ import numpy as np
 import os
 import fnmatch
 
-FILE_EXT = (".mp3", ".flac", ".ogg", ".wav", ".aiff", ".alac", ".aac", ".mp4")
+FILE_EXT = (".mp3", ".flac", ".ogg", ".wav", ".aif", ".alac", ".aac", ".mp4")
 
 
 def walk_dir(dir, exts=FILE_EXT):
@@ -16,8 +16,13 @@ def walk_dir(dir, exts=FILE_EXT):
 
 
 def collect_files(dir, exts=FILE_EXT):
-    files = [f for f in walk_dir(dir, exts)]
-    print("found %d audio files in %s" % (len(files), dir))
+    dir = os.path.realpath(dir)
+    if os.path.isdir(dir):
+        files = [f for f in walk_dir(dir, exts)]
+        print("found %d audio files in %s" % (len(files), dir))
+    else:
+        files = [dir]
+        print("found 1 audio file: %s" % dir)
     return files
 
 

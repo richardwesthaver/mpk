@@ -296,7 +296,6 @@ impl FromStr for Flags {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DbConfig {
   pub path: Option<String>,
-  pub log_file: Option<String>,
   pub flags: Option<Vec<String>>,
   pub limits: Option<HashMap<String, usize>>,
   /// TODO: trace/profile to stdout or file, init in _db
@@ -328,7 +327,6 @@ impl Default for DbConfig {
   fn default() -> Self {
     DbConfig {
       path: Some([DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), DB_FILE].concat()),
-      log_file: None,
       flags: Some(
         vec!["readwrite", "create", "nomutex", "uri"]
           .iter()

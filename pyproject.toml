@@ -10,7 +10,7 @@ keywords = ["media", "Rust", "FFI", "audio"]
 include = ["README.org"]
 packages = [
 	 { include = "mpk", from = "src/mpk_py" },
-	 { include = "mpk_extract.py", from = "src/mpk_py" },
+	 { include = "mpk_extractor.py", from = "src/mpk_py" },
 	 ]
 
 [tool.poetry.dependencies]

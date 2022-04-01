@@ -19,8 +19,9 @@
 use libc::{c_char, c_int, size_t};
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 use mpk_db::{
-  AudioData, LowlevelFeatures, MatrixReal, Mdb, MusicbrainzTags, RhythmFeatures,
-  SfxFeatures, Spectrograms, TonalFeatures, TrackTags, Uuid, VecReal, VecText, AudioType,
+  AudioData, AudioType, LowlevelFeatures, MatrixReal, Mdb, MusicbrainzTags,
+  RhythmFeatures, SfxFeatures, Spectrograms, TonalFeatures, TrackTags, Uuid, VecReal,
+  VecText,
 };
 use mpk_hash::Checksum;
 use std::ffi::{CStr, CString, OsStr};
@@ -115,18 +116,20 @@ pub extern "C" fn mdb_matrixreal_new(ptr: *const f32, len: size_t) -> CMatrixRea
 
 /// Build a Blake3 Checksum from array BYTES of LEN.
 #[no_mangle]
-pub extern "C" fn mpk_checksum_new(ptr: *const u8, len: size_t) -> CChecksum {
-  CChecksum { ptr, len }
+pub extern "C" fn mpk_checksum_new(ptr: *const u8, len: size_t) -> *mut CChecksum {
+  let cs = CChecksum { ptr, len };
+  Box::into_raw(Box::new(cs.into()))
 }
 
 /// Build a Blake3 Checksum from PATH given as c_char[].
 #[no_mangle]
-pub extern "C" fn mpk_checksum_path(path: *const c_char) -> CChecksum {
+pub extern "C" fn mpk_checksum_path(path: *const c_char) -> *mut CChecksum {
   let p = unsafe {
     assert!(!path.is_null());
     CStr::from_ptr(path).to_str().unwrap()
   };
-  Checksum::from_path(p).into()
+  let cs = Checksum::from_path(p);
+  Box::into_raw(Box::new(cs.into()))
 }
 
 #[no_mangle]
@@ -997,18 +1000,16 @@ pub extern "C" fn mdb_insert_sample_images(
 pub extern "C" fn mdb_query_check_file(
   db: *const Mdb,
   path: *const c_char,
-  checksum: CChecksum,
   ty: *const c_char,
 ) -> *mut c_char {
-  let p = unsafe {
-    assert!(!path.is_null());
-    CStr::from_ptr(path).to_str().unwrap()
-  };
+  let cstr = unsafe { CStr::from_ptr(path) };
+  let p: &Path = Path::new(OsStr::from_bytes(cstr.to_bytes()));
   let t = AudioType::from_str(unsafe {
     assert!(!ty.is_null());
     CStr::from_ptr(ty).to_str().unwrap()
-  }).unwrap();
-  let c = checksum.into();
+  })
+  .unwrap();
+  let c = Checksum::from_path(p);
   let db = unsafe { &*db };
   let res = db.query_check_file(p, c, t).unwrap();
   CString::new(res.as_bytes()).unwrap().into_raw()

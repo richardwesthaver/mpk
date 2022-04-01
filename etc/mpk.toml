@@ -9,6 +9,8 @@ flags = [
     'nomutex',
     'uri',
 ]
+trace = false
+profile = false
 
 [jack]
 name = 'mpk'
@@ -21,3 +23,21 @@ temp = false
 rate = 44100
 period = 1024
 n_periods = 2
+
+[metro]
+bpm = 120
+time_sig = [
+    4,
+    4,
+]
+
+[extractor]
+descriptors = ['mel_spec']
+mono = false
+sample_rate = 44100
+windowing = 'hann'
+frame_size = 2048
+hop_size = 1024
+mel_bands = 96
+lf_bound = 0
+hf_bound = 11000

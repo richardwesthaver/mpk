@@ -1,6 +1,7 @@
 from .lib import (
     Config,
     Mdb,
+    checksum,
     vectorize,
     matrixize,
     audio_data,

@@ -39,7 +39,15 @@ impl Mdb {
       None => Connection::open_in_memory_with_flags(flags)?,
     };
 
-    Ok(Mdb { conn })
+    let mut db = Mdb { conn };
+    if cfg.trace {
+      db.set_tracer(Some(|x| println!("{}", x)))
+    }
+    if cfg.profile {
+      db.set_profiler(Some(|x, y| println!("{} -- {}ms", x, y.as_millis())))
+    }
+
+    Ok(db)
   }
 
   pub fn exec_batch(&self, sql: &str) -> Result<()> {
@@ -965,40 +973,59 @@ where sample_id = ?1",
       "select * from sample_images where sample_id = ?",
       [id],
       |row| {
-	let mut specs = Spectrograms::default();
-	for i in [1,3,5] {
-	  let val = match row.get(i) {
-	    Ok(v) => Some(MatrixReal::new(row.get(i+1)?, v)),
-	    Err(_) => None,
-	  };
-	  match i {
-	    1 => specs.mel_spec = val,
-	    3 => specs.log_spec = val,
-	    5 => specs.freq_spec = val,
-	    _ => (),
-	  }
-	}
+        let mut specs = Spectrograms::default();
+        for i in [1, 3, 5] {
+          let val = match row.get(i) {
+            Ok(v) => Some(MatrixReal::new(row.get(i + 1)?, v)),
+            Err(_) => None,
+          };
+          match i {
+            1 => specs.mel_spec = val,
+            3 => specs.log_spec = val,
+            5 => specs.freq_spec = val,
+            _ => (),
+          }
+        }
         Ok(specs)
-      }
+      },
     )?;
     Ok(res)
   }
 
-  pub fn query_check_file<P: AsRef<Path>>(&self, path: P, checksum: Checksum, ty: AudioType) -> Result<String> {
-    let q = format!("select case when path = ?1 and checksum = ?2 then 'found'
+  pub fn query_check_file<P: AsRef<Path>>(
+    &self,
+    path: P,
+    checksum: Checksum,
+    ty: AudioType,
+  ) -> Result<String> {
+    let q = format!(
+      "select case when path = ?1 and checksum = ?2 then 'found'
 when path = ?1 and checksum != ?2 then 'modified'
 when path != ?1 and checksum = ?2 then 'moved'
 end result
 from {}
 where path = ?1
-or checksum = ?1", ty.table_name());
-    let res = self.conn.query_row(
-      &q,
-      [path.as_ref().to_str().unwrap(), checksum.to_hex().as_str()], |row| {
-	let row = row.get::<_, String>(0)?;
-	Ok(row)
-      }).unwrap_or("not found".into());
+or checksum = ?2",
+      ty.table_name()
+    );
+    let res = self
+      .conn
+      .query_row(
+        &q,
+        [path.as_ref().to_str().unwrap(), checksum.to_hex().as_str()],
+        |row| {
+          let row = row.get::<_, String>(0)?;
+          Ok(row)
+        },
+      )
+      .unwrap_or("not found".into());
     Ok(res)
+  }
+
+  pub fn query(&self, ty: AudioType, by: QueryBy, fr: QueryFor) -> Result<()> {
+    let sql = by.as_query(ty, fr)?;
+    let mut stmt = self.conn.prepare(sql.as_str())?;
+    Ok(())
   }
 
   pub fn query_raw(&self, sql: &str) -> Result<DbValues> {
@@ -1148,11 +1175,17 @@ mod tests {
     let db = new_mem_db();
     let checksum = Checksum::rand();
     let d = ("/tmp/file", checksum);
-    assert_eq!(db.query_check_file(d.0, d.1, AudioType::Track).unwrap(), "not found");
+    assert_eq!(
+      db.query_check_file(d.0, d.1, AudioType::Track).unwrap(),
+      "not found"
+    );
     let mut data = AudioData::default();
     data.path = d.0.to_string();
     data.checksum = Some(checksum);
     db.insert_track(&data).unwrap();
-    assert_eq!(db.query_check_file(d.0,d.1,AudioType::Track).unwrap(), "found");
+    assert_eq!(
+      db.query_check_file(d.0, d.1, AudioType::Track).unwrap(),
+      "found"
+    );
   }
 }

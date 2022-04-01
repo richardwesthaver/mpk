@@ -29,6 +29,7 @@ use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, Value, ValueRe
 use std::fmt;
 use std::ops::{Index, Range};
 use std::str::FromStr;
+use std::path::PathBuf;
 pub use uuid::Uuid;
 
 /// Display wrapper for SQLite Value
@@ -712,9 +713,21 @@ impl fmt::Display for Spectrograms {
       "mel_spec: {}
 log_spec: {}
 freq_spec: {}",
-      self.mel_spec.as_ref().map(|s| s.to_string()).unwrap_or("NULL".to_string()),
-      self.log_spec.as_ref().map(|s| s.to_string()).unwrap_or("NULL".to_string()),
-      self.freq_spec.as_ref().map(|s| s.to_string()).unwrap_or("NULL".to_string()),
+      self
+        .mel_spec
+        .as_ref()
+        .map(|s| s.to_string())
+        .unwrap_or("NULL".to_string()),
+      self
+        .log_spec
+        .as_ref()
+        .map(|s| s.to_string())
+        .unwrap_or("NULL".to_string()),
+      self
+        .freq_spec
+        .as_ref()
+        .map(|s| s.to_string())
+        .unwrap_or("NULL".to_string()),
     )
   }
 }
@@ -728,7 +741,7 @@ pub enum SpecType {
 }
 
 /// An identifier for audio types.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum AudioType {
   Track,
   Sample,
@@ -739,6 +752,16 @@ impl AudioType {
     match self {
       AudioType::Track => "tracks",
       AudioType::Sample => "samples",
+    }
+  }
+  pub fn track_else(&self, sql: &str) -> Result<String> {
+    match self {
+      AudioType::Track => {
+	Ok(sql.into())
+      },
+      AudioType::Sample => {
+	Err(Error::BadType("sample".into()))
+      }
     }
   }
 }
@@ -763,43 +786,74 @@ impl fmt::Display for AudioType {
   }
 }
 
-/// Columns to query by.
-#[derive(Debug, Copy, Clone)]
-pub enum QueryBy {
-  Id,
-  Path,
-  Title,
-  Artist,
-  Album,
-  Genre,
-  Date,
-  SampleRate,
-  Bpm,
-  Label,
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum QueryType {
+  Single,
+  Like,
+  Range,
 }
 
-impl FromStr for QueryBy {
-  type Err = Error;
-  fn from_str(input: &str) -> Result<QueryBy> {
-    match input {
-      "id" => Ok(QueryBy::Id),
-      "path" => Ok(QueryBy::Path),
-      "title" => Ok(QueryBy::Title),
-      "artist" => Ok(QueryBy::Artist),
-      "album" => Ok(QueryBy::Album),
-      "genre" => Ok(QueryBy::Genre),
-      "date" => Ok(QueryBy::Date),
-      "samplerate" | "sr" => Ok(QueryBy::SampleRate),
-      "bpm" => Ok(QueryBy::Bpm),
-      "label" => Ok(QueryBy::Label),
-      e => Err(Error::BadType(e.to_string())),
+impl Default for QueryType {
+  fn default() -> Self {
+    QueryType::Single
+  }
+}
+
+/// Columns to query by.
+#[derive(Debug, Clone, PartialEq)]
+pub enum QueryBy {
+  Id(u64),
+  Path(PathBuf),
+  Title(String),
+  Artist(String),
+  Album(String),
+  Genre(String),
+  Date(String),
+  SampleRate(u32),
+  Bpm(f64),
+  Label(String),
+}
+
+impl QueryBy {
+  pub fn as_query(&self, ty: AudioType, fr: QueryFor) -> Result<String> {
+    match self {
+      QueryBy::Id(n) => {
+	Ok(format!("{} where id = {}", fr.as_query(ty)?, n))
+      },
+      QueryBy::Path(p) => {
+	Ok(format!("{} where path = {}", fr.as_query(ty)?, p.display()))
+      },
+      QueryBy::Title(s) => {
+	Ok(format!("{} where title = {}", fr.as_query(ty)?, s))
+      },
+      QueryBy::Artist(s) => {
+	Ok(format!("{} where artist = {}", fr.as_query(ty)?, s))
+      },
+      QueryBy::Album(s) => {
+	Ok(format!("{} where album = {}", fr.as_query(ty)?, s))
+      },
+      QueryBy::Genre(s) => {
+	Ok(format!("{} where genre = {}", fr.as_query(ty)?, s))	
+      },
+      QueryBy::Date(s) => {
+	Ok(format!("{} where date = {}", fr.as_query(ty)?, s))	
+      },
+      QueryBy::SampleRate(n) => {
+	Ok(format!("{} where samplerate = {}", fr.as_query(ty)?, n))	
+      },
+      QueryBy::Bpm(n) => {
+	Ok(format!("{} where bpm = {}", fr.as_query(ty)?, n))	
+      },
+      QueryBy::Label(s) => {
+	Ok(format!("{} where label = {}", fr.as_query(ty)?, s))	
+      },
     }
   }
 }
 
-/// The type of query. Determines which tables are returned by a query.
+/// The type of query result. Determines which tables are returned by a query.
 #[derive(Debug, Copy, Clone)]
-pub enum QueryType {
+pub enum QueryFor {
   Info,
   Tags,
   Musicbrainz,
@@ -809,23 +863,66 @@ pub enum QueryType {
   Tonal,
   Spectrograms,
   All,
-  Raw,
 }
 
-impl FromStr for QueryType {
+impl QueryFor {
+  pub fn as_query(&self, ty: AudioType) -> Result<String> {
+    match self {
+      QueryFor::Info => {
+	Ok(format!("select * from {}", ty.table_name()))
+      },
+      QueryFor::Tags => {
+	ty.track_else("select * from track_tags")
+      },
+      QueryFor::Musicbrainz => {
+	ty.track_else("select * from track_tags_musicbrainz")
+      },
+      QueryFor::Lowlevel => {
+	Ok(format!("select * from {}_features_lowlevel", ty))
+      },
+      QueryFor::Rhythm => {
+	Ok(format!("select * from {}_features_rhythm", ty))
+      },
+      QueryFor::Sfx => {
+	Ok(format!("select * from {}_features_sfx", ty))
+      },
+      QueryFor::Tonal => {
+	Ok(format!("select * from {}_features_tonal", ty))
+      },
+      QueryFor::Spectrograms => {
+	Ok(format!("select * from {}_images", ty))
+      },
+      QueryFor::All => {
+	let mut q = format!("select * from {} ", ty.table_name());
+	if ty == AudioType::Track {
+	  q.push_str("join track_tags on tracks.id = track_tags
+join track_tags_musicbrainz on tracks.id = track_tags_musicbrainz.track_id
+");
+	}
+	q.push_str(format!("join {ty}_features_lowlevel on tracks.id = {ty}_features_lowlevel.{ty}_id
+join {ty}_features_rhythm on {typ}.id = {ty}_features_rhythm.{ty}_id
+join {ty}_features_sfx on {typ}.id = {ty}_features_sfx.{ty}_id
+join {ty}_features_tonal on {typ}.id = {ty}_features_sfx.{ty}_id
+join {ty}_images on {typ}.id = {ty}_images.{ty}_id", typ = ty.table_name()).as_str());	
+	Ok(q)
+      }
+    }
+  }
+}
+
+impl FromStr for QueryFor {
   type Err = Error;
-  fn from_str(input: &str) -> Result<QueryType> {
+  fn from_str(input: &str) -> Result<QueryFor> {
     match input {
-      "info" => Ok(QueryType::Info),
-      "tags" => Ok(QueryType::Tags),
-      "musicbrainz" | "mb" => Ok(QueryType::Musicbrainz),
-      "lowlevel" => Ok(QueryType::Lowlevel),
-      "rhythm" => Ok(QueryType::Rhythm),
-      "sfx" => Ok(QueryType::Sfx),
-      "tonal" => Ok(QueryType::Tonal),
-      "spectrograms" | "specs" => Ok(QueryType::Spectrograms),
-      "all" => Ok(QueryType::All),
-      "raw" => Ok(QueryType::Raw),
+      "info" => Ok(QueryFor::Info),
+      "tags" => Ok(QueryFor::Tags),
+      "musicbrainz" | "mb" => Ok(QueryFor::Musicbrainz),
+      "lowlevel" => Ok(QueryFor::Lowlevel),
+      "rhythm" => Ok(QueryFor::Rhythm),
+      "sfx" => Ok(QueryFor::Sfx),
+      "tonal" => Ok(QueryFor::Tonal),
+      "spectrograms" | "specs" => Ok(QueryFor::Spectrograms),
+      "all" => Ok(QueryFor::All),
       e => Err(Error::BadType(e.to_string())),
     }
   }

@@ -2,7 +2,7 @@ use clap::{AppSettings, Parser, Subcommand};
 use mpk::Result;
 use mpk_audio::gen::SampleChain;
 use mpk_config::{expand_tilde, Config};
-use mpk_db::{Mdb, QueryType};
+use mpk_db::{Mdb, QueryFor, QueryBy, AudioType};
 use std::io;
 use std::path::PathBuf;
 use std::sync::mpsc::sync_channel;
@@ -21,12 +21,12 @@ struct Args {
   cmd: Command,
   #[clap(short,long, default_value_t = String::from("~/mpk/mpk.toml"))]
   cfg: String,
-  /// enable DB tracing
+  /// Enable DB tracing
   #[clap(long)]
-  db_trace: bool,
-  /// enable DB profiling
+  trace: bool,
+  /// Enable DB profiling
   #[clap(long)]
-  db_profile: bool,
+  profile: bool,
 }
 
 #[derive(Subcommand)]
@@ -37,6 +37,7 @@ enum Command {
   /// Play an audio file
   Play {
     file: Option<PathBuf>,
+    #[clap(long, short)]
     query: Option<String>,
     #[clap(short)]
     volume: Option<f32>,
@@ -121,11 +122,28 @@ enum Runner {
 enum DbCmd {
   /// Query DB
   Query {
-    query: QueryType,
-    #[clap(short, long)]
-    track: Option<i64>,
-    #[clap(short, long)]
-    sample: Option<i64>,
+    ty: Option<AudioType>,
+    query: Option<QueryFor>,
+    #[clap(long)]
+    id: Option<u64>,
+    #[clap(long)]
+    path: Option<PathBuf>,
+    #[clap(long)]
+    title: Option<String>,
+    #[clap(long)]
+    artist: Option<String>,
+    #[clap(long)]
+    album: Option<String>,
+    #[clap(long)]
+    genre: Option<String>,
+    #[clap(long)]    
+    date: Option<String>,
+    #[clap(long)]    
+    sr: Option<u32>,
+    #[clap(long)]
+    bpm: Option<f64>,
+    #[clap(long)]
+    label: Option<String>,
     raw: Option<String>,
   },
   /// Sync resources with DB
@@ -136,6 +154,10 @@ enum DbCmd {
     samples: bool,
     #[clap(short, long)]
     projects: bool,
+    #[clap(short, long)]
+    ext: bool,
+    #[clap(short, long)]
+    force: bool,
   },
   Backup {
     output: PathBuf,
@@ -209,7 +231,7 @@ fn main() -> Result<()> {
     }
     Command::Play {
       file,
-      query: _,
+      query,
       volume,
       speed,
       device,
@@ -219,82 +241,78 @@ fn main() -> Result<()> {
       } else {
         None
       };
+      let file: Result<String> = if let Some(f) = file {
+        Ok(f.to_str().unwrap().into())
+      } else if let Some(q) = query {
+        let db = Mdb::new_with_config(cfg.db)?;
+        let path = db.query_track(q.parse().unwrap())?.path;
+        let info = db.query_track_tags(q.parse().unwrap())?;
+        println!("playing {} - {}", info.artist.unwrap(), info.title.unwrap());
+        Ok(path)
+      } else {
+        Err(std::io::Error::from(std::io::ErrorKind::NotFound).into())
+      };
       let rx = mpk_audio::pause_controller_cli();
       mpk_audio::play(file.unwrap(), device, volume, speed, rx)
     }
 
     Command::Db { cmd } => {
-      let (trace, profile) = (
-        &cfg.db.trace | args.db_trace,
-        &cfg.db.profile | args.db_profile,
-      );
       let mut conn = Mdb::new_with_config(cfg.db)?;
-      if trace {
+      if args.trace {
         conn.set_tracer(Some(|x| println!("{}", x)))
       }
-      if profile {
+      if args.profile {
         conn.set_profiler(Some(|x, y| println!("{} -- {}ms", x, y.as_millis())))
       }
 
       match cmd {
         DbCmd::Query {
+	  ty,
           query,
-          track,
-          sample,
+	  id,
+	  path,
+	  title,
+	  artist,
+	  album,
+	  genre,
+	  date,
+	  sr,
+	  bpm,
+	  label,
           raw,
-        } => match query {
-          QueryType::Info => {
-            if track.is_some() {
-              println!("{}", conn.query_track(track.unwrap())?)
-            } else if sample.is_some() {
-              println!("{}", conn.query_sample(sample.unwrap())?)
-            }
-          }
-          QueryType::Tags => {
-            if track.is_some() {
-              println!("{}", conn.query_track_tags(track.unwrap())?)
-            } else {
-              eprintln!("query type not supported")
-            }
-          }
-          QueryType::Musicbrainz => {
-            if track.is_some() {
-              println!("{}", conn.query_track_tags_musicbrainz(track.unwrap())?)
-            } else {
-              eprintln!("query type not supported");
-            }
-          }
-          QueryType::Lowlevel => {
-            if track.is_some() {
-              println!("{}", conn.query_track_features_lowlevel(track.unwrap())?)
-            } else if sample.is_some() {
-              println!("{}", conn.query_sample_features_lowlevel(sample.unwrap())?)
-            }
-          }
-          QueryType::Rhythm => {
-            if track.is_some() {
-              println!("{}", conn.query_track_features_rhythm(track.unwrap())?)
-            }
-            if sample.is_some() {
-              println!("{}", conn.query_sample_features_rhythm(sample.unwrap())?)
-            }
-          }
-          QueryType::Spectrograms => {
-            if track.is_some() {
-              println!("{}", conn.query_track_images(track.unwrap())?)
-            } else if sample.is_some() {
-              println!("{}", conn.query_sample_images(sample.unwrap())?)
-            }
-          }
-          QueryType::Raw => {
-            println!("{}", conn.query_raw(&raw.unwrap())?)
-          }
-          _ => eprintln!("query type not supported"),
-        },
+        } => {
+	  let by: Option<QueryBy> = if let Some(n) = id {
+	    Some(QueryBy::Id(n))
+	  } else if let Some(p) = path {
+	    Some(QueryBy::Path(p))
+	  } else if let Some(s) = title {
+	    Some(QueryBy::Title(s))
+	  } else if let Some(s) = artist {
+	    Some(QueryBy::Artist(s))
+	  } else if let Some(s) = album {
+	    Some(QueryBy::Album(s))
+	  } else if let Some(s) = genre {
+	    Some(QueryBy::Genre(s))
+	  } else if let Some(s) = date {
+	    Some(QueryBy::Date(s))
+	  } else if let Some(n) = sr {
+	    Some(QueryBy::SampleRate(n))
+	  } else if let Some(n) = bpm {
+	    Some(QueryBy::Bpm(n))
+	  } else if let Some(s) = label {
+	    Some(QueryBy::Label(s))
+	  } else {None};
+
+	  if let Some(by) = by {
+	    println!("{}", by.as_query(ty.unwrap(), query.unwrap()).unwrap());
+	  }
+	},
         DbCmd::Sync {
           tracks,
           samples,
           projects,
+          ext,
+          force,
         } => {
           let script = cfg.extractor.path.unwrap_or_default();
           let descriptors = cfg.extractor.descriptors;

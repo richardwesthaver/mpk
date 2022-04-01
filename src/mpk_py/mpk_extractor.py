@@ -8,7 +8,7 @@ from mpk import *
 
 
 def run():
-    parser = argparse.ArgumentParser(description="MPK_EXTRACT")
+    parser = argparse.ArgumentParser(description="MPK_EXTRACTOR")
     parser.add_argument(
         "input", type=Path, nargs="*", default=".", help="input file or directory"
     )
@@ -29,14 +29,13 @@ def run():
         "-d",
         help="descriptors to include",
         choices=[
-            #            "lowlevel",
-            #            "rhythm",
-            #            "sfx",
-            #            "tonal",
-            #            "spectrograms",
-            #            "metadata",
-            # "none",
+            "metadata",
             "features",
+            "lowlevel",
+            "rhythm",
+            "sfx",
+            "tonal",
+            "spectrograms",
             "mel_spec",
             "log_spec",
             "freq_spec",
@@ -340,26 +339,59 @@ def insert(data, descs):
 
 
 def job(files, descs):
-    print("spawning %d with %d files" % (os.getpid(), len(files)))
+    print("spawning %d with files: %s" % (os.getpid(), files))
     return bulk_extract(files, descs=descs)
 
 
 if __name__ == "__main__":
     args = run()
-    with mp.Pool(processes=args.jobs) as pool:
-        cfg = Config(args.cfg)
-        db = Mdb(cfg.db_path())
-        files = [i for s in [collect_files(f) for f in args.input] for i in s]
-        if args.d:
-            descs = args.d
+    cfg = Config(args.cfg)
+    db = Mdb(cfg.db_path())
+
+    files = [i for s in [collect_files(f) for f in args.input] for i in s]
+    new = []
+    modified = []
+    moved = []
+
+    if not args.force:
+      for idx, f in enumerate(files):
+        q = db.query_check_file(f, args.type)
+        if q == "not found":
+          print("%d: new file: %s" % (idx, f))
+          new.append(f)
+        elif q == "found":
+          print("%d: file found: %s" % (idx, f))
+        elif q == "modified":
+          print("%d: file modified: %s" % (idx, f))
+          modified.append(f)
+        elif q == "moved":
+          print("%d: file moved: %s" % (idx, f))
+          moved.append(f)
         else:
-            descs = None
+          print('invalid check_file response')
+    else:
+      new = files
+
+    if args.d:
+        descs = args.d
+    else:
+        descs = None
+
+    if not new or modified or moved:
+        quit()
+
+    print(
+        "processing %d new, %d modified, %d moved..."
+        % (len(new), len(modified), len(moved))
+    )
+
+    with mp.Pool(processes=args.jobs) as pool:
         queue_size = args.queue_size
-        if queue_size > len(files):
-            queue_size = len(files)
+        if queue_size > len(new):
+            queue_size = len(new)
         batch_size = args.batch_size
-        for i in range(0, len(files), queue_size):
-            batch_files = files[i : i + queue_size]
+        for i in range(0, len(new), queue_size):
+            batch_files = new[i : i + queue_size]
             res = [
                 pool.apply_async(
                     job,
@@ -372,5 +404,5 @@ if __name__ == "__main__":
             ]
             for r in res:
                 insert(r.get(), descs)
-            print("PROCESSED :: %d/%d" % (i + queue_size, len(files)))
+            print("PROCESSED :: %d/%d" % (i + queue_size, len(new)))
     print("...DONE")

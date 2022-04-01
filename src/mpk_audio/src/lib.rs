@@ -61,19 +61,17 @@ pub fn play<P: AsRef<Path>>(
   }
   let file = std::fs::File::open(path).unwrap();
   sink.append(rodio::Decoder::new(BufReader::new(file)).unwrap());
-
-  loop {
+  while !sink.empty() {
     match sink.is_paused() {
       true => {
         if !pause.recv().unwrap() {
           sink.play();
         }
       }
-      false => {
-        if pause.recv().unwrap() {
-          sink.pause();
-        }
-      }
+      false => match pause.recv_timeout(std::time::Duration::from_millis(500)) {
+        Ok(_) => sink.pause(),
+        Err(_) => (),
+      },
     }
   }
 }
