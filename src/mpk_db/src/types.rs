@@ -24,15 +24,14 @@
 //!  and QueryType. These are all used to simplify Interactions with
 //!  the DB.
 use crate::err::{Error, Result};
+pub use chrono::NaiveDate;
 use mpk_hash::Checksum;
 use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, Value, ValueRef};
 use std::fmt;
 use std::ops::{Index, Range};
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::time::Duration;
 pub use uuid::Uuid;
-
 /// Display wrapper for SQLite Value
 #[derive(Debug)]
 pub struct DbValue(pub Value);
@@ -785,14 +784,16 @@ impl fmt::Display for AudioType {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum QueryType {
-  Single,
+  Equals,
   Like,
-  Range,
+  Between,
+  GreaterThan,
+  LessThan,
 }
 
 impl Default for QueryType {
   fn default() -> Self {
-    QueryType::Single
+    QueryType::Equals
   }
 }
 
@@ -800,23 +801,47 @@ impl Default for QueryType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryBy {
   Id(u64),
+  IdBetween(u64, u64),
+  IdGreater(u64),
+  IdLess(u64),
   Path(PathBuf),
+  PathLike(PathBuf),
   Title(String),
+  TitleLike(String),
   Artist(String),
+  ArtistLike(String),
   Album(String),
+  AlbumLike(String),
   Genre(String),
-  Date(String),
+  GenreLike(String),
+  Date(NaiveDate),
+  DateBetween(NaiveDate, NaiveDate),
+  DateGreater(NaiveDate),
+  DateLess(NaiveDate),
   SampleRate(u32),
   Bpm(f64),
+  BpmBetween(f64, f64),
+  BpmGreater(f64),
+  BpmLess(f64),
   Label(String),
+  LabelLike(String),
 }
 
 impl QueryBy {
   pub fn as_query(&self, ty: AudioType, fr: QueryFor) -> Result<String> {
     match self {
       QueryBy::Id(n) => Ok(format!("{} where id = {}", fr.as_query(ty)?, n)),
+      QueryBy::IdBetween(n, m) => Ok(format!("{} where id between {} and {}", fr.as_query(ty)?, n, m)),
+      QueryBy::IdGreater(n) => Ok(format!("{} where id > {}", fr.as_query(ty)?, n)),
+      QueryBy::IdLess(n) => Ok(format!("{} where id < {}", fr.as_query(ty)?, n)),
       QueryBy::Path(p) => Ok(format!(
         "{} where id in (select id from {} where path = '{}')",
+        fr.as_query(ty)?,
+        ty.table_name(),
+        p.display()
+      )),
+      QueryBy::PathLike(p) => Ok(format!(
+        "{} where id in (select id from {} where path like '{}')",
         fr.as_query(ty)?,
         ty.table_name(),
         p.display()
@@ -824,6 +849,14 @@ impl QueryBy {
       QueryBy::Title(s) => ty.track_else(
         format!(
           "{} where id in (select id from track_tags where title = '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
+      QueryBy::TitleLike(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where title like '{}')",
           fr.as_query(ty)?,
           s
         )
@@ -837,9 +870,25 @@ impl QueryBy {
         )
         .as_str(),
       ),
+      QueryBy::ArtistLike(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where artist like '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
       QueryBy::Album(s) => ty.track_else(
         format!(
           "{} where id in (select id from track_tags where album = '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
+      QueryBy::AlbumLike(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where album like '{}')",
           fr.as_query(ty)?,
           s
         )
@@ -853,11 +902,43 @@ impl QueryBy {
         )
         .as_str(),
       ),
-      QueryBy::Date(s) => ty.track_else(
+      QueryBy::GenreLike(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where genre like '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
+      QueryBy::Date(d) => ty.track_else(
         format!(
           "{} where id in (select id from track_tags where date = '{}')",
           fr.as_query(ty)?,
-          s
+          d
+        )
+        .as_str(),
+      ),
+      QueryBy::DateBetween(d, e) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where date between '{}' and '{}')",
+          fr.as_query(ty)?,
+          d, e
+        )
+        .as_str(),
+      ),
+      QueryBy::DateGreater(d) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where date > '{}')",
+          fr.as_query(ty)?,
+          d
+        )
+        .as_str(),
+      ),
+      QueryBy::DateLess(d) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where date < '{}')",
+          fr.as_query(ty)?,
+          d
         )
         .as_str(),
       ),
@@ -873,9 +954,35 @@ impl QueryBy {
         ty,
         n
       )),
+      QueryBy::BpmBetween(n, m) => Ok(format!(
+        "{} where id in (select id from {}_features_rhythm where bpm between {} and {})",
+        fr.as_query(ty)?,
+        ty,
+        n, m
+      )),
+      QueryBy::BpmGreater(n) => Ok(format!(
+        "{} where id in (select id from {}_features_rhythm where bpm > {})",
+        fr.as_query(ty)?,
+        ty,
+        n
+      )),
+      QueryBy::BpmLess(n) => Ok(format!(
+        "{} where id in (select id from {}_features_rhythm where bpm < {})",
+        fr.as_query(ty)?,
+        ty,
+        n
+      )),
       QueryBy::Label(s) => ty.track_else(
         format!(
           "{} where id in (select id from track_tags where label = '{}')",
+          fr.as_query(ty)?,
+          s
+        )
+        .as_str(),
+      ),
+      QueryBy::LabelLike(s) => ty.track_else(
+        format!(
+          "{} where id in (select id from track_tags where label like '{}')",
           fr.as_query(ty)?,
           s
         )
@@ -915,17 +1022,17 @@ impl QueryFor {
         if ty == AudioType::Track {
           q.push_str(
             "join track_tags on tracks.id = track_tags
-join track_tags_musicbrainz on tracks.id = track_tags_musicbrainz.track_id
+join track_tags_musicbrainz on tracks.id = track_tags_musicbrainz.id
 ",
           );
         }
         q.push_str(
           format!(
-            "join {ty}_features_lowlevel on tracks.id = {ty}_features_lowlevel.{ty}_id
-join {ty}_features_rhythm on {typ}.id = {ty}_features_rhythm.{ty}_id
-join {ty}_features_sfx on {typ}.id = {ty}_features_sfx.{ty}_id
-join {ty}_features_tonal on {typ}.id = {ty}_features_sfx.{ty}_id
-join {ty}_images on {typ}.id = {ty}_images.{ty}_id",
+            "join {ty}_features_lowlevel on tracks.id = {ty}_features_lowlevel.id
+join {ty}_features_rhythm on {typ}.id = {ty}_features_rhythm.id
+join {ty}_features_sfx on {typ}.id = {ty}_features_sfx.id
+join {ty}_features_tonal on {typ}.id = {ty}_features_sfx.id
+join {ty}_images on {typ}.id = {ty}_images.id",
             typ = ty.table_name()
           )
           .as_str(),

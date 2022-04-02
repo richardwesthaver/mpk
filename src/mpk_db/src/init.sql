@@ -27,7 +27,7 @@ label text,
 producer text,
 engineer text,
 mixer text,
-foreign key(track_id) references tracks(id));
+foreign key(id) references tracks(id));
 
 create table if not exists track_tags_musicbrainz (
 id integer unique,
@@ -41,7 +41,7 @@ releasetrackid text,
 trackid text,
 asin text,
 musicip_puid text,
-foreign key(track_id) references tracks(id));
+foreign key(id) references tracks(id));
 
 create table if not exists track_features_lowlevel (
 id integer unique,
@@ -83,7 +83,7 @@ sccoeffs_frame_size integer,
 sccoeffs blob,
 scvalleys_frame_size integer,
 scvalleys blob,
-foreign key(track_id) references tracks(id));
+foreign key(id) references tracks(id));
 
 create table if not exists track_features_rhythm (
 id integer unique,
@@ -104,7 +104,7 @@ onset_times blob,
 beats_loudness_band_ratio_frame_size integer,
 beats_loudness_band_ratio blob,
 histogram blob,
-foreign key(track_id) references tracks(id));
+foreign key(id) references tracks(id));
 
 create table if not exists track_features_sfx (
 id integer unique,
@@ -115,7 +115,7 @@ pitch_min_to_total real,
 inharmonicity blob,
 oddtoevenharmonicenergyratio blob,
 tristimulus blob,
-foreign key(track_id) references tracks(id));
+foreign key(id) references tracks(id));
 
 create table if not exists track_features_tonal (
 id integer unique,
@@ -136,7 +136,7 @@ chords_scale text,
 key_key text,
 key_scale text,
 chords_progression blob,
-foreign key(track_id) references tracks(id));
+foreign key(id) references tracks(id));
 
 create table if not exists track_images (
 id integer unique,
@@ -146,13 +146,13 @@ log_frame_size integer,
 log_spec blob,
 freq_frame_size integer,
 freq_spec blob,
-foreign key(track_id) references tracks(id));
+foreign key(id) references tracks(id));
 
 create table if not exists track_user_data (
 id integer unique,
 user_tags text,
 notes text,
-foreign key(track_id) references tracks(id));
+foreign key(id) references tracks(id));
 
 create table if not exists samples (
 id integer primary key,
@@ -205,7 +205,7 @@ sccoeffs_frame_size integer,
 sccoeffs blob,
 scvalleys_frame_size integer,
 scvalleys blob,
-foreign key(sample_id) references samples(id));
+foreign key(id) references samples(id));
 
 create table if not exists sample_features_rhythm (
 id integer unique,
@@ -226,7 +226,7 @@ onset_times blob,
 beats_loudness_band_ratio_frame_size integer,
 beats_loudness_band_ratio blob,
 histogram blob,
-foreign key(sample_id) references samples(id));
+foreign key(id) references samples(id));
 
 create table if not exists sample_features_sfx (
 id integer unique,
@@ -237,7 +237,7 @@ pitch_min_to_total real,
 inharmonicity blob,
 oddtoevenharmonicenergyratio blob,
 tristimulus blob,
-foreign key(sample_id) references samples(id));
+foreign key(id) references samples(id));
 
 create table if not exists sample_features_tonal (
 id integer unique,
@@ -258,7 +258,7 @@ chords_scale text,
 key_key text,
 key_scale text,
 chords_progression blob,
-foreign key(sample_id) references samples(id));
+foreign key(id) references samples(id));
 
 create table if not exists sample_images (
 id integer unique,
@@ -268,13 +268,13 @@ log_frame_size integer,
 log_spec blob,
 freq_frame_size integer,
 freq_spec blob,
-foreign key(sample_id) references samples(id));
+foreign key(id) references samples(id));
 
 create table if not exists sample_user_data (
 id integer unique,
 user_tags text,
 notes text,
-foreign key(sample_id) references samples(id));
+foreign key(id) references samples(id));
 
 create table if not exists projects (
 id integer unique,
@@ -287,5 +287,5 @@ create table if not exists project_user_data (
 id integer unique,
 user_tags text,
 notes text,
-foreign key(project_id) references projects(id));
+foreign key(id) references projects(id));
 COMMIT;

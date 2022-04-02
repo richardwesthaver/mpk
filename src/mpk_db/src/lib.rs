@@ -1044,10 +1044,17 @@ or checksum = ?2",
     ty: AudioType,
     by: QueryBy,
     fr: QueryFor,
-  ) -> Result<Vec<(i64, String)>> {
+  ) -> Result<Vec<Vec<rusqlite::types::Value>>> {
     let sql = by.as_query(ty, fr)?;
     let mut stmt = self.conn.prepare(sql.as_str())?;
-    let q = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+    let count = stmt.column_count();
+    let q = stmt.query_map([], |row| {
+      let mut cols = Vec::with_capacity(count);
+      for i in 0..count {
+        cols.push(row.get::<_, rusqlite::types::Value>(i)?)
+      }
+      Ok(cols)
+    })?;
     let mut rows = Vec::new();
     for i in q {
       rows.push(i?)

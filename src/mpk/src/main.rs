@@ -2,7 +2,7 @@ use clap::{AppSettings, Parser, Subcommand};
 use mpk::Result;
 use mpk_audio::gen::SampleChain;
 use mpk_config::{expand_tilde, Config};
-use mpk_db::{AudioType, Mdb, QueryBy, QueryFor};
+use mpk_db::{AudioType, Mdb, NaiveDate, QueryBy, QueryFor};
 use std::io;
 use std::path::PathBuf;
 use std::sync::mpsc::sync_channel;
@@ -294,8 +294,10 @@ fn main() -> Result<()> {
             Some(QueryBy::Album(s))
           } else if let Some(s) = genre {
             Some(QueryBy::Genre(s))
-          } else if let Some(s) = date {
-            Some(QueryBy::Date(s))
+          } else if let Some(d) = date {
+            Some(QueryBy::Date(
+              NaiveDate::parse_from_str(&d, "%Y-%m-%d").unwrap(),
+            ))
           } else if let Some(n) = sr {
             Some(QueryBy::SampleRate(n))
           } else if let Some(n) = bpm {
