@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-03-31
+#+DATE: 2022-04-03
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
@@ -92,9 +92,9 @@ MPK is meant to be used on a Linux box. In this example we'll be using
 Arch Linux.
 
 MPK also runs on MacOS but some of the project management
-functionality isn't. Most notably, you can't run the [[https://new-session-manager.jackaudio.org][NSM]] server on
-MacOS, but you can still interact with one remotely. All other
-features are supported on both platforms.
+functionality isn't available. Most notably, you can't run the [[https://new-session-manager.jackaudio.org][NSM]]
+server on MacOS, but you can still interact with one remotely. All
+other features are supported on both platforms.
 ** Installation
 First install the dependencies:
 #+begin_src shell

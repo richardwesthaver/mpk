@@ -797,6 +797,31 @@ impl Default for QueryType {
   }
 }
 
+impl FromStr for QueryType {
+  type Err = Error;
+  fn from_str(input: &str) -> Result<QueryType> {
+    match input {
+      "="|"eq"|"equal" => Ok(QueryType::Equals),
+      "lk"|"like" => Ok(QueryType::Like),
+      "bt"|"betweeen" => Ok(QueryType::Between),
+      "gt"|"greater" => Ok(QueryType::GreaterThan),
+      "lt"|"less" => Ok(QueryType::LessThan),
+      e => Err(Error::BadType(e.to_string())),
+    }
+  }
+}
+
+impl fmt::Display for QueryType {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match self {
+      QueryType::Equals => f.write_str("="),
+      QueryType::Like => f.write_str("~"),
+      QueryType::Between => f.write_str("-"),
+      QueryType::GreaterThan => f.write_str(">"),
+      QueryType::LessThan => f.write_str("<"),
+    }
+  }
+}
 /// Columns to query by.
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryBy {

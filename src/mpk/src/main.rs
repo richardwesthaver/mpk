@@ -2,8 +2,9 @@ use clap::{AppSettings, Parser, Subcommand};
 use mpk::Result;
 use mpk_audio::gen::SampleChain;
 use mpk_config::{expand_tilde, Config};
-use mpk_db::{AudioType, Mdb, NaiveDate, QueryBy, QueryFor};
+use mpk_db::{AudioType, Mdb, NaiveDate, QueryBy, QueryFor, QueryType};
 use std::io;
+use std::str::FromStr;
 use std::path::PathBuf;
 use std::sync::mpsc::sync_channel;
 use std::thread;
@@ -124,6 +125,7 @@ enum DbCmd {
   Query {
     ty: Option<AudioType>,
     query: Option<QueryFor>,
+    by: Option<String>,
     #[clap(long)]
     id: Option<u64>,
     #[clap(long)]
@@ -270,6 +272,7 @@ fn main() -> Result<()> {
         DbCmd::Query {
           ty,
           query,
+	  by,
           id,
           path,
           title,
@@ -283,27 +286,58 @@ fn main() -> Result<()> {
           raw,
         } => {
           let by: Option<QueryBy> = if let Some(n) = id {
-            Some(QueryBy::Id(n))
+	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
+	      Some(QueryType::GreaterThan) => Some(QueryBy::IdGreater(n)),
+	      Some(QueryType::LessThan) => Some(QueryBy::IdLess(n)),	      
+	      _ => Some(QueryBy::Id(n)),
+	    }
           } else if let Some(p) = path {
-            Some(QueryBy::Path(p))
+	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
+	      Some(QueryType::Like) => Some(QueryBy::PathLike(p)),
+	      _ => Some(QueryBy::Path(p)),
+	    }
           } else if let Some(s) = title {
-            Some(QueryBy::Title(s))
+	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
+	      Some(QueryType::Like) => Some(QueryBy::TitleLike(s)),
+	      _ => Some(QueryBy::Title(s)),
+	    }
           } else if let Some(s) = artist {
-            Some(QueryBy::Artist(s))
+	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
+	      Some(QueryType::Like) => Some(QueryBy::ArtistLike(s)),
+	      _ => Some(QueryBy::Artist(s)),
+	    }
           } else if let Some(s) = album {
-            Some(QueryBy::Album(s))
+	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
+	      Some(QueryType::Like) => Some(QueryBy::AlbumLike(s)),
+	      _ => Some(QueryBy::Album(s)),
+	    }
           } else if let Some(s) = genre {
-            Some(QueryBy::Genre(s))
+	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
+	      Some(QueryType::Like) => Some(QueryBy::GenreLike(s)),
+	      _ => Some(QueryBy::Genre(s)),
+	    }
           } else if let Some(d) = date {
-            Some(QueryBy::Date(
-              NaiveDate::parse_from_str(&d, "%Y-%m-%d").unwrap(),
-            ))
+	    let d = NaiveDate::parse_from_str(&d, "%Y-%m-%d").unwrap();
+	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
+	      Some(QueryType::GreaterThan) => Some(QueryBy::DateGreater(d)),
+	      Some(QueryType::LessThan) => Some(QueryBy::DateLess(d)),	      
+	      _ => Some(QueryBy::Date(d)),
+	    }
           } else if let Some(n) = sr {
-            Some(QueryBy::SampleRate(n))
+	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
+	      _ => Some(QueryBy::SampleRate(n)),
+	    }
           } else if let Some(n) = bpm {
-            Some(QueryBy::Bpm(n))
+	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
+	      Some(QueryType::GreaterThan) => Some(QueryBy::BpmGreater(n)),
+	      Some(QueryType::LessThan) => Some(QueryBy::BpmLess(n)),	      
+	      _ => Some(QueryBy::Bpm(n)),
+	    }
           } else if let Some(s) = label {
-            Some(QueryBy::Label(s))
+	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
+	      Some(QueryType::Like) => Some(QueryBy::LabelLike(s)),
+	      _ => Some(QueryBy::Label(s)),
+	    }
           } else {
             None
           };
