@@ -298,9 +298,10 @@ pub struct DbConfig {
   pub path: Option<String>,
   pub flags: Option<Vec<String>>,
   pub limits: Option<HashMap<String, usize>>,
-  /// TODO: trace/profile to stdout or file, init in _db
   pub trace: bool,
   pub profile: bool,
+  /// Custom views which can be queried via CLI
+  pub views: Option<HashMap<String, String>>,
 }
 
 impl DbConfig {
@@ -336,6 +337,7 @@ impl Default for DbConfig {
       limits: None,
       trace: false,
       profile: false,
+      views: None,
     }
   }
 }
@@ -395,18 +397,6 @@ impl From<Config> for JackConfig {
     cfg.jack
   }
 }
-
-/// Configurations for Sets.
-#[derive(Serialize, Deserialize)]
-pub struct SetConfig {}
-
-/// Configuration for Projects.
-#[derive(Serialize, Deserialize)]
-pub struct ProjectConfig {}
-
-/// Configuration for Patches.
-#[derive(Serialize, Deserialize)]
-pub struct PatchConfig {}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct MetroConfig {
@@ -484,3 +474,15 @@ impl From<Config> for ExtractorConfig {
     cfg.extractor
   }
 }
+
+/// Configurations for Sets.
+#[derive(Serialize, Deserialize)]
+pub struct SetConfig {}
+
+/// Configuration for Projects.
+#[derive(Serialize, Deserialize)]
+pub struct ProjectConfig {}
+
+/// Configuration for Patches.
+#[derive(Serialize, Deserialize)]
+pub struct PatchConfig {}

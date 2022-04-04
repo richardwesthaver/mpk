@@ -179,7 +179,6 @@ mel_bands = 96
 lf_bound = 0
 hf_bound = 11000
 #+end_src
-XC
 Much of the configuration can be overridden by CLI flags but you may
 want to change some of the default values. Some of the optional
 settings aren't included in the default file:

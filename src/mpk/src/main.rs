@@ -2,13 +2,13 @@ use clap::{AppSettings, Parser, Subcommand};
 use mpk::Result;
 use mpk_audio::gen::SampleChain;
 use mpk_config::{expand_tilde, Config};
-use mpk_db::{AudioType, Mdb, NaiveDate, QueryBy, QueryFor, QueryType};
+use mpk_db::{AudioType, Mdb, NaiveDate, QueryBy, QueryFor, QueryType, DbValue};
 use std::io;
 use std::str::FromStr;
 use std::path::PathBuf;
 use std::sync::mpsc::sync_channel;
 use std::thread;
-
+use serde::Serialize;
 #[derive(Parser)]
 #[clap(name = "mpk")]
 #[clap(about = "media programming kit")]
@@ -148,6 +148,8 @@ enum DbCmd {
     label: Option<String>,
     #[clap(short, long)]
     raw: Option<String>,
+    #[clap(long)]
+    csv: bool,
   },
   /// Sync resources with DB
   Sync {
@@ -202,7 +204,12 @@ fn main() -> Result<()> {
       Mdb::new(db_path.as_deref())?.init()?;
       ppln("[DONE]", 'd');
     }
-    Command::Info { audio, midi, db } => {
+    Command::Info { mut audio, mut midi, mut db } => {
+      if !(audio || midi || db) {
+	audio = true;
+	midi = true;
+	db = true;
+      }
       if audio {
         println!("\x1b[1mAUDIO INFO\x1b[0m");
         mpk_audio::info();
@@ -216,20 +223,9 @@ fn main() -> Result<()> {
         let db = Mdb::new_with_config(cfg.db.to_owned())?;
         let ts = db.track_count()?;
         let ss = db.sample_count()?;
+	println!("sqlite_version: {}", db.version());
         println!("{} tracks", ts);
         println!("{} samples", ss);
-      }
-      if !(audio || midi || db) {
-        println!("\x1b[1mDB INFO\x1b[0m");
-        let db = Mdb::new_with_config(cfg.db)?;
-        let ts = db.track_count()?;
-        let ss = db.sample_count()?;
-        println!("{} tracks", ts);
-        println!("{} samples", ss);
-        println!("\x1b[1mAUDIO INFO\x1b[0m");
-        mpk_audio::info();
-        println!("\x1b[1mMIDI INFO\x1b[0m");
-        mpk_midi::list_midi_ports()?;
       }
     }
     Command::Play {
@@ -284,6 +280,7 @@ fn main() -> Result<()> {
           bpm,
           label,
           raw,
+	  csv,
         } => {
           let by: Option<QueryBy> = if let Some(n) = id {
 	    match by.map(|b| QueryType::from_str(&b).unwrap()) {
@@ -343,8 +340,15 @@ fn main() -> Result<()> {
           };
 
           if let Some(by) = by {
-            println!("{}", by.as_query(ty.unwrap(), query.unwrap()).unwrap());
-            println!("{:?}", conn.query(ty.unwrap(), by, query.unwrap())?);
+	    let s = by.as_query(ty.unwrap_or_default(), query.unwrap_or_default()).unwrap();
+	    let q = conn.query::<DbValue>(ty.unwrap_or_default(), by, query.unwrap_or_default())?;
+	    if csv {
+	      let mut w = csv::Writer::from_writer(io::stdout());
+	      w.serialize(q).unwrap();
+	    } else {
+              println!("{}", s);
+              println!("{:#?}", q);
+	    }
           }
           if let Some(q) = raw {
             println!("{}", conn.query_raw(&q)?);

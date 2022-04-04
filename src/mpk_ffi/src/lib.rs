@@ -21,7 +21,7 @@ use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 use mpk_db::{
   AudioData, AudioType, LowlevelFeatures, MatrixReal, Mdb, MusicbrainzTags,
   RhythmFeatures, SfxFeatures, Spectrograms, TonalFeatures, TrackTags, Uuid, VecReal,
-  VecText,
+  VecText, FileChecksum
 };
 use mpk_hash::Checksum;
 use std::ffi::{CStr, CString, OsStr};
@@ -328,7 +328,7 @@ pub extern "C" fn mdb_audio_data_new(
     channels: Some(channels),
     bitrate: Some(bitrate),
     samplerate: Some(samplerate),
-    checksum: Some(checksum),
+    checksum: Some(FileChecksum::from(checksum)),
   };
   let box_data = Box::new(data);
   Box::into_raw(box_data)

@@ -26,24 +26,52 @@
 use crate::err::{Error, Result};
 pub use chrono::NaiveDate;
 use mpk_hash::Checksum;
-use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, Value, ValueRef};
+use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
+use rusqlite::Row;
+pub use rusqlite::types::Value as SqlValue;
 use std::fmt;
 use std::ops::{Index, Range};
 use std::path::PathBuf;
 use std::str::FromStr;
 pub use uuid::Uuid;
+use serde::{Serialize, Deserialize, ser::Serializer, de::{Deserializer, Visitor}};
+
 /// Display wrapper for SQLite Value
 #[derive(Debug)]
-pub struct DbValue(pub Value);
+pub struct DbValue(pub SqlValue);
 
 impl fmt::Display for DbValue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self.0 {
-      Value::Null => write!(f, "NULL"),
-      Value::Integer(i) => write!(f, "{}", i),
-      Value::Real(i) => write!(f, "{}", i),
-      Value::Text(ref i) => write!(f, "{}", i),
-      Value::Blob(ref x) => write!(f, "<Blob[u8;{}]>", x.len()),
+      SqlValue::Null => write!(f, "NULL"),
+      SqlValue::Integer(i) => write!(f, "{}", i),
+      SqlValue::Real(i) => write!(f, "{}", i),
+      SqlValue::Text(ref i) => write!(f, "{}", i),
+      SqlValue::Blob(ref x) => write!(f, "<Blob[u8;{}]>", x.len()),
+    }
+  }
+}
+
+impl FromSql for DbValue {
+  fn column_result(value: ValueRef) -> FromSqlResult<Self> {
+    Ok(DbValue(value.into()))
+  }
+}
+
+impl ToSql for DbValue {
+  fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+    self.0.to_sql()
+  }
+}
+
+impl Serialize for DbValue {
+  fn serialize<S: Serializer>(&self, ser: S) -> std::result::Result<S::Ok, S::Error> {
+    match self.0 {
+      SqlValue::Integer(n) => ser.serialize_i64(n),
+      SqlValue::Real(n) => ser.serialize_f64(n),
+      SqlValue::Text(ref s) => ser.serialize_str(&s),
+      SqlValue::Blob(ref b) => ser.serialize_bytes(&b),
+      SqlValue::Null => ser.serialize_none()
     }
   }
 }
@@ -62,7 +90,7 @@ impl fmt::Display for DbValues {
 }
 
 /// A Vec<f32> for SQLite
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VecReal(pub Vec<f32>);
 
 impl VecReal {
@@ -139,7 +167,7 @@ impl From<MatrixReal> for VecReal {
 }
 
 /// A Matrix of f32s for SQLite. Implemented as a flat Vec with a frame_size
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MatrixReal {
   pub vec: VecReal,
   pub frame_size: usize,
@@ -178,7 +206,7 @@ impl fmt::Display for MatrixReal {
 }
 
 //TODO
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Note {
   C = 0,
   Db = 1,
@@ -192,6 +220,25 @@ pub enum Note {
   A = 9,
   Bb = 10,
   B = 11,
+}
+
+impl Note {
+  pub fn val(&self) -> u8 {
+    match self {
+      Note::C => 0,
+      Note::Db => 1,
+      Note::D => 2,
+      Note::Eb => 3,
+      Note::E => 4,
+      Note::F => 5,
+      Note::Gb => 6,
+      Note::G => 7,
+      Note::Ab => 8,
+      Note::A => 9,
+      Note::Bb => 10,
+      Note::B => 11,
+    }
+  }
 }
 
 impl FromStr for Note {
@@ -215,10 +262,60 @@ impl FromStr for Note {
   }
 }
 
-#[derive(Debug, Default)]
+impl From<&u8> for Note {
+  fn from(n: &u8) -> Self {
+    match n {
+      0 => Note::C,
+      1 => Note::Db,
+      2 => Note::D,
+      3 => Note::Eb,
+      4 => Note::E,
+      5 => Note::F,
+      6 => Note::Gb,
+      7 => Note::G,
+      8 => Note::Ab,
+      9 => Note::A,
+      10 => Note::Bb,
+      11 => Note::B,
+      _ => panic!("invalid note value"),
+    }
+  }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct VecNote(pub Vec<Note>);
 
-#[derive(Debug, Default)]
+impl VecNote {
+  fn as_bytes(&self) -> Vec<u8> {
+    self.0.iter().map(|n| n.val()).collect()
+  }
+}
+
+impl From<Vec<u8>> for VecNote {
+  fn from(v: Vec<u8>) -> Self {
+    VecNote(v.iter().map(|n| Note::from(n)).collect())
+  }
+}
+
+impl From<&[u8]> for VecNote {
+  fn from(v: &[u8]) -> Self {
+    VecNote(v.iter().map(|n| Note::from(n)).collect())
+  }
+}
+
+impl FromSql for VecNote {
+  fn column_result(value: ValueRef) -> FromSqlResult<Self> {
+    value.as_blob().and_then(|blob| Ok(VecNote::from(blob)))
+  }
+}
+
+impl ToSql for VecNote {
+  fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+    Ok(ToSqlOutput::from(self.as_bytes()))
+  }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct VecText(pub Vec<String>);
 
 impl FromSql for VecText {
@@ -242,9 +339,65 @@ impl ToSql for VecText {
   }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct FileChecksum(Checksum);
+
+impl FileChecksum {
+  pub fn to_hex(&self) -> String {
+    self.0.to_hex()
+  }
+  pub fn from_hex(hex: &str) -> Self {
+    FileChecksum(Checksum::from_hex(hex))
+  }
+}
+
+impl From<Checksum> for FileChecksum {
+  fn from(c: Checksum) -> Self {
+    FileChecksum(c)
+  }
+}
+
+impl ToSql for FileChecksum {
+  fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+    Ok(ToSqlOutput::from(self.0.to_hex()))
+  }
+}
+
+impl FromSql for FileChecksum {
+  fn column_result(value: ValueRef) -> FromSqlResult<Self> {
+    value.as_str().and_then(|text| {
+      Ok(FileChecksum::from_hex(text))
+    })
+  }
+}
+
+impl Serialize for FileChecksum {
+  fn serialize<S: Serializer>(&self, ser: S) -> std::result::Result<S::Ok, S::Error> {
+    ser.serialize_str(&self.to_hex())
+  }
+}
+
+struct FileChecksumVisitor;
+
+impl<'de> Visitor<'de> for FileChecksumVisitor {
+  type Value = FileChecksum;
+  fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    f.write_str("a hex-encoded checksum")
+  }
+  fn visit_str<E: serde::de::Error>(self, v: &str) -> std::result::Result<Self::Value, E> {
+    Ok(FileChecksum::from_hex(v))
+  }
+}
+
+impl<'de> Deserialize<'de> for FileChecksum {
+  fn deserialize<D: Deserializer<'de>>(de: D) -> std::result::Result<FileChecksum, D::Error> {
+    de.deserialize_str(FileChecksumVisitor)
+  }
+}
+
 /// Generic audio file information
 /// tables: [tracks, samples]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AudioData {
   pub path: String,
   pub filesize: Option<usize>,
@@ -252,7 +405,24 @@ pub struct AudioData {
   pub channels: Option<u8>,
   pub bitrate: Option<u32>,
   pub samplerate: Option<u32>,
-  pub checksum: Option<Checksum>,
+  pub checksum: Option<FileChecksum>,
+}
+
+impl AudioData {
+  pub fn to_params<'a>(&'a self) -> [&'a dyn ToSql; 7] {
+    [&self.path, &self.filesize, &self.duration, &self.channels, &self.bitrate, &self.samplerate, &self.checksum]
+  }
+  pub fn from_row<'stmt>(row: &Row<'stmt>, idx: usize) -> Result<Self> {
+    Ok(AudioData {
+      path: row.get(idx)?,
+      filesize: row.get(idx+1)?,
+      duration: row.get(idx+2)?,
+      channels: row.get(idx+3)?,
+      bitrate: row.get(idx+4)?,
+      samplerate: row.get(idx+5)?,
+      checksum: Some(FileChecksum::from_hex(row.get::<_, String>(idx+6)?.as_str())),
+    })
+  }
 }
 
 impl fmt::Display for AudioData {
@@ -278,7 +448,7 @@ impl fmt::Display for AudioData {
       .map(|n| n.to_string())
       .unwrap_or("NULL".to_string());
     let checksum = self
-      .checksum
+      .checksum.as_ref()
       .map(|c| c.to_hex())
       .unwrap_or("NULL".to_string());
     write!(
@@ -297,7 +467,7 @@ checksum: {}",
 
 /// Track tags retrieved from file headers (i.e. ID3).
 /// tables: [track_tags]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TrackTags {
   pub artist: Option<String>,
   pub title: Option<String>,
@@ -312,6 +482,27 @@ pub struct TrackTags {
   pub producer: Option<String>,
   pub engineer: Option<String>,
   pub mixer: Option<String>,
+}
+
+impl TrackTags {
+  pub fn to_params<'a>(&'a self, id: &'a i64) -> [&'a dyn ToSql; 14] {
+    [
+        id,
+        &self.artist,
+        &self.title,
+        &self.album,
+        &self.genre,
+        &self.date,
+        &self.tracknumber,
+        &self.format,
+        &self.language,
+        &self.country,
+        &self.label,
+        &self.producer,
+        &self.engineer,
+        &self.mixer,
+    ]
+  }
 }
 
 impl fmt::Display for TrackTags {
@@ -369,7 +560,7 @@ mixer: {}",
 /// Track tags specific to musicbrainz.org. Used for looking up tracks
 /// on the internet.
 /// tables: [track_tags_musicbrainz]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct MusicbrainzTags {
   pub albumartistid: Option<Uuid>,
   pub albumid: Option<Uuid>,
@@ -381,6 +572,24 @@ pub struct MusicbrainzTags {
   pub trackid: Option<Uuid>,
   pub asin: Option<String>,
   pub musicip_puid: Option<Uuid>,
+}
+
+impl MusicbrainzTags {
+  pub fn to_params<'a>(&'a self, id: &'a i64) -> [&'a dyn ToSql; 11] {
+    [
+        id,
+        &self.albumartistid,
+        &self.albumid,
+        &self.albumstatus,
+        &self.albumtype,
+        &self.artistid,
+        &self.releasegroupid,
+        &self.releasetrackid,
+        &self.trackid,
+        &self.asin,
+        &self.musicip_puid,
+    ]
+  }
 }
 
 impl fmt::Display for MusicbrainzTags {
@@ -463,7 +672,7 @@ musicip_puid: {}",
 
 /// Lowlevel features containg a variety of spectral features.
 /// tables: [track_features_lowlevel, sample_features_lowlevel]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct LowlevelFeatures {
   pub average_loudness: f64,
   pub barkbands_kurtosis: VecReal,
@@ -499,6 +708,52 @@ pub struct LowlevelFeatures {
   pub mfcc: MatrixReal,
   pub sccoeffs: MatrixReal,
   pub scvalleys: MatrixReal,
+}
+
+impl LowlevelFeatures {
+  pub fn to_params<'a>(&'a self, id: &'a i64) -> [&'a dyn ToSql; 39] {
+    [
+      id,
+      &self.average_loudness,
+      &self.barkbands_kurtosis,
+      &self.barkbands_skewness,
+      &self.barkbands_spread,
+      &self.barkbands.frame_size,
+      &self.barkbands.vec,
+      &self.dissonance,
+      &self.hfc,
+      &self.pitch,
+      &self.pitch_instantaneous_confidence,
+      &self.pitch_salience,
+      &self.silence_rate_20db,
+      &self.silence_rate_30db,
+      &self.silence_rate_60db,
+      &self.spectral_centroid,
+      &self.spectral_complexity,
+      &self.spectral_crest,
+      &self.spectral_decrease,
+      &self.spectral_energy,
+      &self.spectral_energyband_high,
+      &self.spectral_energyband_low,
+      &self.spectral_energyband_middle_high,
+      &self.spectral_energyband_middle_low,
+      &self.spectral_flatness_db,
+      &self.spectral_flux,
+      &self.spectral_kurtosis,
+      &self.spectral_rms,
+      &self.spectral_rolloff,
+      &self.spectral_skewness,
+      &self.spectral_spread,
+      &self.spectral_strongpeak,
+      &self.zerocrossingrate,
+      &self.mfcc.frame_size,
+      &self.mfcc.vec,
+      &self.sccoeffs.frame_size,
+      &self.sccoeffs.vec,
+      &self.scvalleys.frame_size,
+      &self.scvalleys.vec,
+    ]
+  }
 }
 
 impl fmt::Display for LowlevelFeatures {
@@ -579,7 +834,7 @@ scvalleys: {}",
 
 /// Rhythm features for audio including bpm and onsets
 /// tables: [track_features_rhythm, sample_features_rhythm]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct RhythmFeatures {
   pub bpm: f64,
   pub confidence: f64,
@@ -597,6 +852,31 @@ pub struct RhythmFeatures {
   pub onset_times: VecReal,
   pub beats_loudness_band_ratio: MatrixReal,
   pub histogram: VecReal,
+}
+
+impl RhythmFeatures {
+  pub fn to_params<'a>(&'a self, id: &'a i64) -> [&'a dyn ToSql; 18] {
+    [
+      id,
+      &self.bpm,
+      &self.confidence,
+      &self.onset_rate,
+      &self.beats_loudness,
+      &self.first_peak_bpm,
+      &self.first_peak_spread,
+      &self.first_peak_weight,
+      &self.second_peak_bpm,
+      &self.second_peak_spread,
+      &self.second_peak_weight,
+      &self.beats_position,
+      &self.bpm_estimates,
+      &self.bpm_intervals,
+      &self.onset_times,
+      &self.beats_loudness_band_ratio.frame_size,
+      &self.beats_loudness_band_ratio.vec,
+      &self.histogram,
+    ]
+  }
 }
 
 impl fmt::Display for RhythmFeatures {
@@ -641,7 +921,7 @@ histogram: {}",
 
 /// SFX features
 /// tables: [track_features_sfx, sample_features_sfx]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct SfxFeatures {
   pub pitch_after_max_to_before_max_energy_ratio: f64,
   pub pitch_centroid: f64,
@@ -650,6 +930,21 @@ pub struct SfxFeatures {
   pub inharmonicity: VecReal,
   pub oddtoevenharmonicenergyratio: VecReal,
   pub tristimulus: MatrixReal,
+}
+
+impl SfxFeatures {
+  pub fn to_params<'a>(&'a self, id: &'a i64) -> [&'a dyn ToSql; 8] {
+    [
+      id,
+      &self.pitch_after_max_to_before_max_energy_ratio,
+      &self.pitch_centroid,
+      &self.pitch_max_to_total,
+      &self.pitch_min_to_total,
+      &self.inharmonicity,
+      &self.oddtoevenharmonicenergyratio,
+      &self.tristimulus.vec,
+    ]
+  }
 }
 
 impl fmt::Display for SfxFeatures {
@@ -676,7 +971,7 @@ tristimulus: {}",
 
 /// Tonal features including key and chord progression estimates
 /// tables: [track_features_tonal, sample_features_tonal]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TonalFeatures {
   pub chords_changes_rate: f64,
   pub chords_number_rate: f64,
@@ -696,10 +991,35 @@ pub struct TonalFeatures {
   pub chords_progression: VecText,
 }
 
+impl TonalFeatures {
+  pub fn to_params<'a>(&'a self, id: &'a i64) -> [&'a dyn ToSql; 18] {
+    [
+      id,
+      &self.chords_changes_rate,
+      &self.chords_number_rate,
+      &self.key_strength,
+      &self.tuning_diatonic_strength,
+      &self.tuning_equal_tempered_deviation,
+      &self.tuning_frequency,
+      &self.tuning_nontempered_energy_ratio,
+      &self.chords_strength,
+      &self.chords_histogram,
+      &self.thpcp,
+      &self.hpcp.frame_size,
+      &self.hpcp.vec,
+      &self.chords_key,
+      &self.chords_scale,
+      &self.key_key,
+      &self.key_scale,
+      &self.chords_progression,
+    ]
+  }
+}
+
 /// Audio spectrograms. Mel-weighted spectrogram is particularly
 /// useful for analysis.
 /// tables: [track_images, sample_images]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Spectrograms {
   pub mel_spec: Option<MatrixReal>,
   pub log_spec: Option<MatrixReal>,
@@ -759,6 +1079,12 @@ impl AudioType {
       AudioType::Track => Ok(sql.into()),
       AudioType::Sample => Err(Error::BadType("sample".into())),
     }
+  }
+}
+
+impl Default for AudioType {
+  fn default() -> Self {
+    AudioType::Track
   }
 }
 
@@ -1065,6 +1391,12 @@ join {ty}_images on {typ}.id = {ty}_images.id",
         Ok(q)
       }
     }
+  }
+}
+
+impl Default for QueryFor {
+  fn default() -> Self {
+    QueryFor::Info
   }
 }
 

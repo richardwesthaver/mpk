@@ -4,11 +4,15 @@
 use mpk_config::DbConfig;
 use mpk_hash::Checksum;
 use rusqlite::{version, Connection, OpenFlags, ToSql};
+use rusqlite::types::FromSql;
 use std::path::Path;
+use rusqlite::backup::{Backup, Progress};
+
+pub use rusqlite::DatabaseName;
+
 mod err;
 pub use err::{Error, Result};
-use rusqlite::backup::{Backup, Progress};
-pub use rusqlite::DatabaseName;
+
 mod types;
 pub use types::*;
 
@@ -28,7 +32,7 @@ impl Mdb {
     Ok(Mdb { conn })
   }
 
-  pub fn version() -> &'static str {
+  pub fn version(&self) -> &'static str {
     version()
   }
 
@@ -119,7 +123,7 @@ bitrate = ?5,
 samplerate = ?6,
 checksum = ?7
 where id = ?1",
-      &[&file.path, &file.filesize, &file.duration, &file.channels, &file.bitrate, &file.samplerate, &file.checksum.map(|c| c.to_hex())],
+      &file.to_params(),
     )?;
     Ok(self.last_track_id(&file.path))
   }
@@ -143,22 +147,7 @@ set artist = ?2,
     engineer = ?13,
     mixer = ?14
 where id = ?1",
-      &[
-        &id,
-        &tags.artist,
-        &tags.title,
-        &tags.album,
-        &tags.genre,
-        &tags.date,
-        &tags.tracknumber,
-        &tags.format,
-        &tags.language,
-        &tags.country,
-        &tags.label,
-        &tags.producer,
-        &tags.engineer,
-        &tags.mixer,
-      ],
+      &tags.to_params(&id)
     )?;
     Ok(())
   }
@@ -183,19 +172,7 @@ trackid = ?9,
 asin = ?10,
 musicip_puid = ?11
 where id = ?1",
-      &[
-        &id,
-        &tags.albumartistid,
-        &tags.albumid,
-        &tags.albumstatus,
-        &tags.albumtype,
-        &tags.artistid,
-        &tags.releasegroupid,
-        &tags.releasetrackid,
-        &tags.trackid,
-        &tags.asin,
-        &tags.musicip_puid,
-      ],
+      &tags.to_params(&id)
     )?;
     Ok(())
   }
@@ -247,45 +224,7 @@ sccoeffs = ?37,
 scvalleys_frame_size = ?38,
 scvalleys = ?39
 where id = ?1",
-	      &[&id,
-		&features.average_loudness,
-		&features.barkbands_kurtosis,
-		&features.barkbands_skewness,
-		&features.barkbands_spread,
-		&features.barkbands.frame_size,
-		&features.barkbands.to_vec(),
-		&features.dissonance,
-		&features.hfc,
-		&features.pitch,
-		&features.pitch_instantaneous_confidence,
-		&features.pitch_salience,
-		&features.silence_rate_20db,
-		&features.silence_rate_30db,
-		&features.silence_rate_60db,
-		&features.spectral_centroid,
-		&features.spectral_complexity,
-		&features.spectral_crest,
-		&features.spectral_decrease,
-		&features.spectral_energy,
-		&features.spectral_energyband_high,
-		&features.spectral_energyband_low,
-		&features.spectral_energyband_middle_high,
-		&features.spectral_energyband_middle_low,
-		&features.spectral_flatness_db,
-		&features.spectral_flux,
-		&features.spectral_kurtosis,
-		&features.spectral_rms,
-		&features.spectral_rolloff,
-		&features.spectral_skewness,
-		&features.spectral_spread,
-		&features.spectral_strongpeak,
-		&features.zerocrossingrate,
-		&features.mfcc.frame_size,
-		&features.mfcc.to_vec(),
-		&features.sccoeffs.frame_size,
-		&features.sccoeffs.to_vec(),
-		&features.scvalleys.frame_size,
-		&features.scvalleys.to_vec()])?;
+	      &features.to_params(&id))?;
     Ok(())
   }
 
@@ -316,26 +255,7 @@ beats_loudness_band_ratio_frame_size = ?16,
 beats_loudness_band_ratio = ?17,
 histogram = ?18
 where id = ?1",
-      &[
-        &id,
-        &features.bpm,
-        &features.confidence,
-        &features.onset_rate,
-        &features.beats_loudness,
-        &features.first_peak_bpm,
-        &features.first_peak_spread,
-        &features.first_peak_weight,
-        &features.second_peak_bpm,
-        &features.second_peak_spread,
-        &features.second_peak_weight,
-        &features.beats_position,
-        &features.bpm_estimates,
-        &features.bpm_intervals,
-        &features.onset_times,
-        &features.beats_loudness_band_ratio.frame_size,
-        &features.beats_loudness_band_ratio.to_vec(),
-        &features.histogram,
-      ],
+      &features.to_params(&id)
     )?;
     Ok(())
   }
@@ -358,16 +278,7 @@ oddtoevenharmonicenergyratio = ?7,
 tristimulus = ?8
 where id = ?1
 ",
-      &[
-        &id,
-        &features.pitch_after_max_to_before_max_energy_ratio,
-        &features.pitch_centroid,
-        &features.pitch_max_to_total,
-        &features.pitch_min_to_total,
-        &features.inharmonicity,
-        &features.oddtoevenharmonicenergyratio,
-        &features.tristimulus.to_vec(),
-      ],
+      &features.to_params(&id)
     )?;
     Ok(())
   }
@@ -399,26 +310,7 @@ key_key = ?16,
 key_scale = ?17,
 chords_progression = ?18
 where id = ?1",
-      &[
-        &id,
-        &features.chords_changes_rate,
-        &features.chords_number_rate,
-        &features.key_strength,
-        &features.tuning_diatonic_strength,
-        &features.tuning_equal_tempered_deviation,
-        &features.tuning_frequency,
-        &features.tuning_nontempered_energy_ratio,
-        &features.chords_strength,
-        &features.chords_histogram,
-        &features.thpcp,
-        &features.hpcp.frame_size,
-        &features.hpcp.to_vec(),
-        &features.chords_key,
-        &features.chords_scale,
-        &features.key_key,
-        &features.key_scale,
-        &features.chords_progression,
-      ],
+      &features.to_params(&id)
     )?;
     Ok(())
   }
@@ -465,7 +357,7 @@ bitrate = ?5,
 samplerate = ?6,
 checksum = ?7
 where id = ?1",
-	      &[&file.path, &file.filesize, &file.duration, &file.channels, &file.bitrate, &file.samplerate, &file.checksum.map(|c| c.to_hex())],
+	      &file.to_params()
     )?;
     Ok(self.last_sample_id(&file.path))
   }
@@ -517,45 +409,7 @@ sccoeffs = ?37,
 scvalleys_frame_size = ?38,
 scvalleys = ?39
 where id = ?1",
-	      &[&id,
-		&features.average_loudness,
-		&features.barkbands_kurtosis,
-		&features.barkbands_skewness,
-		&features.barkbands_spread,
-		&features.barkbands.frame_size,
-		&features.barkbands.to_vec(),
-		&features.dissonance,
-		&features.hfc,
-		&features.pitch,
-		&features.pitch_instantaneous_confidence,
-		&features.pitch_salience,
-		&features.silence_rate_20db,
-		&features.silence_rate_30db,
-		&features.silence_rate_60db,
-		&features.spectral_centroid,
-		&features.spectral_complexity,
-		&features.spectral_crest,
-		&features.spectral_decrease,
-		&features.spectral_energy,
-		&features.spectral_energyband_high,
-		&features.spectral_energyband_low,
-		&features.spectral_energyband_middle_high,
-		&features.spectral_energyband_middle_low,
-		&features.spectral_flatness_db,
-		&features.spectral_flux,
-		&features.spectral_kurtosis,
-		&features.spectral_rms,
-		&features.spectral_rolloff,
-		&features.spectral_skewness,
-		&features.spectral_spread,
-		&features.spectral_strongpeak,
-		&features.zerocrossingrate,
-		&features.mfcc.frame_size,
-		&features.mfcc.to_vec(),
-		&features.sccoeffs.frame_size,
-		&features.sccoeffs.to_vec(),
-		&features.scvalleys.frame_size,
-		&features.scvalleys.to_vec()])?;
+	      &features.to_params(&id))?;
     Ok(())
   }
 
@@ -586,26 +440,7 @@ beats_loudness_band_ratio_frame_size = ?16,
 beats_loudness_band_ratio = ?17,
 histogram = ?18
 where id = ?1",
-      &[
-        &id,
-        &features.bpm,
-        &features.confidence,
-        &features.onset_rate,
-        &features.beats_loudness,
-        &features.first_peak_bpm,
-        &features.first_peak_spread,
-        &features.first_peak_weight,
-        &features.second_peak_bpm,
-        &features.second_peak_spread,
-        &features.second_peak_weight,
-        &features.beats_position,
-        &features.bpm_estimates,
-        &features.bpm_intervals,
-        &features.onset_times,
-        &features.beats_loudness_band_ratio.frame_size,
-        &features.beats_loudness_band_ratio.to_vec(),
-        &features.histogram,
-      ],
+      &features.to_params(&id)
     )?;
     Ok(())
   }
@@ -628,16 +463,7 @@ oddtoevenharmonicenergyratio = ?7,
 tristimulus = ?8
 where id = ?1
 ",
-      &[
-        &id,
-        &features.pitch_after_max_to_before_max_energy_ratio,
-        &features.pitch_centroid,
-        &features.pitch_max_to_total,
-        &features.pitch_min_to_total,
-        &features.inharmonicity,
-        &features.oddtoevenharmonicenergyratio,
-        &features.tristimulus.to_vec(),
-      ],
+      &features.to_params(&id)
     )?;
     Ok(())
   }
@@ -669,26 +495,7 @@ key_key = ?16,
 key_scale = ?17,
 chords_progression = ?18
 where id = ?1",
-      &[
-        &id,
-        &features.chords_changes_rate,
-        &features.chords_number_rate,
-        &features.key_strength,
-        &features.tuning_diatonic_strength,
-        &features.tuning_equal_tempered_deviation,
-        &features.tuning_frequency,
-        &features.tuning_nontempered_energy_ratio,
-        &features.chords_strength,
-        &features.chords_histogram,
-        &features.thpcp,
-        &features.hpcp.frame_size,
-        &features.hpcp.to_vec(),
-        &features.chords_key,
-        &features.chords_scale,
-        &features.key_key,
-        &features.key_scale,
-        &features.chords_progression,
-      ],
+      &features.to_params(&id)
     )?;
     Ok(())
   }
@@ -746,15 +553,7 @@ where id = ?1",
       self
         .conn
         .query_row("select * from tracks where id = ?", [id], |row| {
-          Ok(AudioData {
-            path: row.get(1)?,
-            filesize: row.get(2)?,
-            duration: row.get(3)?,
-            channels: row.get(4)?,
-            bitrate: row.get(5)?,
-            samplerate: row.get(6)?,
-            checksum: Some(Checksum::from_hex(row.get::<_, String>(7)?.as_str())),
-          })
+	  Ok(AudioData::from_row(row, 1).unwrap())
         })?;
     Ok(res)
   }
@@ -899,15 +698,7 @@ where id = ?1",
       self
         .conn
         .query_row("select * from samples where id = ?", [id], |row| {
-          Ok(AudioData {
-            path: row.get(1)?,
-            filesize: row.get(2)?,
-            duration: row.get(3)?,
-            channels: row.get(4)?,
-            bitrate: row.get(5)?,
-            samplerate: row.get(6)?,
-            checksum: Some(Checksum::from_hex(row.get::<_, String>(7)?.as_str())),
-          })
+	  Ok(AudioData::from_row(row, 1).unwrap())
         })?;
     Ok(res)
   }
@@ -1039,19 +830,19 @@ or checksum = ?2",
     Ok(res)
   }
 
-  pub fn query(
+  pub fn query<T: FromSql>(
     &self,
     ty: AudioType,
     by: QueryBy,
     fr: QueryFor,
-  ) -> Result<Vec<Vec<rusqlite::types::Value>>> {
+  ) -> Result<Vec<Vec<T>>> {
     let sql = by.as_query(ty, fr)?;
     let mut stmt = self.conn.prepare(sql.as_str())?;
     let count = stmt.column_count();
     let q = stmt.query_map([], |row| {
       let mut cols = Vec::with_capacity(count);
       for i in 0..count {
-        cols.push(row.get::<_, rusqlite::types::Value>(i)?)
+        cols.push(row.get(i)?)
       }
       Ok(cols)
     })?;
@@ -1215,7 +1006,7 @@ mod tests {
     );
     let mut data = AudioData::default();
     data.path = d.0.to_string();
-    data.checksum = Some(checksum);
+    data.checksum = Some(checksum.into());
     db.insert_track(&data).unwrap();
     assert_eq!(
       db.query_check_file(d.0, d.1, AudioType::Track).unwrap(),
