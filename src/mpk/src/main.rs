@@ -8,7 +8,6 @@ use std::str::FromStr;
 use std::path::PathBuf;
 use std::sync::mpsc::sync_channel;
 use std::thread;
-use serde::Serialize;
 #[derive(Parser)]
 #[clap(name = "mpk")]
 #[clap(about = "media programming kit")]
@@ -252,7 +251,7 @@ fn main() -> Result<()> {
         Err(std::io::Error::from(std::io::ErrorKind::NotFound).into())
       };
       let rx = mpk_audio::pause_controller_cli();
-      mpk_audio::play(file.unwrap(), device, volume, speed, rx)
+      mpk_audio::play(file.unwrap(), &device, volume, speed, rx)
     }
 
     Command::Db { cmd } => {
@@ -343,8 +342,7 @@ fn main() -> Result<()> {
 	    let s = by.as_query(ty.unwrap_or_default(), query.unwrap_or_default()).unwrap();
 	    let q = conn.query::<DbValue>(ty.unwrap_or_default(), by, query.unwrap_or_default())?;
 	    if csv {
-	      let mut w = csv::Writer::from_writer(io::stdout());
-	      w.serialize(q).unwrap();
+	      mpk_db::print_csv(q);
 	    } else {
               println!("{}", s);
               println!("{:#?}", q);

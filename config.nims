@@ -15,6 +15,9 @@ const
   release {.booldefine.} = false
   fastexport {.strdefine.}: string = expandTilde("~/stash/fast-export/hg-fast-export.sh")
   stash {.strdefine.}: string = expandTilde("~/stash")
+  rs {.booldefine.} = true
+  py {.booldefine.} = true
+  f {.booldefine.} = false
   MPK_BIN = "src/mpk"
 
 proc getVcRoot(): string =
@@ -87,7 +90,7 @@ proc rustTest() =
   var args: seq[string]
   when defined(p):
     args.add(" -p " & p)
-  when defined(v):
+  when v:
     args.add(" -- --nocapture")
   exec "cargo test" & args.join
   
@@ -102,7 +105,7 @@ proc ffiTest() =
 task build, "build MPK":
   withDir getVcRoot():
     var args: seq[string]
-    when defined(release):
+    when release:
       args.insert(" --release")
       target_dir = "target/release"
     when defined(p):
@@ -115,19 +118,26 @@ task build, "build MPK":
     if fileExists(mpk_py):
       mvFile(mpk_py, build_dir / mpk_py)
       exec "cd " & build_dir & " && " & "python3 " & mpk_py
-    when not defined(release):
+    when not release:
       exec "cp build/_mpk* build/libmpk_ffi* src/mpk_py/mpk/"
 
 task run, "run MPK binary":
   withDir getVcRoot():
     var args: seq[string]
-    when defined(release):
+    when release:
       args.insert(" --release")
     exec "cargo run" & args.join
 
 task install, "install MPK":
   withDir getVcRoot():
-    exec "cargo install --path " & MPK_BIN
+    when rs:
+      exec "cargo install --path " & MPK_BIN
+    when py:
+      exec "poetry build"
+      if f:
+        exec "pip install dist/*.whl --force-reinstall"
+      else:
+        exec "pip install dist/*.whl"
 
 task clean, "clean build artifacts":
   withDir getVcRoot():
@@ -139,9 +149,9 @@ task test, "run MPK tests":
   withDir getVcRoot():
     if not dirExists(build_dir):
       buildTask()
-    if defined(ffi):
+    if ffi:
       ffiTest()
-    elif defined(all):
+    elif all:
       rustTest()
       ffiTest()
     else:

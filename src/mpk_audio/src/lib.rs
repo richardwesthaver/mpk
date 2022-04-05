@@ -42,7 +42,7 @@ pub fn info() {
 
 pub fn play<P: AsRef<Path>>(
   path: P,
-  device: Option<Device>,
+  device: &Option<Device>,
   vol: Option<f32>,
   speed: Option<f32>,
   pause: Receiver<bool>,
@@ -87,6 +87,7 @@ pub fn device_from_str(s: &str) -> Option<Device> {
   }
   dev
 }
+
 pub fn pause_controller_cli() -> Receiver<bool> {
   let (tx, rx) = channel();
   println!("Press enter to pause, C-c to quit...");

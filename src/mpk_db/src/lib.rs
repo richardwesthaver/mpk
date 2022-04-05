@@ -7,7 +7,7 @@ use rusqlite::{version, Connection, OpenFlags, ToSql};
 use rusqlite::types::FromSql;
 use std::path::Path;
 use rusqlite::backup::{Backup, Progress};
-
+use serde::Serialize;
 pub use rusqlite::DatabaseName;
 
 mod err;
@@ -926,6 +926,11 @@ pub fn print_progress(p: Progress) {
     p.pagecount,
     current
   )
+}
+
+pub fn print_csv<S: Serialize>(input: S) {
+  let mut w = csv::Writer::from_writer(std::io::stdout());
+  w.serialize(input).unwrap()
 }
 
 #[cfg(test)]

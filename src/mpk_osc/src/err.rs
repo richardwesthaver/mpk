@@ -4,22 +4,25 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
   Osc(rosc::OscError),
   Io(std::io::Error),
+  BadType(String),
 }
 
-impl std::error::Error for Error {
+impl<'a> std::error::Error for Error {
   fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
     match *self {
       Error::Osc(ref err) => Some(err),
       Error::Io(ref err) => Some(err),
+      _ => None,
     }
   }
 }
 
-impl std::fmt::Display for Error {
+impl<'a> std::fmt::Display for Error {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match *self {
       Error::Osc(ref err) => err.fmt(f),
       Error::Io(ref err) => err.fmt(f),
+      Error::BadType(ref s) => f.write_str(&format!("Invalid Type: {}", s)),
     }
   }
 }

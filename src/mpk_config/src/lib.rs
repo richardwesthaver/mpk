@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 use std::str::FromStr;
+use std::net::SocketAddr;
 
 mod err;
 pub use err::{Error, Result};
@@ -485,4 +486,16 @@ pub struct ProjectConfig {}
 
 /// Configuration for Patches.
 #[derive(Serialize, Deserialize)]
-pub struct PatchConfig {}
+pub struct SeshConfig {
+  client_addr: SocketAddr,
+  nsm_url: Option<SocketAddr>,
+}
+
+impl Default for SeshConfig {
+  fn default() -> Self {
+    SeshConfig {
+      client_addr: "127.0.0.1:0".parse().unwrap(),
+      nsm_url: std::env::var("NSM_URL").map(|u| u.parse().unwrap()).ok()
+    }
+  }
+}
