@@ -4,9 +4,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
+use std::net::SocketAddr;
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 use std::str::FromStr;
-use std::net::SocketAddr;
 
 mod err;
 pub use err::{Error, Result};
@@ -457,8 +457,12 @@ impl Default for ExtractorConfig {
       } else {
         None
       },
-      descriptors: vec!["mel_spec".to_string()],
-      mono: false,
+      descriptors: vec![
+        "mel_spec".to_string(),
+        "info".to_string(),
+        "tags".to_string(),
+      ],
+      mono: true,
       sample_rate: 44100,
       windowing: "hann".to_string(),
       frame_size: 2048,
@@ -495,7 +499,7 @@ impl Default for SeshConfig {
   fn default() -> Self {
     SeshConfig {
       client_addr: "127.0.0.1:0".parse().unwrap(),
-      nsm_url: std::env::var("NSM_URL").map(|u| u.parse().unwrap()).ok()
+      nsm_url: std::env::var("NSM_URL").map(|u| u.parse().unwrap()).ok(),
     }
   }
 }

@@ -19,9 +19,9 @@
 use libc::{c_char, c_int, size_t};
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 use mpk_db::{
-  AudioData, AudioType, LowlevelFeatures, MatrixReal, Mdb, MusicbrainzTags,
-  RhythmFeatures, SfxFeatures, Spectrograms, TonalFeatures, TrackTags, Uuid, VecReal,
-  VecText, FileChecksum
+  AudioData, AudioType, FileChecksum, LowlevelFeatures, MatrixReal, Mdb,
+  MusicbrainzTags, RhythmFeatures, SfxFeatures, Spectrograms, TonalFeatures, TrackTags,
+  Uuid, VecReal, VecText,
 };
 use mpk_hash::Checksum;
 use std::ffi::{CStr, CString, OsStr};

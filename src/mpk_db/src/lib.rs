@@ -3,12 +3,12 @@
 //! Types for interacting with the SQLite DB. The schema is defined in 'init.sql'.
 use mpk_config::DbConfig;
 use mpk_hash::Checksum;
-use rusqlite::{version, Connection, OpenFlags, ToSql};
-use rusqlite::types::FromSql;
-use std::path::Path;
 use rusqlite::backup::{Backup, Progress};
-use serde::Serialize;
+use rusqlite::types::FromSql;
 pub use rusqlite::DatabaseName;
+use rusqlite::{version, Connection, OpenFlags, ToSql};
+use serde::Serialize;
+use std::path::Path;
 
 mod err;
 pub use err::{Error, Result};
@@ -147,7 +147,7 @@ set artist = ?2,
     engineer = ?13,
     mixer = ?14
 where id = ?1",
-      &tags.to_params(&id)
+      &tags.to_params(&id),
     )?;
     Ok(())
   }
@@ -172,7 +172,7 @@ trackid = ?9,
 asin = ?10,
 musicip_puid = ?11
 where id = ?1",
-      &tags.to_params(&id)
+      &tags.to_params(&id),
     )?;
     Ok(())
   }
@@ -255,7 +255,7 @@ beats_loudness_band_ratio_frame_size = ?16,
 beats_loudness_band_ratio = ?17,
 histogram = ?18
 where id = ?1",
-      &features.to_params(&id)
+      &features.to_params(&id),
     )?;
     Ok(())
   }
@@ -278,7 +278,7 @@ oddtoevenharmonicenergyratio = ?7,
 tristimulus = ?8
 where id = ?1
 ",
-      &features.to_params(&id)
+      &features.to_params(&id),
     )?;
     Ok(())
   }
@@ -310,7 +310,7 @@ key_key = ?16,
 key_scale = ?17,
 chords_progression = ?18
 where id = ?1",
-      &features.to_params(&id)
+      &features.to_params(&id),
     )?;
     Ok(())
   }
@@ -440,7 +440,7 @@ beats_loudness_band_ratio_frame_size = ?16,
 beats_loudness_band_ratio = ?17,
 histogram = ?18
 where id = ?1",
-      &features.to_params(&id)
+      &features.to_params(&id),
     )?;
     Ok(())
   }
@@ -463,7 +463,7 @@ oddtoevenharmonicenergyratio = ?7,
 tristimulus = ?8
 where id = ?1
 ",
-      &features.to_params(&id)
+      &features.to_params(&id),
     )?;
     Ok(())
   }
@@ -495,7 +495,7 @@ key_key = ?16,
 key_scale = ?17,
 chords_progression = ?18
 where id = ?1",
-      &features.to_params(&id)
+      &features.to_params(&id),
     )?;
     Ok(())
   }
@@ -553,7 +553,7 @@ where id = ?1",
       self
         .conn
         .query_row("select * from tracks where id = ?", [id], |row| {
-	  Ok(AudioData::from_row(row, 1).unwrap())
+          Ok(AudioData::from_row(row, 1).unwrap())
         })?;
     Ok(res)
   }
@@ -698,7 +698,7 @@ where id = ?1",
       self
         .conn
         .query_row("select * from samples where id = ?", [id], |row| {
-	  Ok(AudioData::from_row(row, 1).unwrap())
+          Ok(AudioData::from_row(row, 1).unwrap())
         })?;
     Ok(res)
   }

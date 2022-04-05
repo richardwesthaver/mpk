@@ -26,15 +26,19 @@
 use crate::err::{Error, Result};
 pub use chrono::NaiveDate;
 use mpk_hash::Checksum;
+pub use rusqlite::types::Value as SqlValue;
 use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::Row;
-pub use rusqlite::types::Value as SqlValue;
+use serde::{
+  de::{Deserializer, Visitor},
+  ser::Serializer,
+  Deserialize, Serialize,
+};
 use std::fmt;
 use std::ops::{Index, Range};
 use std::path::PathBuf;
 use std::str::FromStr;
 pub use uuid::Uuid;
-use serde::{Serialize, Deserialize, ser::Serializer, de::{Deserializer, Visitor}};
 
 /// Display wrapper for SQLite Value
 #[derive(Debug)]
@@ -71,7 +75,7 @@ impl Serialize for DbValue {
       SqlValue::Real(n) => ser.serialize_f64(n),
       SqlValue::Text(ref s) => ser.serialize_str(&s),
       SqlValue::Blob(ref b) => ser.serialize_bytes(&b),
-      SqlValue::Null => ser.serialize_none()
+      SqlValue::Null => ser.serialize_none(),
     }
   }
 }
@@ -365,9 +369,9 @@ impl ToSql for FileChecksum {
 
 impl FromSql for FileChecksum {
   fn column_result(value: ValueRef) -> FromSqlResult<Self> {
-    value.as_str().and_then(|text| {
-      Ok(FileChecksum::from_hex(text))
-    })
+    value
+      .as_str()
+      .and_then(|text| Ok(FileChecksum::from_hex(text)))
   }
 }
 
@@ -384,13 +388,18 @@ impl<'de> Visitor<'de> for FileChecksumVisitor {
   fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
     f.write_str("a hex-encoded checksum")
   }
-  fn visit_str<E: serde::de::Error>(self, v: &str) -> std::result::Result<Self::Value, E> {
+  fn visit_str<E: serde::de::Error>(
+    self,
+    v: &str,
+  ) -> std::result::Result<Self::Value, E> {
     Ok(FileChecksum::from_hex(v))
   }
 }
 
 impl<'de> Deserialize<'de> for FileChecksum {
-  fn deserialize<D: Deserializer<'de>>(de: D) -> std::result::Result<FileChecksum, D::Error> {
+  fn deserialize<D: Deserializer<'de>>(
+    de: D,
+  ) -> std::result::Result<FileChecksum, D::Error> {
     de.deserialize_str(FileChecksumVisitor)
   }
 }
@@ -410,17 +419,27 @@ pub struct AudioData {
 
 impl AudioData {
   pub fn to_params<'a>(&'a self) -> [&'a dyn ToSql; 7] {
-    [&self.path, &self.filesize, &self.duration, &self.channels, &self.bitrate, &self.samplerate, &self.checksum]
+    [
+      &self.path,
+      &self.filesize,
+      &self.duration,
+      &self.channels,
+      &self.bitrate,
+      &self.samplerate,
+      &self.checksum,
+    ]
   }
   pub fn from_row<'stmt>(row: &Row<'stmt>, idx: usize) -> Result<Self> {
     Ok(AudioData {
       path: row.get(idx)?,
-      filesize: row.get(idx+1)?,
-      duration: row.get(idx+2)?,
-      channels: row.get(idx+3)?,
-      bitrate: row.get(idx+4)?,
-      samplerate: row.get(idx+5)?,
-      checksum: Some(FileChecksum::from_hex(row.get::<_, String>(idx+6)?.as_str())),
+      filesize: row.get(idx + 1)?,
+      duration: row.get(idx + 2)?,
+      channels: row.get(idx + 3)?,
+      bitrate: row.get(idx + 4)?,
+      samplerate: row.get(idx + 5)?,
+      checksum: Some(FileChecksum::from_hex(
+        row.get::<_, String>(idx + 6)?.as_str(),
+      )),
     })
   }
 }
@@ -448,7 +467,8 @@ impl fmt::Display for AudioData {
       .map(|n| n.to_string())
       .unwrap_or("NULL".to_string());
     let checksum = self
-      .checksum.as_ref()
+      .checksum
+      .as_ref()
       .map(|c| c.to_hex())
       .unwrap_or("NULL".to_string());
     write!(
@@ -487,20 +507,20 @@ pub struct TrackTags {
 impl TrackTags {
   pub fn to_params<'a>(&'a self, id: &'a i64) -> [&'a dyn ToSql; 14] {
     [
-        id,
-        &self.artist,
-        &self.title,
-        &self.album,
-        &self.genre,
-        &self.date,
-        &self.tracknumber,
-        &self.format,
-        &self.language,
-        &self.country,
-        &self.label,
-        &self.producer,
-        &self.engineer,
-        &self.mixer,
+      id,
+      &self.artist,
+      &self.title,
+      &self.album,
+      &self.genre,
+      &self.date,
+      &self.tracknumber,
+      &self.format,
+      &self.language,
+      &self.country,
+      &self.label,
+      &self.producer,
+      &self.engineer,
+      &self.mixer,
     ]
   }
 }
@@ -577,17 +597,17 @@ pub struct MusicbrainzTags {
 impl MusicbrainzTags {
   pub fn to_params<'a>(&'a self, id: &'a i64) -> [&'a dyn ToSql; 11] {
     [
-        id,
-        &self.albumartistid,
-        &self.albumid,
-        &self.albumstatus,
-        &self.albumtype,
-        &self.artistid,
-        &self.releasegroupid,
-        &self.releasetrackid,
-        &self.trackid,
-        &self.asin,
-        &self.musicip_puid,
+      id,
+      &self.albumartistid,
+      &self.albumid,
+      &self.albumstatus,
+      &self.albumtype,
+      &self.artistid,
+      &self.releasegroupid,
+      &self.releasetrackid,
+      &self.trackid,
+      &self.asin,
+      &self.musicip_puid,
     ]
   }
 }
@@ -1127,11 +1147,11 @@ impl FromStr for QueryType {
   type Err = Error;
   fn from_str(input: &str) -> Result<QueryType> {
     match input {
-      "="|"eq"|"equal" => Ok(QueryType::Equals),
-      "lk"|"like" => Ok(QueryType::Like),
-      "bt"|"betweeen" => Ok(QueryType::Between),
-      "gt"|"greater" => Ok(QueryType::GreaterThan),
-      "lt"|"less" => Ok(QueryType::LessThan),
+      "=" | "eq" | "equal" => Ok(QueryType::Equals),
+      "lk" | "like" => Ok(QueryType::Like),
+      "bt" | "betweeen" => Ok(QueryType::Between),
+      "gt" | "greater" => Ok(QueryType::GreaterThan),
+      "lt" | "less" => Ok(QueryType::LessThan),
       e => Err(Error::BadType(e.to_string())),
     }
   }

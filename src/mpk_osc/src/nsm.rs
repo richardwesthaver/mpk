@@ -15,11 +15,11 @@
 //!
 //! REF: https://new-session-manager.jackaudio.org
 // use crate::OscPacket;
-use crate::{Result, Error};
+use crate::{Error, Result};
+use rosc::{decoder, encoder, OscMessage, OscPacket, OscType};
+use std::fmt;
 use std::net::{SocketAddr, UdpSocket};
 use std::str::FromStr;
-use std::fmt;
-use rosc::{encoder, decoder, OscPacket, OscMessage, OscType};
 
 pub const NSM_API_VERSION_MAJOR: u8 = 1;
 pub const NSM_API_VERSION_MINOR: u8 = 1;
@@ -76,12 +76,12 @@ impl<'a> NsmClient<'a> {
 
   pub fn recv(&mut self) -> Result<OscPacket> {
     match self.socket.recv_from(&mut self.buf) {
-      Ok((size, _addr)) => {
-	Ok(decoder::decode_udp(&self.buf[..size]).expect("failed to decode packet").1)
-      }
-      Err(e) => {
-	Err(Error::Io(e))
-      }
+      Ok((size, _addr)) => Ok(
+        decoder::decode_udp(&self.buf[..size])
+          .expect("failed to decode packet")
+          .1,
+      ),
+      Err(e) => Err(Error::Io(e)),
     }
   }
 
@@ -108,7 +108,7 @@ impl FromStr for ClientCap {
       "progress" => Ok(ClientCap::Progress),
       "message" => Ok(ClientCap::Message),
       "optional-gui" => Ok(ClientCap::OptionalGui),
-      e => Err(Error::BadType(e.to_string()))
+      e => Err(Error::BadType(e.to_string())),
     }
   }
 }
@@ -117,7 +117,7 @@ impl fmt::Display for ClientCap {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       ClientCap::Dirty => f.write_str("dirty"),
-      ClientCap::Switch => f.write_str("switch"),      
+      ClientCap::Switch => f.write_str("switch"),
       ClientCap::Progress => f.write_str("progress"),
       ClientCap::Message => f.write_str("message"),
       ClientCap::OptionalGui => f.write_str("optional-gui"),
@@ -131,8 +131,8 @@ pub struct ClientCaps<'a>(&'a [ClientCap]);
 impl<'a> fmt::Display for ClientCaps<'a> {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut s = String::new();
-    for i in self.0.iter() { 
-     s.push_str(&i.to_string());
+    for i in self.0.iter() {
+      s.push_str(&i.to_string());
       s.push(':');
     }
     f.write_str(&s)
@@ -163,7 +163,7 @@ impl FromStr for ServerCap {
       "server-control" => Ok(ServerCap::ServerControl),
       "broadcast" => Ok(ServerCap::Broadcast),
       "optional-gui" => Ok(ServerCap::OptionalGui),
-      e => Err(Error::BadType(e.to_string()))
+      e => Err(Error::BadType(e.to_string())),
     }
   }
 }
@@ -174,8 +174,8 @@ pub struct ServerCaps<'a>(&'a [ServerCap]);
 impl<'a> fmt::Display for ServerCaps<'a> {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut s = String::new();
-    for i in self.0.iter() { 
-     s.push_str(&i.to_string());
+    for i in self.0.iter() {
+      s.push_str(&i.to_string());
       s.push(':');
     }
     f.write_str(&s)
@@ -206,8 +206,6 @@ pub type NsmResult<T> = std::result::Result<T, ErrorCode>;
 
 pub enum ClientMessage<'a> {
   Announce(&'a str, ClientCaps<'a>),
-  Reply(ClientReply<'a>),
-  Control(ClientControl<'a>),
   Progress(f32),
   Status(i32, &'a str),
   GuiShown,
@@ -215,64 +213,68 @@ pub enum ClientMessage<'a> {
   Dirty,
   Clean,
   Broadcast,
+  Control(ClientControl<'a>),
+  Reply(ClientReply<'a>),
 }
 
 impl<'a> ClientMessage<'a> {
   pub fn msg(&self) -> OscPacket {
+    OscPacket::Message(OscMessage {
+      addr: self.addr(),
+      args: self.args(),
+    })
+  }
+
+  pub fn addr(&self) -> String {
+    match self {
+      ClientMessage::Announce(_, _) => "/nsm/server/announce".to_string(),
+      ClientMessage::Status(_, _) => "/nsm/client/message".to_string(),
+      ClientMessage::Progress(_) => "/nsm/client/progress".to_string(),
+      ClientMessage::GuiShown => "/nsm/client/gui_is_hidden".to_string(),
+      ClientMessage::GuiHidden => "/nsm/client/gui_is_shown".to_string(),
+      ClientMessage::Clean => "/nsm/client/is_clean".to_string(),
+      ClientMessage::Dirty => "/nsm/client/is_dirty".to_string(),
+      ClientMessage::Broadcast => "/nsm/server/broadcast".to_string(),
+      ClientMessage::Control(m) => m.addr(),
+      ClientMessage::Reply(m) => m.addr(),
+    }
+  }
+
+  pub fn args(&self) -> Vec<OscType> {
     match self {
       ClientMessage::Announce(a, b) => {
-	OscPacket::Message(
-	  OscMessage {
-	    addr: "/nsm/server/announce".to_string(),
-	    args: vec![
-	      OscType::String(a.to_string()),
-	      OscType::String(b.to_string()),
-	      OscType::String(std::env::args().nth(0).unwrap()),
-	      OscType::Int(NSM_API_VERSION_MAJOR as i32),
-	      OscType::Int(NSM_API_VERSION_MINOR as i32),
-	      OscType::Int(std::process::id() as i32),
-	    ],
-	  }
-	)
-      },
-      ClientMessage::Reply(p) => {
-	p.msg()
-      },
-      ClientMessage::Status(a, b) => {
-	OscPacket::Message(
-	  OscMessage {
-	    addr: "/nsm/client/message".to_string(),
-	    args: vec![OscType::Int(*a), OscType::String(b.to_string())]
-	  }
-	)
-      },
-      ClientMessage::Progress(a) => {
-	OscPacket::Message(
-	  OscMessage {
-	    addr: "/nsm/client/progress".to_string(),
-	    args: vec![OscType::Float(*a)]
-	  }
-	)
-      },
-      ClientMessage::Clean => {
-	OscPacket::Message(
-	  OscMessage {
-	    addr: "/nsm/client/clean".to_string(),
-	    args: vec![],
-	  }
-	)
-      },
-      ClientMessage::Dirty => {
-	OscPacket::Message(
-	  OscMessage {
-	    addr: "/nsm/client/dirty".to_string(),
-	    args: vec![],
-	  }
-	)
-      },
-      _ => {
-	OscPacket::Message(OscMessage { addr: "".to_string(), args: vec![] })
+        vec![
+          OscType::String(a.to_string()),
+          OscType::String(b.to_string()),
+          OscType::String(std::env::args().nth(0).unwrap()),
+          OscType::Int(NSM_API_VERSION_MAJOR as i32),
+          OscType::Int(NSM_API_VERSION_MINOR as i32),
+          OscType::Int(std::process::id() as i32),
+        ]
       }
+      ClientMessage::Status(a, b) => {
+        vec![OscType::Int(*a), OscType::String(b.to_string())]
+      }
+      ClientMessage::Progress(a) => {
+        vec![OscType::Float(*a)]
+      }
+      ClientMessage::GuiShown => {
+        vec![]
+      }
+      ClientMessage::GuiHidden => {
+        vec![]
+      }
+      ClientMessage::Clean => {
+        vec![]
+      }
+      ClientMessage::Dirty => {
+        vec![]
+      }
+      ClientMessage::Broadcast => {
+        vec![]
+      }
+      ClientMessage::Control(p) => p.args(),
+      ClientMessage::Reply(p) => p.args(),
     }
   }
 }
@@ -280,7 +282,36 @@ impl<'a> ClientMessage<'a> {
 pub enum ClientReply<'a> {
   Open(&'a str),
   Save(&'a str),
-  
+}
+
+impl<'a> ClientReply<'a> {
+  pub fn msg(&self) -> OscPacket {
+    OscPacket::Message(OscMessage {
+      addr: self.addr(),
+      args: self.args(),
+    })
+  }
+
+  pub fn addr(&self) -> String {
+    "/reply".to_string()
+  }
+
+  pub fn args(&self) -> Vec<OscType> {
+    match self {
+      ClientReply::Open(m) => {
+        vec![
+          OscType::String("/nsm/client/open".to_string()),
+          OscType::String(m.to_string()),
+        ]
+      }
+      ClientReply::Save(m) => {
+        vec![
+          OscType::String("/nsm/client/save".to_string()),
+          OscType::String(m.to_string()),
+        ]
+      }
+    }
+  }
 }
 
 pub enum ClientControl<'a> {
@@ -295,49 +326,175 @@ pub enum ClientControl<'a> {
   List,
 }
 
-impl<'a> ClientReply<'a> {
+impl<'a> ClientControl<'a> {
   pub fn msg(&self) -> OscPacket {
+    OscPacket::Message(OscMessage {
+      addr: self.addr(),
+      args: self.args(),
+    })
+  }
+
+  pub fn addr(&self) -> String {
+    let addr = match self {
+      ClientControl::Add(_) => "/nsm/server/add",
+      ClientControl::Save => "/nsm/server/save",
+      ClientControl::Open(_) => "/nsm/server/open",
+      ClientControl::New(_) => "/nsm/server/new",
+      ClientControl::Duplicate(_) => "/nsm/server/duplicate",
+      ClientControl::Close => "/nsm/server/close",
+      ClientControl::Abort => "/nsm/server/abort",
+      ClientControl::Quit => "/nsm/server/quiit",
+      ClientControl::List => "/nsm/server/list",
+    };
+    addr.to_string()
+  }
+
+  pub fn args(&self) -> Vec<OscType> {
     match self {
-      ClientReply::Open(m) => {
-	OscPacket::Message(
-	  OscMessage {
-	    addr: "/nsm/client/open".to_string(),
-	    args: vec![OscType::String(m.to_string())],
-	  }
-	)
-      },
-      ClientReply::Save(m) => {
-	OscPacket::Message(
-	  OscMessage {
-	    addr: "/nsm/client/save".to_string(),
-	    args: vec![OscType::String(m.to_string())],
-	  }
-	)
+      ClientControl::Add(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ClientControl::Save => {
+        vec![]
+      }
+      ClientControl::Open(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ClientControl::New(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ClientControl::Duplicate(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ClientControl::Close => {
+        vec![]
+      }
+      ClientControl::Abort => {
+        vec![]
+      }
+      ClientControl::Quit => {
+        vec![]
+      }
+      ClientControl::List => {
+        vec![]
       }
     }
   }
 }
 
 pub enum ServerMessage<'a> {
-  Error,
   Reply(ServerReply<'a>),
-  Open,
+  Open(&'a str, &'a str, &'a str),
   Save,
   SessionLoaded,
   ShowGui,
   HideGui,
-  Broadcast,
+  Broadcast(&'a str, &'a str),
+}
+
+impl<'a> ServerMessage<'a> {
+  pub fn msg(&self) -> OscPacket {
+    OscPacket::Message(OscMessage {
+      addr: self.addr(),
+      args: self.args(),
+    })
+  }
+
+  pub fn addr(&self) -> String {
+    match self {
+      ServerMessage::Reply(m) => m.addr(),
+      ServerMessage::Open(_, _, _) => "/nsm/client/open".to_string(),
+      ServerMessage::Save => "/nsm/client/save".to_string(),
+      ServerMessage::SessionLoaded => "/nsm/client/session_is_loaded".to_string(),
+      ServerMessage::ShowGui => "/nsm/client/show_optional_gui".to_string(),
+      ServerMessage::HideGui => "/nsm/client/hide_optional_gui".to_string(),
+      ServerMessage::Broadcast(a, _) => a.to_string(),
+    }
+  }
+
+  pub fn args(&self) -> Vec<OscType> {
+    match self {
+      ServerMessage::Reply(m) => m.args(),
+      ServerMessage::Open(a, b, c) => {
+        vec![
+          OscType::String(a.to_string()),
+          OscType::String(b.to_string()),
+          OscType::String(c.to_string()),
+        ]
+      }
+      ServerMessage::Save => vec![],
+      ServerMessage::SessionLoaded => vec![],
+      ServerMessage::ShowGui => vec![],
+      ServerMessage::HideGui => vec![],
+      ServerMessage::Broadcast(_, b) => {
+        vec![OscType::String(b.to_string())]
+      }
+    }
+  }
 }
 
 pub enum ServerReply<'a> {
   Announce(&'a str, &'a str, ServerCaps<'a>),
-  Add,
-  Save,
-  Open,
-  New,
-  Duplicate,
-  Close,
-  Abort,
-  Quit,
-  List,
+  Add(&'a str),
+  Save(&'a str),
+  Open(&'a str),
+  New(&'a str),
+  Duplicate(&'a str),
+  Close(&'a str),
+  Abort(&'a str),
+  Quit(&'a str),
+  List(&'a str),
+}
+
+impl<'a> ServerReply<'a> {
+  pub fn msg(&self) -> OscPacket {
+    OscPacket::Message(OscMessage {
+      addr: self.addr(),
+      args: self.args(),
+    })
+  }
+
+  pub fn addr(&self) -> String {
+    "/reply".to_string()
+  }
+
+  pub fn args(&self) -> Vec<OscType> {
+    match self {
+      ServerReply::Announce(a, b, c) => {
+        vec![
+          OscType::String("/nsm/server/announce".to_string()),
+          OscType::String(a.to_string()),
+          OscType::String(b.to_string()),
+          OscType::String(c.to_string()),
+        ]
+      }
+      ServerReply::Add(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ServerReply::Save(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ServerReply::Open(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ServerReply::New(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ServerReply::Duplicate(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ServerReply::Close(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ServerReply::Abort(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ServerReply::Quit(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ServerReply::List(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+    }
+  }
 }
