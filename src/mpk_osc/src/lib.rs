@@ -11,6 +11,15 @@ mod tests {
   use rosc::encoder;
   use rosc::{OscMessage, OscPacket, OscType};
   use std::net::UdpSocket;
+  fn test_nsm_client<'a>() -> NsmClient<'a> {
+    NsmClient::new(
+      "test_client",
+      "127.0.0.1:0",
+      Some("127.0.0.1:0"),
+      &[ClientCap::Dirty, ClientCap::Switch],
+    )
+    .unwrap()
+  }
   #[test]
   fn test_send_recv() {
     let sock1 = UdpSocket::bind("127.0.0.1:9264").unwrap();
@@ -36,13 +45,15 @@ mod tests {
   }
   #[test]
   fn test_nsm_announce() {
-    let client = NsmClient::new(
-      "test_client",
-      "127.0.0.1:9266",
-      Some("127.0.0.1:9267"),
-      &[ClientCap::Dirty, ClientCap::Switch],
-    )
-    .unwrap();
+    let mut client = test_nsm_client();
     assert!(client.announce().is_ok());
+  }
+
+  #[test]
+  fn test_nsm_replies() {
+    let mut client = test_nsm_client();
+    let p = ClientReply::Open("/some/path").msg();
+    dbg!(&p);
+    client.reply(&p).unwrap();
   }
 }
