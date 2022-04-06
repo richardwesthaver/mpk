@@ -18,7 +18,7 @@
 use crate::{Error, Result};
 use rosc::{decoder, encoder, OscMessage, OscPacket, OscType};
 use std::fmt;
-use std::net::{SocketAddr, UdpSocket};
+use std::net::{SocketAddr, UdpSocket, ToSocketAddrs};
 use std::str::FromStr;
 
 pub const NSM_API_VERSION_MAJOR: u8 = 1;
@@ -26,7 +26,8 @@ pub const NSM_API_VERSION_MINOR: u8 = 1;
 pub const NSM_URL_VAR: &str = "NSM_URL";
 
 pub fn nsm_url_from_env() -> SocketAddr {
-  std::env::var(NSM_URL_VAR).unwrap().parse().unwrap()
+  let url = std::env::var(NSM_URL_VAR).unwrap();
+  url.strip_prefix("osc.udp://").unwrap().strip_suffix('/').unwrap().to_socket_addrs().unwrap().next().unwrap()
 }
 
 #[derive(Debug)]

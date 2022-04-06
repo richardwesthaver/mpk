@@ -15,7 +15,7 @@ mod tests {
     NsmClient::new(
       "test_client",
       "127.0.0.1:0",
-      Some("127.0.0.1:0"),
+      None,
       &[ClientCap::Dirty, ClientCap::Switch],
     )
     .unwrap()
