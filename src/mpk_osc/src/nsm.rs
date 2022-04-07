@@ -14,7 +14,6 @@
 //! so for full session support you need a Linux box available.
 //!
 //! REF: https://new-session-manager.jackaudio.org
-// use crate::OscPacket;
 use crate::{Error, Result};
 use rosc::{decoder, encoder, OscMessage, OscPacket, OscType};
 use std::fmt;
@@ -229,21 +228,143 @@ impl<'a> FromStr for ServerCaps<'a> {
   }
 }
 
-pub enum ErrorCode {
-  General = -1,
-  IncompatibleApi = -2,
-  Blacklisted = -3,
-  LaunchFailed = -4,
-  NoSuchFile = -5,
-  NoSessionOpen = -6,
-  UnsavedChanges = -7,
-  NotNow = -8,
-  BadProject = -9,
-  CreateFailed = -10,
-  SaveFailed = -11,
+pub enum ErrorCode<'a> {
+  General(&'a str, &'a str),
+  IncompatibleApi(&'a str, &'a str),
+  Blacklisted(&'a str, &'a str),
+  LaunchFailed(&'a str, &'a str),
+  NoSuchFile(&'a str, &'a str),
+  NoSessionOpen(&'a str, &'a str),
+  UnsavedChanges(&'a str, &'a str),
+  NotNow(&'a str, &'a str),
+  BadProject(&'a str, &'a str),
+  CreateFailed(&'a str, &'a str),
+  SaveFailed(&'a str, &'a str),
 }
 
-pub type NsmResult<T> = std::result::Result<T, ErrorCode>;
+impl<'a> ErrorCode<'a> {
+  pub fn msg(&self) -> OscPacket {
+    OscPacket::Message(OscMessage {
+      addr: self.addr(),
+      args: self.args(),
+    })
+  }
+  
+  pub fn addr(&self) -> String {
+    "/error".to_string()
+  }
+
+  pub fn args(&self) -> Vec<OscType> {
+    match self {
+      ErrorCode::General(r,m) => vec![OscType::String(r.to_string()),
+				      OscType::Int(self.code()),
+				      OscType::String(m.to_string())],
+      ErrorCode::IncompatibleApi(r,m) => vec![OscType::String(r.to_string()),
+					      OscType::Int(self.code()),
+					      OscType::String(m.to_string())],
+      ErrorCode::Blacklisted(r,m) => vec![OscType::String(r.to_string()),
+					  OscType::Int(self.code()),
+					  OscType::String(m.to_string())],
+      ErrorCode::LaunchFailed(r,m) => vec![OscType::String(r.to_string()),
+					   OscType::Int(self.code()),
+					   OscType::String(m.to_string())],
+      ErrorCode::NoSuchFile(r,m) => vec![OscType::String(r.to_string()),
+					 OscType::Int(self.code()),
+					 OscType::String(m.to_string())],
+      ErrorCode::NoSessionOpen(r,m) => vec![OscType::String(r.to_string()),
+					    OscType::Int(self.code()),
+					    OscType::String(m.to_string())],
+      ErrorCode::UnsavedChanges(r,m) => vec![OscType::String(r.to_string()),
+					     OscType::Int(self.code()),
+					     OscType::String(m.to_string())],
+      ErrorCode::NotNow(r,m) => vec![OscType::String(r.to_string()),
+				     OscType::Int(self.code()),
+				     OscType::String(m.to_string())],
+      ErrorCode::BadProject(r,m) => vec![OscType::String(r.to_string()),
+					 OscType::Int(self.code()),
+					 OscType::String(m.to_string())],
+      ErrorCode::CreateFailed(r,m) => vec![OscType::String(r.to_string()),
+					   OscType::Int(self.code()),
+					   OscType::String(m.to_string())],
+      ErrorCode::SaveFailed(r,m) => vec![OscType::String(r.to_string()),
+					 OscType::Int(self.code()),
+					 OscType::String(m.to_string())],
+    }
+  }
+
+  pub fn code(&self) -> i32 {
+    match self {
+      ErrorCode::General(_,_) => -1,
+      ErrorCode::IncompatibleApi(_,_) => -2,
+      ErrorCode::Blacklisted(_,_) => -3,
+      ErrorCode::LaunchFailed(_,_) => -4,
+      ErrorCode::NoSuchFile(_,_) => -5,
+      ErrorCode::NoSessionOpen(_,_) => -6,
+      ErrorCode::UnsavedChanges(_,_) => -7,
+      ErrorCode::NotNow(_,_) => -8,
+      ErrorCode::BadProject(_,_) => -9,
+      ErrorCode::CreateFailed(_,_) => -10,
+      ErrorCode::SaveFailed(_,_) => -11,
+    }
+  }
+
+  pub fn parse(p: &'a OscPacket) -> Result<Self> {
+    ErrorCode::try_from(p)
+  }
+}
+
+impl<'a> TryFrom<&'a OscPacket> for ErrorCode<'a> {
+  type Error = Error;
+  fn try_from(p: &'a OscPacket) -> Result<Self> {
+    match p {
+      OscPacket::Message(m) => {
+	if &m.addr == "/error" {
+	  let raddr = if let OscType::String(ref s) = m.args[0] {
+	    Some(s)
+	  } else {
+	    None
+	  };
+
+	  let code = if let OscType::Int(n) = m.args[1] {
+	    Some(n)
+	  } else {
+	    None
+	  };
+
+	  let msg = if let OscType::String(ref s) = m.args[2] {
+	    Some(s)
+	  } else {
+	    None
+	  };
+
+	  if let Some(n) = code {
+	    match n {
+	      -1 => Ok(ErrorCode::General(raddr.unwrap(), msg.unwrap())),
+	      -2 => Ok(ErrorCode::IncompatibleApi(raddr.unwrap(), msg.unwrap())),
+	      -3 => Ok(ErrorCode::Blacklisted(raddr.unwrap(), msg.unwrap())),
+	      -4 => Ok(ErrorCode::LaunchFailed(raddr.unwrap(), msg.unwrap())),
+	      -5 => Ok(ErrorCode::NoSuchFile(raddr.unwrap(), msg.unwrap())),
+	      -6 => Ok(ErrorCode::NoSessionOpen(raddr.unwrap(), msg.unwrap())),
+	      -7 => Ok(ErrorCode::UnsavedChanges(raddr.unwrap(), msg.unwrap())),
+	      -8 => Ok(ErrorCode::NotNow(raddr.unwrap(), msg.unwrap())),
+	      -9 => Ok(ErrorCode::BadProject(raddr.unwrap(), msg.unwrap())),
+	      -10 => Ok(ErrorCode::CreateFailed(raddr.unwrap(), msg.unwrap())),
+	      -11 => Ok(ErrorCode::SaveFailed(raddr.unwrap(), msg.unwrap())),
+	      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ErrorCode")))
+	    }
+	  } else {
+	    Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ErrorCode")))
+	  }
+	} else {
+	  Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ErrorCode")))
+	}
+      },
+      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ErrorCode")))
+    }
+  }
+}
+
+pub type NsmResult<T, ErrorCode> = std::result::Result<T, ErrorCode>;
 
 pub enum ClientMessage<'a> {
   Announce(&'a str, ClientCaps<'a>),

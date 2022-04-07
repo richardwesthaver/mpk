@@ -1,53 +1,53 @@
-- [Status](#org31146a4)
-- [On Digital Audio Workstations](#orgc99f828)
-  - [The Music Programmer](#orga63564d)
-    - [Trackers](#orgb851a76)
-    - [Patchers](#org2a9677b)
-  - [A new paradigm](#orgc7e3bc6)
-- [Usage](#orgc6a8b9f)
-  - [Installation](#orge9cf54f)
-  - [Initialization](#org6bf9880)
-  - [Configuration](#org346ea44)
-  - [The Database](#orgd52b40e)
-    - [Sync](#org66259d1)
-    - [Query](#org695ccdb)
-    - [Backup/Restore](#org334de29)
-  - [Projects](#orgeb58bf0)
-- [Dependencies](#orgafad70a)
-- [Crates](#org37e6285)
-  - [`mpk`](#org3ae3529)
-  - [`mpk_config`](#org45aa563)
-  - [`mpk_db`](#org17a68e7)
-  - [`mpk_py`](#orgc54e987)
-  - [`mpk_ffi`](#org0e61c10)
-  - [`mpk_audio`](#orgcd6c1aa)
-  - [`mpk_flate`](#orgfe3fb11)
-  - [`mpk_codec`](#orgd0f39f1)
-  - [`mpk_gear`](#org098c855)
-  - [`mpk_jack`](#org4013ea9)
-  - [`mpk_sesh`](#org1fa98c9)
-  - [`mpk_midi`](#orga8b2134)
-  - [`mpk_http`](#orgf0cfb51)
-  - [`mpk_osc`](#org69e79e0)
-  - [`mpk_hash`](#org1462aa6)
+- [Status](#orgb30bc83)
+- [On Digital Audio Workstations](#org1c8c651)
+  - [The Music Programmer](#org27299ff)
+    - [Trackers](#org741ef88)
+    - [Patchers](#org8d85092)
+  - [A new paradigm](#org638e900)
+- [Usage](#orgc862def)
+  - [Installation](#orgbdff9dd)
+  - [Initialization](#org4dcf8db)
+  - [Configuration](#org29a0375)
+  - [The Database](#org5eb7e5e)
+    - [Sync](#orgb641213)
+    - [Query](#org002db3d)
+    - [Backup/Restore](#orgb3d51b9)
+  - [Projects](#org29e76d7)
+- [Dependencies](#org4ad6e6e)
+- [Crates](#org58be15e)
+  - [`mpk`](#orgeebcc2a)
+  - [`mpk_config`](#orgaa07377)
+  - [`mpk_db`](#org4ca36f2)
+  - [`mpk_py`](#orgc81abd4)
+  - [`mpk_ffi`](#orgc910ce4)
+  - [`mpk_audio`](#org8eba044)
+  - [`mpk_flate`](#orgffa1ec8)
+  - [`mpk_codec`](#orgdbeeb2e)
+  - [`mpk_gear`](#org3416c36)
+  - [`mpk_jack`](#orgfb92b41)
+  - [`mpk_sesh`](#orgda01b26)
+  - [`mpk_midi`](#org839fca6)
+  - [`mpk_http`](#org1f0c9d5)
+  - [`mpk_osc`](#org7986395)
+  - [`mpk_hash`](#org2fc1665)
 
 `mpk` is a *Media Programming Kit* &#x2013; a development kit for digital media, taking lessons learned from software engineering and applying them to creative pursuits. It is a flexible ecosystem designed to organize my workflow involving hardware, software, and data.
 
 *Batteries are not included.*
 
 
-<a id="org31146a4"></a>
+<a id="orgb30bc83"></a>
 
 # Status
 
-This project is quite young and will only deal with audio for quite some time since that's the medium I'm most interested in. There are future plans for image/video support followed by VR/AR. The core APIs are written in Rust but there are bindings for C and Python (see [mpk\_ffi](#org0e61c10)).
+This project is quite young and will only deal with audio for quite some time since that's the medium I'm most interested in. There are future plans for image/video support followed by VR/AR. The core APIs are written in Rust but there are bindings for C and Python (see [mpk\_ffi](#orgc910ce4)).
 
 Right now my focus is on the SQLite<sup><a id="fnr.1" class="footref" href="#fn.1" role="doc-backlink">1</a></sup> database and cataloging libraries of audio tracks and samples. The database is designed to capture as much information as possible with minimal user configuration and input. The libraries have a fairly flat directory structure &#x2013; a far cry from most music library programs which encourage a deeply nested structure (`Tracks -> Artist -> Album -> track.wav`).
 
-Once I'm happy with the database I'll work on the MIDI module ([mpk\_midi](#orga8b2134)), add playback/record/transcode capabilities ([mpk\_audio](#orgcd6c1aa)/[mpk\_codec](#orgd0f39f1)), and then get started on session management functionality ([mpk\_sesh](#org1fa98c9)).
+Once I'm happy with the database I'll work on the MIDI module ([mpk\_midi](#org839fca6)), add playback/record/transcode capabilities ([mpk\_audio](#org8eba044)/[mpk\_codec](#orgdbeeb2e)), and then get started on session management functionality ([mpk\_sesh](#orgda01b26)).
 
 
-<a id="orgc99f828"></a>
+<a id="org1c8c651"></a>
 
 # TODO On Digital Audio Workstations
 
@@ -62,7 +62,7 @@ Another benefit of the DAW is its efficacy in education. Most Music Production c
 Indeed, the DAW has been an important evolution in the ways we make music. For all the luxuries it endows us with, there's hardly an argument to be made against the paradigm. Despite this, I do think there is one: The DAW prevents Music Producers from being Music Programmers.
 
 
-<a id="orga63564d"></a>
+<a id="org27299ff"></a>
 
 ## The Music Programmer
 
@@ -70,14 +70,14 @@ Indeed, the DAW has been an important evolution in the ways we make music. For a
 -   [CCRMA - Music 192B: Week 2, Digital Audio Workstations](https://ccrma.stanford.edu/courses/192b/ProTools-Logic%20Lec.pdf)
 
 
-<a id="orgb851a76"></a>
+<a id="org741ef88"></a>
 
 ### Trackers
 
 -   [Mod love | Salon.com](https://www.salon.com/1999/04/29/mod_trackers/)
 
 
-<a id="org2a9677b"></a>
+<a id="org8d85092"></a>
 
 ### Patchers
 
@@ -85,7 +85,7 @@ Indeed, the DAW has been an important evolution in the ways we make music. For a
 -   [Miller Puckette, IRCAM - The Patcher](http://msp.ucsd.edu/Publications/icmc88.pdf)
 
 
-<a id="orgc7e3bc6"></a>
+<a id="org638e900"></a>
 
 ## A new paradigm
 
@@ -96,7 +96,7 @@ Indeed, the DAW has been an important evolution in the ways we make music. For a
 -   [OpenSoundControl.org](https://ccrma.stanford.edu/groups/osc/index.html)
 
 
-<a id="orgc6a8b9f"></a>
+<a id="orgc862def"></a>
 
 # Usage
 
@@ -105,7 +105,7 @@ MPK is meant to be used on a Linux box. In this example we'll be using Arch Linu
 MPK also runs on MacOS but some of the project management functionality isn't available. Most notably, you can't run the [NSM](https://new-session-manager.jackaudio.org) server on MacOS, but you can still interact with one remotely. All other features are supported on both platforms.
 
 
-<a id="orge9cf54f"></a>
+<a id="orgbdff9dd"></a>
 
 ## Installation
 
@@ -128,7 +128,7 @@ Simply run `nim install` in the project root to install the mpk binary in `~/.ca
 Run `nim help` to see the other commands and flags available.
 
 
-<a id="org6bf9880"></a>
+<a id="org4dcf8db"></a>
 
 ## Initialization
 
@@ -146,7 +146,7 @@ tracks
 ```
 
 
-<a id="org346ea44"></a>
+<a id="org29a0375"></a>
 
 ## Configuration
 
@@ -206,7 +206,7 @@ Much of the configuration can be overridden by CLI flags but you may want to cha
 -   **`metro.toc`:** audio file to play on metro upbeats
 
 
-<a id="orgd52b40e"></a>
+<a id="org5eb7e5e"></a>
 
 ## The Database
 
@@ -248,33 +248,33 @@ You can interact with the database via CLI:
         sync       Sync resources with DB
 
 
-<a id="org66259d1"></a>
+<a id="orgb641213"></a>
 
 ### Sync
 
 You can populate the database using `mpk db sync` which executes the `mpk_extract.py` script and updates any files that have changed based on checksums.
 
 
-<a id="org695ccdb"></a>
+<a id="org002db3d"></a>
 
 ### Query
 
 Use `mpk db query` to query the database directly. You can get formatted output with the built-in commands. Raw queries are also supported but the output for Blobs are summarized with a length in bytes.
 
 
-<a id="org334de29"></a>
+<a id="orgb3d51b9"></a>
 
 ### Backup/Restore
 
 Use `mpk db backup` to backup the current database and `mpk db restore` to restore from a backup.
 
 
-<a id="orgeb58bf0"></a>
+<a id="org29e76d7"></a>
 
 ## TODO Projects
 
 
-<a id="orgafad70a"></a>
+<a id="org4ad6e6e"></a>
 
 # Dependencies
 
@@ -296,12 +296,12 @@ Use `mpk db backup` to backup the current database and `mpk db restore` to resto
         -   used to detect issues with FFI memory management.
 
 
-<a id="org37e6285"></a>
+<a id="org58be15e"></a>
 
 # Crates
 
 
-<a id="org3ae3529"></a>
+<a id="orgeebcc2a"></a>
 
 ## `mpk`
 
@@ -334,14 +334,14 @@ The MPK binary providing CLI access to the library features.
         help      Print this message or the help of the given subcommand(s)
 
 
-<a id="org45aa563"></a>
+<a id="orgaa07377"></a>
 
 ## `mpk_config`
 
 User configuration with read/write support for TOML (typically from `mpk.toml`). Used to initialize other modules at runtime (for example `DbConfig` for `Mdb::new_with_config`).
 
 
-<a id="org17a68e7"></a>
+<a id="org4ca36f2"></a>
 
 ## `mpk_db`
 
@@ -621,7 +621,7 @@ The `Mdb` struct provides an API to the underlying SQLite database which works w
             notes text
 
 
-<a id="orgc54e987"></a>
+<a id="orgc81abd4"></a>
 
 ## `mpk_py`
 
@@ -650,14 +650,14 @@ The MIR<sup><a id="fnr.3" class="footref" href="#fn.3" role="doc-backlink">3</a>
 ```
 
 
-<a id="org0e61c10"></a>
+<a id="orgc910ce4"></a>
 
 ## `mpk_ffi`
 
 C-compatible MPK FFI with C-header and python binding generators.
 
 
-<a id="orgcd6c1aa"></a>
+<a id="org8eba044"></a>
 
 ## `mpk_audio`
 
@@ -668,21 +668,21 @@ The audio module leverages [cpal](https://github.com/RustAudio/cpal) and [rodio]
     -   **chain:** sample chainer<sup><a id="fnr.7" class="footref" href="#fn.7" role="doc-backlink">7</a></sup>
 
 
-<a id="orgfe3fb11"></a>
+<a id="orgffa1ec8"></a>
 
 ## `mpk_flate`
 
 Zstd compression and Tar archival utilities.
 
 
-<a id="orgd0f39f1"></a>
+<a id="orgdbeeb2e"></a>
 
 ## `mpk_codec`
 
 Audio file encoding and decoding.
 
 
-<a id="org098c855"></a>
+<a id="org3416c36"></a>
 
 ## `mpk_gear`
 
@@ -694,42 +694,42 @@ MPK interface for hardware devices connected via USB.
 -   Korg SV-1
 
 
-<a id="org4013ea9"></a>
+<a id="orgfb92b41"></a>
 
 ## `mpk_jack`
 
 MPK interface for JACK.
 
 
-<a id="org1fa98c9"></a>
+<a id="orgda01b26"></a>
 
 ## `mpk_sesh`
 
 MPK session management. Inspired by NSM
 
 
-<a id="orga8b2134"></a>
+<a id="org839fca6"></a>
 
 ## `mpk_midi`
 
 MPK MIDI interface supporting real-time processing, encoding/decoding, and Sysex patching.
 
 
-<a id="orgf0cfb51"></a>
+<a id="org1f0c9d5"></a>
 
 ## `mpk_http`
 
 HTTP client APIs for MPK. Currently includes [freesound.org](https://freesound.org/), [musicbrainz.org](https://musicbrainz.org/), and [coverartarchive.org](https://coverartarchive.org/).
 
 
-<a id="org69e79e0"></a>
+<a id="org7986395"></a>
 
 ## `mpk_osc`
 
 OSC (Open Sound Control) APIs for MPK. Includes an API client for [NSM](https://new-session-manager.jackaudio.org/) (New/Non-Session Manager).
 
 
-<a id="org1462aa6"></a>
+<a id="org2fc1665"></a>
 
 ## `mpk_hash`
 
