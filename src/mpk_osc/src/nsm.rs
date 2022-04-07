@@ -494,10 +494,10 @@ impl<'a> TryFrom<&'a OscPacket> for ClientMessage<'a> {
 	  "/nsm/server/duplicate"|"/nsm/server/close"|
 	  "/nsm/server/abort"|"/nsm/server/quit"|
 	  "/nsm/server/list" => Ok(ClientMessage::Control(ClientControl::try_from(p)?)),
-	  _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerMessage"))),
+	  _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientMessage"))),
 	}
       },
-      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
+      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientMessage")))
     }
   }
 }
@@ -691,10 +691,10 @@ impl<'a> TryFrom<&'a OscPacket> for ClientControl<'a> {
 	  "/nsm/server/quit" => Ok(ClientControl::Quit),
 	  "/nsm/server/list" => Ok(ClientControl::List),
 	  // "" => Ok(ServerMessage::Broadcast(a, b)),
-	  _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerMessage"))),
+	  _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientControl message"))),
 	}
       },
-      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
+      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientControl message")))
     }
   }
 }
@@ -784,7 +784,7 @@ impl<'a> TryFrom<&'a OscPacket> for ServerMessage<'a> {
 	  _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerMessage"))),
 	}
       },
-      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
+      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerMessage")))
     }
   }
 }
@@ -915,16 +915,16 @@ impl<'a> TryFrom<&'a OscPacket> for ServerReply<'a> {
 	      "/nsm/server/abort" => Ok(ServerReply::Abort(msg.unwrap())),
 	      "/nsm/server/quit" => Ok(ServerReply::Quit(msg.unwrap())),
 	      "/nsm/server/list" => Ok(ServerReply::List(msg.unwrap())),
-	      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
+	      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerReply")))
 	    }
 	  } else {
-	    Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
+	    Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerReply")))
 	  }
 	} else {
-	  Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
+	  Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerReply")))
 	}
       },
-      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
+      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerReply")))
     }
   }
 }
