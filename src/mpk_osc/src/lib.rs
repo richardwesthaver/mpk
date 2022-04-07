@@ -11,15 +11,24 @@ mod tests {
   use rosc::encoder;
   use rosc::{OscMessage, OscPacket, OscType};
   use std::net::UdpSocket;
-  fn test_nsm_client<'a>() -> NsmClient<'a> {
+
+  fn get_nsm_url() -> String {
+    let id = String::from_utf8(std::process::Command::new("id").arg("-u").output().unwrap().stdout).unwrap();
+    let pid = String::from_utf8(std::process::Command::new("pgrep").args(["-f","nsmd"]).output().unwrap().stdout).unwrap();
+    let d = std::fs::read_to_string(format!("/run/user/{}/nsm/d/{}", id, pid)).unwrap();
+    d.strip_prefix("osc.udp://").unwrap().strip_suffix('/').unwrap().to_string()
+  }
+
+  fn test_nsm_client<'a>(url: &'a str) -> NsmClient<'a> {
     NsmClient::new(
       "test_client",
       "127.0.0.1:0",
-      None,
+      url,
       &[ClientCap::Dirty, ClientCap::Switch],
     )
     .unwrap()
   }
+
   #[test]
   fn test_send_recv() {
     let sock1 = UdpSocket::bind("127.0.0.1:9264").unwrap();
@@ -43,15 +52,18 @@ mod tests {
       }
     }
   }
+
   #[test]
   fn test_nsm_announce() {
-    let mut client = test_nsm_client();
+    let url = get_nsm_url();
+    let mut client = test_nsm_client(&url);
     assert!(client.announce().is_ok());
   }
 
   #[test]
   fn test_nsm_replies() {
-    let mut client = test_nsm_client();
+    let url = get_nsm_url();
+    let mut client = test_nsm_client(&url);
     let p = ClientReply::Open("/some/path").msg();
     dbg!(&p);
     client.reply(&p).unwrap();
