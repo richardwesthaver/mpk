@@ -3,6 +3,7 @@ pub use blake3::{
 };
 use rand::Rng;
 use std::fs::File;
+use std::hash::Hasher;
 use std::io::{BufReader, Read};
 use std::path::Path;
 pub const KEY_LEN: usize = 32;
@@ -45,6 +46,39 @@ impl Checksum {
   }
 }
 
+pub struct Djb2 {
+  state: u64,
+}
+
+impl Default for Djb2 {
+  fn default() -> Djb2 {
+    Djb2 { state: 5381 }
+  }
+}
+
+impl Hasher for Djb2 {
+  fn finish(&self) -> u64 {
+    self.state
+  }
+
+  fn write(&mut self, bytes: &[u8]) {
+    for &b in bytes {
+      self.state = (self.state << 5)
+        .wrapping_add(self.state)
+        .wrapping_add(b as u64);
+    }
+  }
+}
+
+/// djb2 % 65521 as string
+///
+/// equivalent to NSM's simple_hash function in src/file.cpp
+pub fn simple_hash(input: &str) -> String {
+  let mut hash = Djb2::default();
+  hash.write(input.as_bytes());
+  (hash.finish() % 65521).to_string()
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -82,5 +116,13 @@ mod tests {
     assert_eq!(cs1, cs2);
     assert_ne!(cs2, cs3);
     assert_eq!(cs3, cs4);
+  }
+
+  #[test]
+  fn djb2() {
+    let mut djb2 = Djb2::default();
+    djb2.write(b"bazinga");
+    assert_eq!(djb2.finish(), 229460350232353);
+    assert_eq!("57787".to_string(), simple_hash("bazinga"));
   }
 }

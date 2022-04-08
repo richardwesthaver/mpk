@@ -178,9 +178,7 @@ enum DbCmd {
 
 #[derive(Subcommand)]
 pub enum SeshCmd {
-  New {
-    name: String,
-  },
+  New { name: String },
   List,
   Abort,
 }
@@ -442,25 +440,21 @@ fn main() -> Result<()> {
           Some(|p| mpk_db::print_progress(p)),
         )?,
       }
-    },
+    }
     Command::Sesh { cmd } => {
       let mut client = mpk_osc::nsm::NsmClient::new(
-	"mpk",
-	"127.0.0.1:0",
-	None,
-	mpk_osc::nsm::ClientCaps::all()).unwrap();
+        "mpk",
+        "127.0.0.1:0",
+        None,
+        mpk_osc::nsm::ClientCaps::all(),
+      )
+      .unwrap();
       match cmd {
-	SeshCmd::New { name } => {
-	  client.new_project(&name).unwrap()
-	},
-	SeshCmd::List => {
-	  client.list().unwrap()
-	}
-	SeshCmd::Abort => {
-	  client.abort().unwrap()
-	},
+        SeshCmd::New { name } => client.new_project(&name).unwrap(),
+        SeshCmd::List => client.list().unwrap(),
+        SeshCmd::Abort => client.abort().unwrap(),
       }
-    },
+    }
     Command::Pack {
       input,
       output,

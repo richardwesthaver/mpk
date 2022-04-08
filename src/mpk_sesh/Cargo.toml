@@ -3,6 +3,9 @@ name = "mpk_sesh"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+mpk_osc = { path = "../mpk_osc" }
+mpk_hash = { path = "../mpk_hash" }
+mpk_db = { path = "../mpk_db" }
+mpk_audio = { path = "../mpk_audio" }
+mpk_config = { path = "../mpk_config" }

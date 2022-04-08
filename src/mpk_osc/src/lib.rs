@@ -13,17 +13,14 @@ mod tests {
   use std::net::UdpSocket;
 
   fn spawn_nsmd() {
-    std::process::Command::new("nohup").args(["nsmd", "&"]).spawn().unwrap();
- } 
+    std::process::Command::new("nohup")
+      .args(["nsmd", "&"])
+      .spawn()
+      .unwrap();
+  }
 
   fn test_nsm_client<'a>(url: Option<&'a str>) -> NsmClient<'a> {
-    NsmClient::new(
-      "test_client",
-      "127.0.0.1:0",
-      url,
-      ClientCaps::all(),
-    )
-    .unwrap()
+    NsmClient::new("test_client", "127.0.0.1:0", url, ClientCaps::all()).unwrap()
   }
 
   #[test]
@@ -54,7 +51,7 @@ mod tests {
   fn test_nsm() {
     spawn_nsmd();
     let mut client = test_nsm_client(None);
-//    client.new_project("a_lovely_day").unwrap();
+    //    client.new_project("a_lovely_day").unwrap();
     client.list().unwrap();
     client.open("a_lovely_day").unwrap();
     client.announce().unwrap();

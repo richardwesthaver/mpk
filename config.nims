@@ -176,6 +176,10 @@ task ci, "commit and push changes":
     exec("hg ci -m '" & readLineFromStdin() & "'")
     exec "hg push"
 
+task pull, "pull changes from https://hg.rwest.io/mpk":
+  withDir getVcRoot():
+    exec("hg pull -u")
+
 task fmt, "format code":
   withDir getVcRoot():
     exec "cargo fmt"

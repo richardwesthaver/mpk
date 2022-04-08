@@ -17,7 +17,7 @@
 use crate::{Error, Result};
 use rosc::{decoder, encoder, OscMessage, OscPacket, OscType};
 use std::fmt;
-use std::net::{SocketAddr, UdpSocket, ToSocketAddrs};
+use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
 use std::str::FromStr;
 
 pub const NSM_API_VERSION_MAJOR: u8 = 1;
@@ -27,8 +27,12 @@ pub const NSM_URL_VAR: &str = "NSM_URL";
 pub fn nsmd_pid() -> String {
   let pid = String::from_utf8(
     std::process::Command::new("pgrep")
-      .args(["-f","nsmd"]).output().unwrap().stdout
-  ).unwrap();
+      .args(["-f", "nsmd"])
+      .output()
+      .unwrap()
+      .stdout,
+  )
+  .unwrap();
   if !pid.is_empty() {
     pid.lines().next().unwrap().to_string()
   } else {
@@ -37,17 +41,29 @@ pub fn nsmd_pid() -> String {
 }
 
 pub fn parse_nsm_url(url: &str) -> Result<SocketAddr> {
-  match url.strip_prefix("osc.udp://").unwrap().strip_suffix("/\n").unwrap().to_socket_addrs() {
+  match url
+    .strip_prefix("osc.udp://")
+    .unwrap()
+    .strip_suffix("/\n")
+    .unwrap()
+    .to_socket_addrs()
+  {
     Ok(mut s) => Ok(s.next().unwrap()),
-    Err(e) => Err(Error::Io(e))
+    Err(e) => Err(Error::Io(e)),
   }
 }
 
 pub fn get_nsm_url<'a>(pid: &'a str) -> Result<SocketAddr> {
-  let id = String::from_utf8(std::process::Command::new("id")
-			     .arg("-u").output().unwrap().stdout).unwrap();
-  let url = std::fs::read_to_string(format!("/run/user/{}/nsm/d/{}",
-					  id.trim(), pid)).unwrap();
+  let id = String::from_utf8(
+    std::process::Command::new("id")
+      .arg("-u")
+      .output()
+      .unwrap()
+      .stdout,
+  )
+  .unwrap();
+  let url =
+    std::fs::read_to_string(format!("/run/user/{}/nsm/d/{}", id.trim(), pid)).unwrap();
   parse_nsm_url(&url)
 }
 
@@ -70,14 +86,14 @@ impl<'a> NsmClient<'a> {
     let socket = UdpSocket::bind(addr)?;
     let nsm_url: SocketAddr = if let Some(s) = nsm_url {
       match s.to_socket_addrs() {
-	Ok(mut s) => s.next().unwrap(),
-	Err(_) => match parse_nsm_url(s) {
-	  Ok(s) => s,
-	  Err(_) => {
-	    let pid = nsmd_pid();
-	    get_nsm_url(&pid)?
-	  }
-	}
+        Ok(mut s) => s.next().unwrap(),
+        Err(_) => match parse_nsm_url(s) {
+          Ok(s) => s,
+          Err(_) => {
+            let pid = nsmd_pid();
+            get_nsm_url(&pid)?
+          }
+        },
       }
     } else {
       let pid = nsmd_pid();
@@ -123,17 +139,20 @@ impl<'a> NsmClient<'a> {
   }
 
   pub fn send(&self, msg: ClientMessage) -> Result<()> {
-    self.socket.send_to(&encoder::encode(&msg.msg())?, self.nsm_url)?;
+    self
+      .socket
+      .send_to(&encoder::encode(&msg.msg())?, self.nsm_url)?;
     Ok(())
   }
 
   pub fn recv(&mut self) -> Result<OscPacket> {
     match self.socket.recv_from(&mut self.buf) {
       Ok((size, _addr)) => {
-	let packet = decoder::decode_udp(&self.buf[..size])
-          .expect("failed to decode packet").1;
-	Ok(packet)
-      },
+        let packet = decoder::decode_udp(&self.buf[..size])
+          .expect("failed to decode packet")
+          .1;
+        Ok(packet)
+      }
       Err(e) => Err(Error::Io(e)),
     }
   }
@@ -141,16 +160,16 @@ impl<'a> NsmClient<'a> {
   pub fn recv_msg(&mut self) -> Result<()> {
     match self.recv() {
       Ok(ref p) => {
-	match ServerMessage::parse(p) {
-	  Ok(r) => println!("{:?}", r),
-	  Err(e) => {
-	    let err = ErrorCode::parse(p)?;
-	    println!("{:?}", err);
-	    return Err(e)
-	  }
-	};
-	Ok(())
-      },
+        match ServerMessage::parse(p) {
+          Ok(r) => println!("{:?}", r),
+          Err(e) => {
+            let err = ErrorCode::parse(p)?;
+            println!("{:?}", err);
+            return Err(e);
+          }
+        };
+        Ok(())
+      }
       Err(e) => Err(e),
     }
   }
@@ -158,20 +177,20 @@ impl<'a> NsmClient<'a> {
   pub fn recv_reply(&mut self) -> Result<()> {
     match self.recv() {
       Ok(ref p) => {
-	match ServerReply::parse(p) {
-	  Ok(r) => println!("{:?}", r),
-	  Err(e) => {
-	    let err = ErrorCode::parse(p)?;
-	    println!("{:?}", err);
-	    return Err(e)
-	  }
-	};
-	Ok(())
-      },
+        match ServerReply::parse(p) {
+          Ok(r) => println!("{:?}", r),
+          Err(e) => {
+            let err = ErrorCode::parse(p)?;
+            println!("{:?}", err);
+            return Err(e);
+          }
+        };
+        Ok(())
+      }
       Err(e) => Err(e),
     }
   }
-    
+
   pub fn reply(&mut self, p: &'a OscPacket) -> Result<ClientReply<'a>> {
     ClientReply::parse(p)
   }
@@ -223,7 +242,12 @@ impl<'a> ClientCaps<'a> {
     ClientCaps(caps.leak())
   }
   pub fn all() -> ClientCaps<'a> {
-    ClientCaps(&[ClientCap::Dirty,ClientCap::Switch,ClientCap::Progress,ClientCap::Message])
+    ClientCaps(&[
+      ClientCap::Dirty,
+      ClientCap::Switch,
+      ClientCap::Progress,
+      ClientCap::Message,
+    ])
   }
 }
 
@@ -303,13 +327,13 @@ impl<'a> fmt::Display for ServerCaps<'a> {
     let mut s = String::new();
     match self.0 {
       Some(c) => {
-	for i in c.iter() {
-	  s.push_str(&i.to_string());
-	  s.push(':');
-	}
-      },
+        for i in c.iter() {
+          s.push_str(&i.to_string());
+          s.push(':');
+        }
+      }
       None => {
-	s.push_str("NULL");
+        s.push_str("NULL");
       }
     }
     f.write_str(&s)
@@ -324,7 +348,7 @@ impl<'a> FromStr for ServerCaps<'a> {
     } else {
       let mut vec = Vec::new();
       for i in input.trim_matches(':').split(':') {
-	vec.push(ServerCap::from_str(i)?);
+        vec.push(ServerCap::from_str(i)?);
       }
       Ok(ServerCaps::from_vec(vec))
     }
@@ -353,62 +377,84 @@ impl<'a> ErrorCode<'a> {
       args: self.args(),
     })
   }
-  
+
   pub fn addr(&self) -> String {
     "/error".to_string()
   }
 
   pub fn args(&self) -> Vec<OscType> {
     match self {
-      ErrorCode::General(r,m) => vec![OscType::String(r.to_string()),
-				      OscType::Int(self.code()),
-				      OscType::String(m.to_string())],
-      ErrorCode::IncompatibleApi(r,m) => vec![OscType::String(r.to_string()),
-					      OscType::Int(self.code()),
-					      OscType::String(m.to_string())],
-      ErrorCode::Blacklisted(r,m) => vec![OscType::String(r.to_string()),
-					  OscType::Int(self.code()),
-					  OscType::String(m.to_string())],
-      ErrorCode::LaunchFailed(r,m) => vec![OscType::String(r.to_string()),
-					   OscType::Int(self.code()),
-					   OscType::String(m.to_string())],
-      ErrorCode::NoSuchFile(r,m) => vec![OscType::String(r.to_string()),
-					 OscType::Int(self.code()),
-					 OscType::String(m.to_string())],
-      ErrorCode::NoSessionOpen(r,m) => vec![OscType::String(r.to_string()),
-					    OscType::Int(self.code()),
-					    OscType::String(m.to_string())],
-      ErrorCode::UnsavedChanges(r,m) => vec![OscType::String(r.to_string()),
-					     OscType::Int(self.code()),
-					     OscType::String(m.to_string())],
-      ErrorCode::NotNow(r,m) => vec![OscType::String(r.to_string()),
-				     OscType::Int(self.code()),
-				     OscType::String(m.to_string())],
-      ErrorCode::BadProject(r,m) => vec![OscType::String(r.to_string()),
-					 OscType::Int(self.code()),
-					 OscType::String(m.to_string())],
-      ErrorCode::CreateFailed(r,m) => vec![OscType::String(r.to_string()),
-					   OscType::Int(self.code()),
-					   OscType::String(m.to_string())],
-      ErrorCode::SaveFailed(r,m) => vec![OscType::String(r.to_string()),
-					 OscType::Int(self.code()),
-					 OscType::String(m.to_string())],
+      ErrorCode::General(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::IncompatibleApi(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::Blacklisted(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::LaunchFailed(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::NoSuchFile(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::NoSessionOpen(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::UnsavedChanges(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::NotNow(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::BadProject(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::CreateFailed(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::SaveFailed(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
     }
   }
 
   pub fn code(&self) -> i32 {
     match self {
-      ErrorCode::General(_,_) => -1,
-      ErrorCode::IncompatibleApi(_,_) => -2,
-      ErrorCode::Blacklisted(_,_) => -3,
-      ErrorCode::LaunchFailed(_,_) => -4,
-      ErrorCode::NoSuchFile(_,_) => -5,
-      ErrorCode::NoSessionOpen(_,_) => -6,
-      ErrorCode::UnsavedChanges(_,_) => -7,
-      ErrorCode::NotNow(_,_) => -8,
-      ErrorCode::BadProject(_,_) => -9,
-      ErrorCode::CreateFailed(_,_) => -10,
-      ErrorCode::SaveFailed(_,_) => -11,
+      ErrorCode::General(_, _) => -1,
+      ErrorCode::IncompatibleApi(_, _) => -2,
+      ErrorCode::Blacklisted(_, _) => -3,
+      ErrorCode::LaunchFailed(_, _) => -4,
+      ErrorCode::NoSuchFile(_, _) => -5,
+      ErrorCode::NoSessionOpen(_, _) => -6,
+      ErrorCode::UnsavedChanges(_, _) => -7,
+      ErrorCode::NotNow(_, _) => -8,
+      ErrorCode::BadProject(_, _) => -9,
+      ErrorCode::CreateFailed(_, _) => -10,
+      ErrorCode::SaveFailed(_, _) => -11,
     }
   }
 
@@ -422,48 +468,56 @@ impl<'a> TryFrom<&'a OscPacket> for ErrorCode<'a> {
   fn try_from(p: &'a OscPacket) -> Result<Self> {
     match p {
       OscPacket::Message(m) => {
-	if &m.addr == "/error" {
-	  let raddr = if let OscType::String(ref s) = m.args[0] {
-	    Some(s)
-	  } else {
-	    None
-	  };
+        if &m.addr == "/error" {
+          let raddr = if let OscType::String(ref s) = m.args[0] {
+            Some(s)
+          } else {
+            None
+          };
 
-	  let code = if let OscType::Int(n) = m.args[1] {
-	    Some(n)
-	  } else {
-	    None
-	  };
+          let code = if let OscType::Int(n) = m.args[1] {
+            Some(n)
+          } else {
+            None
+          };
 
-	  let msg = if let OscType::String(ref s) = m.args[2] {
-	    Some(s)
-	  } else {
-	    None
-	  };
+          let msg = if let OscType::String(ref s) = m.args[2] {
+            Some(s)
+          } else {
+            None
+          };
 
-	  if let Some(n) = code {
-	    match n {
-	      -1 => Ok(ErrorCode::General(raddr.unwrap(), msg.unwrap())),
-	      -2 => Ok(ErrorCode::IncompatibleApi(raddr.unwrap(), msg.unwrap())),
-	      -3 => Ok(ErrorCode::Blacklisted(raddr.unwrap(), msg.unwrap())),
-	      -4 => Ok(ErrorCode::LaunchFailed(raddr.unwrap(), msg.unwrap())),
-	      -5 => Ok(ErrorCode::NoSuchFile(raddr.unwrap(), msg.unwrap())),
-	      -6 => Ok(ErrorCode::NoSessionOpen(raddr.unwrap(), msg.unwrap())),
-	      -7 => Ok(ErrorCode::UnsavedChanges(raddr.unwrap(), msg.unwrap())),
-	      -8 => Ok(ErrorCode::NotNow(raddr.unwrap(), msg.unwrap())),
-	      -9 => Ok(ErrorCode::BadProject(raddr.unwrap(), msg.unwrap())),
-	      -10 => Ok(ErrorCode::CreateFailed(raddr.unwrap(), msg.unwrap())),
-	      -11 => Ok(ErrorCode::SaveFailed(raddr.unwrap(), msg.unwrap())),
-	      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ErrorCode")))
-	    }
-	  } else {
-	    Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ErrorCode")))
-	  }
-	} else {
-	  Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ErrorCode")))
-	}
-      },
-      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ErrorCode")))
+          if let Some(n) = code {
+            match n {
+              -1 => Ok(ErrorCode::General(raddr.unwrap(), msg.unwrap())),
+              -2 => Ok(ErrorCode::IncompatibleApi(raddr.unwrap(), msg.unwrap())),
+              -3 => Ok(ErrorCode::Blacklisted(raddr.unwrap(), msg.unwrap())),
+              -4 => Ok(ErrorCode::LaunchFailed(raddr.unwrap(), msg.unwrap())),
+              -5 => Ok(ErrorCode::NoSuchFile(raddr.unwrap(), msg.unwrap())),
+              -6 => Ok(ErrorCode::NoSessionOpen(raddr.unwrap(), msg.unwrap())),
+              -7 => Ok(ErrorCode::UnsavedChanges(raddr.unwrap(), msg.unwrap())),
+              -8 => Ok(ErrorCode::NotNow(raddr.unwrap(), msg.unwrap())),
+              -9 => Ok(ErrorCode::BadProject(raddr.unwrap(), msg.unwrap())),
+              -10 => Ok(ErrorCode::CreateFailed(raddr.unwrap(), msg.unwrap())),
+              -11 => Ok(ErrorCode::SaveFailed(raddr.unwrap(), msg.unwrap())),
+              _ => Err(Error::Osc(rosc::OscError::BadMessage(
+                "Unable to parse ErrorCode",
+              ))),
+            }
+          } else {
+            Err(Error::Osc(rosc::OscError::BadMessage(
+              "Unable to parse ErrorCode",
+            )))
+          }
+        } else {
+          Err(Error::Osc(rosc::OscError::BadMessage(
+            "Unable to parse ErrorCode",
+          )))
+        }
+      }
+      _ => Err(Error::Osc(rosc::OscError::BadMessage(
+        "Unable to parse ErrorCode",
+      ))),
     }
   }
 }
@@ -551,58 +605,68 @@ impl<'a> TryFrom<&'a OscPacket> for ClientMessage<'a> {
   fn try_from(p: &'a OscPacket) -> Result<Self> {
     match p {
       OscPacket::Message(ref m) => {
-	match m.addr.as_str() {
-	  "/reply" => Ok(ClientMessage::Reply(ClientReply::try_from(p)?)),
-	  "/nsm/server/announce" => {
-	    let name = if let OscType::String(ref s) = m.args[0] {
-	      Some(s)
-	    } else {
-	      None
-	    };
-	    let caps = if let OscType::String(ref s) = m.args[1] {
-	      let c = ClientCaps::from_str(s).unwrap();
-	      Some(c)
-	    } else {
-	      None
-	    };
-	    Ok(ClientMessage::Announce(&name.unwrap(), caps.unwrap()))
-	  },
-	  "/nsm/client/message" => {
-	    let priority = if let OscType::Int(i) = m.args[0] {
-	      Some(i)
-	    } else {
-	      None
-	    };
-	    let message = if let OscType::String(ref s) = m.args[1] {
-	      Some(s)
-	    } else {
-	      None
-	    };
-	    Ok(ClientMessage::Status(priority.unwrap(), &message.unwrap()))
-	  },
-	  "/nsm/client/progress" => {
-	    let progress = if let OscType::Float(f) = m.args[0] {
-	      Some(f)
-	    } else {
-	      None
-	    };
-	    Ok(ClientMessage::Progress(progress.unwrap()))
-	  },
-	  "/nsm/client/gui_is_hidden" => Ok(ClientMessage::GuiHidden),
-	  "/nsm/client/gui_is_shown" => Ok(ClientMessage::GuiShown),
-	  "/nsm/client/is_clean" => Ok(ClientMessage::Clean),
-	  "/nsm/client/is_dirty" => Ok(ClientMessage::Dirty),
-	  "/nsm/server/broadcast" => Ok(ClientMessage::Broadcast),
-	  // "" => Ok(ServerMessage::Broadcast(a, b)),
-	  "/nsm/server/add"|"/nsm/server/save"|
-	  "/nsm/server/open"|"/nsm/server/new"|
-	  "/nsm/server/duplicate"|"/nsm/server/close"|
-	  "/nsm/server/abort"|"/nsm/server/quit"|
-	  "/nsm/server/list" => Ok(ClientMessage::Control(ClientControl::try_from(p)?)),
-	  _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientMessage"))),
-	}
-      },
-      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientMessage")))
+        match m.addr.as_str() {
+          "/reply" => Ok(ClientMessage::Reply(ClientReply::try_from(p)?)),
+          "/nsm/server/announce" => {
+            let name = if let OscType::String(ref s) = m.args[0] {
+              Some(s)
+            } else {
+              None
+            };
+            let caps = if let OscType::String(ref s) = m.args[1] {
+              let c = ClientCaps::from_str(s).unwrap();
+              Some(c)
+            } else {
+              None
+            };
+            Ok(ClientMessage::Announce(&name.unwrap(), caps.unwrap()))
+          }
+          "/nsm/client/message" => {
+            let priority = if let OscType::Int(i) = m.args[0] {
+              Some(i)
+            } else {
+              None
+            };
+            let message = if let OscType::String(ref s) = m.args[1] {
+              Some(s)
+            } else {
+              None
+            };
+            Ok(ClientMessage::Status(priority.unwrap(), &message.unwrap()))
+          }
+          "/nsm/client/progress" => {
+            let progress = if let OscType::Float(f) = m.args[0] {
+              Some(f)
+            } else {
+              None
+            };
+            Ok(ClientMessage::Progress(progress.unwrap()))
+          }
+          "/nsm/client/gui_is_hidden" => Ok(ClientMessage::GuiHidden),
+          "/nsm/client/gui_is_shown" => Ok(ClientMessage::GuiShown),
+          "/nsm/client/is_clean" => Ok(ClientMessage::Clean),
+          "/nsm/client/is_dirty" => Ok(ClientMessage::Dirty),
+          "/nsm/server/broadcast" => Ok(ClientMessage::Broadcast),
+          // "" => Ok(ServerMessage::Broadcast(a, b)),
+          "/nsm/server/add"
+          | "/nsm/server/save"
+          | "/nsm/server/open"
+          | "/nsm/server/new"
+          | "/nsm/server/duplicate"
+          | "/nsm/server/close"
+          | "/nsm/server/abort"
+          | "/nsm/server/quit"
+          | "/nsm/server/list" => {
+            Ok(ClientMessage::Control(ClientControl::try_from(p)?))
+          }
+          _ => Err(Error::Osc(rosc::OscError::BadMessage(
+            "Unable to parse ClientMessage",
+          ))),
+        }
+      }
+      _ => Err(Error::Osc(rosc::OscError::BadMessage(
+        "Unable to parse ClientMessage",
+      ))),
     }
   }
 }
@@ -652,35 +716,43 @@ impl<'a> TryFrom<&'a OscPacket> for ClientReply<'a> {
   fn try_from(p: &'a OscPacket) -> Result<Self> {
     match p {
       OscPacket::Message(m) => {
-	if &m.addr == "/reply" {
-	  let args = &m.args;
+        if &m.addr == "/reply" {
+          let args = &m.args;
 
-	  let raddr = if let OscType::String(ref s) = args[0] {
-	    Some(s)
-	  } else {
-	    None
-	  };
+          let raddr = if let OscType::String(ref s) = args[0] {
+            Some(s)
+          } else {
+            None
+          };
 
-	  let msg = if let OscType::String(ref s) = args[1] {
-	    Some(s)
-	  } else {
-	    None
-	  };
+          let msg = if let OscType::String(ref s) = args[1] {
+            Some(s)
+          } else {
+            None
+          };
 
-	  if let Some(ref s) = raddr {
-	    match s.as_str() {
-	      "/nsm/client/open" => Ok(ClientReply::Open(msg.unwrap())),
-	      "nsm/client/save" => Ok(ClientReply::Open(msg.unwrap())),
-	      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
-	    }
-	  } else {
-	    Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
-	  }
-	} else {
-	  Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
-	}
-      },
-      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientReply")))
+          if let Some(ref s) = raddr {
+            match s.as_str() {
+              "/nsm/client/open" => Ok(ClientReply::Open(msg.unwrap())),
+              "nsm/client/save" => Ok(ClientReply::Open(msg.unwrap())),
+              _ => Err(Error::Osc(rosc::OscError::BadMessage(
+                "Unable to parse ClientReply",
+              ))),
+            }
+          } else {
+            Err(Error::Osc(rosc::OscError::BadMessage(
+              "Unable to parse ClientReply",
+            )))
+          }
+        } else {
+          Err(Error::Osc(rosc::OscError::BadMessage(
+            "Unable to parse ClientReply",
+          )))
+        }
+      }
+      _ => Err(Error::Osc(rosc::OscError::BadMessage(
+        "Unable to parse ClientReply",
+      ))),
     }
   }
 }
@@ -759,49 +831,53 @@ impl<'a> TryFrom<&'a OscPacket> for ClientControl<'a> {
   fn try_from(p: &'a OscPacket) -> Result<Self> {
     match p {
       OscPacket::Message(ref m) => {
-	match m.addr.as_str() {
-	  "/nsm/server/add" => {
-	    let exe = if let OscType::String(ref s) = m.args[0] {
-	      Some(s)
-	    } else {
-	      None
-	    };
-	    Ok(ClientControl::Add(&exe.unwrap()))
-	  },
-	  "/nsm/server/save" => Ok(ClientControl::Save),
-	  "/nsm/server/open" => {
-	    let name = if let OscType::String(ref s) = m.args[0] {
-	      Some(s)
-	    } else {
-	      None
-	    };
-	    Ok(ClientControl::Open(&name.unwrap()))
-	  },
-	  "/nsm/server/new" => {
-	    let name = if let OscType::String(ref s) = m.args[0] {
-	      Some(s)
-	    } else {
-	      None
-	    };
-	    Ok(ClientControl::New(&name.unwrap()))
-	  },
-	  "/nsm/server/duplicate" => {
-	    let name = if let OscType::String(ref s) = m.args[0] {
-	      Some(s)
-	    } else {
-	      None
-	    };
-	    Ok(ClientControl::Duplicate(&name.unwrap()))
-	  },
-	  "/nsm/server/close" => Ok(ClientControl::Close),
-	  "/nsm/server/abort" => Ok(ClientControl::Abort),
-	  "/nsm/server/quit" => Ok(ClientControl::Quit),
-	  "/nsm/server/list" => Ok(ClientControl::List),
-	  // "" => Ok(ServerMessage::Broadcast(a, b)),
-	  _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientControl message"))),
-	}
-      },
-      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ClientControl message")))
+        match m.addr.as_str() {
+          "/nsm/server/add" => {
+            let exe = if let OscType::String(ref s) = m.args[0] {
+              Some(s)
+            } else {
+              None
+            };
+            Ok(ClientControl::Add(&exe.unwrap()))
+          }
+          "/nsm/server/save" => Ok(ClientControl::Save),
+          "/nsm/server/open" => {
+            let name = if let OscType::String(ref s) = m.args[0] {
+              Some(s)
+            } else {
+              None
+            };
+            Ok(ClientControl::Open(&name.unwrap()))
+          }
+          "/nsm/server/new" => {
+            let name = if let OscType::String(ref s) = m.args[0] {
+              Some(s)
+            } else {
+              None
+            };
+            Ok(ClientControl::New(&name.unwrap()))
+          }
+          "/nsm/server/duplicate" => {
+            let name = if let OscType::String(ref s) = m.args[0] {
+              Some(s)
+            } else {
+              None
+            };
+            Ok(ClientControl::Duplicate(&name.unwrap()))
+          }
+          "/nsm/server/close" => Ok(ClientControl::Close),
+          "/nsm/server/abort" => Ok(ClientControl::Abort),
+          "/nsm/server/quit" => Ok(ClientControl::Quit),
+          "/nsm/server/list" => Ok(ClientControl::List),
+          // "" => Ok(ServerMessage::Broadcast(a, b)),
+          _ => Err(Error::Osc(rosc::OscError::BadMessage(
+            "Unable to parse ClientControl message",
+          ))),
+        }
+      }
+      _ => Err(Error::Osc(rosc::OscError::BadMessage(
+        "Unable to parse ClientControl message",
+      ))),
     }
   }
 }
@@ -867,36 +943,44 @@ impl<'a> TryFrom<&'a OscPacket> for ServerMessage<'a> {
   fn try_from(p: &'a OscPacket) -> Result<Self> {
     match p {
       OscPacket::Message(ref m) => {
-	match m.addr.as_str() {
-	  "/reply" => Ok(ServerMessage::Reply(ServerReply::try_from(p)?)),
-	  "/nsm/client/open" => {
-	    let path = if let OscType::String(ref s) = m.args[0] {
-	      Some(s)
-	    } else {
-	      None
-	    };
-	    let name = if let OscType::String(ref s) = m.args[1] {
-	      Some(s)
-	    } else {
-	      None
-	    };
-	    let id = if let OscType::String(ref s) = m.args[2] {
-	      Some(s)
-	    } else {
-	      None
-	    };
+        match m.addr.as_str() {
+          "/reply" => Ok(ServerMessage::Reply(ServerReply::try_from(p)?)),
+          "/nsm/client/open" => {
+            let path = if let OscType::String(ref s) = m.args[0] {
+              Some(s)
+            } else {
+              None
+            };
+            let name = if let OscType::String(ref s) = m.args[1] {
+              Some(s)
+            } else {
+              None
+            };
+            let id = if let OscType::String(ref s) = m.args[2] {
+              Some(s)
+            } else {
+              None
+            };
 
-	    Ok(ServerMessage::Open(&path.unwrap(), &name.unwrap(), &id.unwrap()))
-	  },
-	  "/nsm/client/save" => Ok(ServerMessage::Save),
-	  "/nsm/client/session_is_loaded" => Ok(ServerMessage::SessionLoaded),
-	  "/nsm/client/show_optional_gui" => Ok(ServerMessage::ShowGui),
-	  "/nsm/client/hide_optional_gui" => Ok(ServerMessage::HideGui),
-	  // "" => Ok(ServerMessage::Broadcast(a, b)),
-	  _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerMessage"))),
-	}
-      },
-      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerMessage")))
+            Ok(ServerMessage::Open(
+              &path.unwrap(),
+              &name.unwrap(),
+              &id.unwrap(),
+            ))
+          }
+          "/nsm/client/save" => Ok(ServerMessage::Save),
+          "/nsm/client/session_is_loaded" => Ok(ServerMessage::SessionLoaded),
+          "/nsm/client/show_optional_gui" => Ok(ServerMessage::ShowGui),
+          "/nsm/client/hide_optional_gui" => Ok(ServerMessage::HideGui),
+          // "" => Ok(ServerMessage::Broadcast(a, b)),
+          _ => Err(Error::Osc(rosc::OscError::BadMessage(
+            "Unable to parse ServerMessage",
+          ))),
+        }
+      }
+      _ => Err(Error::Osc(rosc::OscError::BadMessage(
+        "Unable to parse ServerMessage",
+      ))),
     }
   }
 }
@@ -938,40 +1022,54 @@ impl<'a> ServerReply<'a> {
         ]
       }
       ServerReply::Add(a) => {
-        vec![OscType::String("/nsm/server/add".to_string()),
-	     OscType::String(a.to_string())]
+        vec![
+          OscType::String("/nsm/server/add".to_string()),
+          OscType::String(a.to_string()),
+        ]
       }
       ServerReply::Save(a) => {
-        vec![OscType::String("/nsm/server/save".to_string()),
-	     OscType::String(a.to_string())]
+        vec![
+          OscType::String("/nsm/server/save".to_string()),
+          OscType::String(a.to_string()),
+        ]
       }
       ServerReply::Open(a) => {
-        vec![OscType::String("/nsm/server/open".to_string()),
-	     OscType::String(a.to_string())]
+        vec![
+          OscType::String("/nsm/server/open".to_string()),
+          OscType::String(a.to_string()),
+        ]
       }
       ServerReply::New(a) => {
-        vec![OscType::String("/nsm/server/new".to_string()),
-	  OscType::String(a.to_string())]
+        vec![
+          OscType::String("/nsm/server/new".to_string()),
+          OscType::String(a.to_string()),
+        ]
       }
       ServerReply::Duplicate(a) => {
-        vec![OscType::String("/nsm/server/duplicate".to_string()),
-	  OscType::String(a.to_string())]
+        vec![
+          OscType::String("/nsm/server/duplicate".to_string()),
+          OscType::String(a.to_string()),
+        ]
       }
       ServerReply::Close(a) => {
-        vec![OscType::String("/nsm/server/close".to_string()),
-	  OscType::String(a.to_string())]
+        vec![
+          OscType::String("/nsm/server/close".to_string()),
+          OscType::String(a.to_string()),
+        ]
       }
       ServerReply::Abort(a) => {
-        vec![OscType::String("/nsm/server/abort".to_string()),
-	  OscType::String(a.to_string())]
+        vec![
+          OscType::String("/nsm/server/abort".to_string()),
+          OscType::String(a.to_string()),
+        ]
       }
       ServerReply::Quit(a) => {
-        vec![OscType::String("/nsm/server/quit".to_string()),
-	  OscType::String(a.to_string())]
+        vec![
+          OscType::String("/nsm/server/quit".to_string()),
+          OscType::String(a.to_string()),
+        ]
       }
-      ServerReply::List(a) => {
-	a.iter().map(|l| OscType::String(l.to_owned())).collect()
-      }
+      ServerReply::List(a) => a.iter().map(|l| OscType::String(l.to_owned())).collect(),
     }
   }
 
@@ -985,69 +1083,83 @@ impl<'a> TryFrom<&'a OscPacket> for ServerReply<'a> {
   fn try_from(p: &'a OscPacket) -> Result<Self> {
     match p {
       OscPacket::Message(m) => {
-	if &m.addr == "/reply" {
-	  let args = &m.args;
+        if &m.addr == "/reply" {
+          let args = &m.args;
 
-	  let raddr = if let OscType::String(ref s) = args[0] {
-	    Some(s)
-	  } else {
-	    None
-	  };
+          let raddr = if let OscType::String(ref s) = args[0] {
+            Some(s)
+          } else {
+            None
+          };
 
-	  let msg = if let OscType::String(ref s) = args[1] {
-	    Some(s)
-	  } else {
-	    None
-	  };
+          let msg = if let OscType::String(ref s) = args[1] {
+            Some(s)
+          } else {
+            None
+          };
 
-	  if let Some(ref s) = raddr {
-	    match s.as_str() {
-	      "/nsm/server/announce" => {
-		let name = if let OscType::String(ref s) = args[2] {
-		  Some(s)
-		} else {
-		  None
-		};
+          if let Some(ref s) = raddr {
+            match s.as_str() {
+              "/nsm/server/announce" => {
+                let name = if let OscType::String(ref s) = args[2] {
+                  Some(s)
+                } else {
+                  None
+                };
 
-		let caps = if let OscType::String(ref s) = args[3] {
-		  let c = ServerCaps::from_str(s).unwrap();
-		  Some(c)
-		} else {
-		  None
-		};
+                let caps = if let OscType::String(ref s) = args[3] {
+                  let c = ServerCaps::from_str(s).unwrap();
+                  Some(c)
+                } else {
+                  None
+                };
 
-		Ok(ServerReply::Announce(msg.unwrap(), name.unwrap(), caps.unwrap()))
-	      },
-	      "/nsm/server/add" => Ok(ServerReply::Add(msg.unwrap())),
-	      "nsm/server/save" => Ok(ServerReply::Save(msg.unwrap())),
-	      "/nsm/server/open" => Ok(ServerReply::Open(msg.unwrap())),
-	      "/nsm/server/new" => Ok(ServerReply::New(msg.unwrap())),
-	      "/nsm/server/duplicate" => Ok(ServerReply::Duplicate(msg.unwrap())),
-	      "/nsm/server/close" => Ok(ServerReply::Close(msg.unwrap())),
-	      "/nsm/server/abort" => Ok(ServerReply::Abort(msg.unwrap())),
-	      "/nsm/server/quit" => Ok(ServerReply::Quit(msg.unwrap())),
-	      "/nsm/server/list" => {
-		let mut buf = Vec::new();
-		for i in args {
-		  buf.push(i.clone().string().unwrap())
-		}
-		let reply = ServerReply::List(
-		  args.iter().skip(1)
-		    .filter_map(
-		      |l| l.clone().string().filter(|s| !s.is_empty()))
-		    .collect::<Vec<String>>());
-		Ok(reply)
-	      },
-	      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerReply")))
-	    }
-	  } else {
-	    Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerReply")))
-	  }
-	} else {
-	  Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerReply")))
-	}
-      },
-      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerReply")))
+                Ok(ServerReply::Announce(
+                  msg.unwrap(),
+                  name.unwrap(),
+                  caps.unwrap(),
+                ))
+              }
+              "/nsm/server/add" => Ok(ServerReply::Add(msg.unwrap())),
+              "nsm/server/save" => Ok(ServerReply::Save(msg.unwrap())),
+              "/nsm/server/open" => Ok(ServerReply::Open(msg.unwrap())),
+              "/nsm/server/new" => Ok(ServerReply::New(msg.unwrap())),
+              "/nsm/server/duplicate" => Ok(ServerReply::Duplicate(msg.unwrap())),
+              "/nsm/server/close" => Ok(ServerReply::Close(msg.unwrap())),
+              "/nsm/server/abort" => Ok(ServerReply::Abort(msg.unwrap())),
+              "/nsm/server/quit" => Ok(ServerReply::Quit(msg.unwrap())),
+              "/nsm/server/list" => {
+                let mut buf = Vec::new();
+                for i in args {
+                  buf.push(i.clone().string().unwrap())
+                }
+                let reply = ServerReply::List(
+                  args
+                    .iter()
+                    .skip(1)
+                    .filter_map(|l| l.clone().string().filter(|s| !s.is_empty()))
+                    .collect::<Vec<String>>(),
+                );
+                Ok(reply)
+              }
+              _ => Err(Error::Osc(rosc::OscError::BadMessage(
+                "Unable to parse ServerReply",
+              ))),
+            }
+          } else {
+            Err(Error::Osc(rosc::OscError::BadMessage(
+              "Unable to parse ServerReply",
+            )))
+          }
+        } else {
+          Err(Error::Osc(rosc::OscError::BadMessage(
+            "Unable to parse ServerReply",
+          )))
+        }
+      }
+      _ => Err(Error::Osc(rosc::OscError::BadMessage(
+        "Unable to parse ServerReply",
+      ))),
     }
   }
 }
