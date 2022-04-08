@@ -12,8 +12,8 @@ mod tests {
   use rosc::{OscMessage, OscPacket, OscType};
   use std::net::UdpSocket;
 
-  fn spawn_nsmd(){ 
-    std::process::Command::new("sh").args(["-c", "'nohup nsmd &'"]).spawn().unwrap();
+  fn spawn_nsmd() {
+    std::process::Command::new("nohup").args(["nsmd", "&>/dev/null", "&"]).spawn().unwrap();
  } 
 
   fn test_nsm_client<'a>(url: Option<&'a str>) -> NsmClient<'a> {
