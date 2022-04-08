@@ -13,7 +13,7 @@ mod tests {
   use std::net::UdpSocket;
 
   fn spawn_nsmd() {
-    std::process::Command::new("nohup").args(["nsmd", "&>/dev/null", "&"]).spawn().unwrap();
+    std::process::Command::new("nohup").args(["nsmd", ">/dev/null", "2>&1", "&"]).spawn().unwrap();
  } 
 
   fn test_nsm_client<'a>(url: Option<&'a str>) -> NsmClient<'a> {
