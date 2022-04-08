@@ -10,6 +10,8 @@ mpk_audio = { path = "../mpk_audio" }
 mpk_jack = { path = "../mpk_jack" }
 mpk_midi = { path = "../mpk_midi" }
 mpk_db = { path = "../mpk_db" }
+mpk_osc = { path = "../mpk_osc" }
+mpk_sesh = { path = "../mpk_sesh" }
 mpk_plot = { path = "../mpk_plot" }
 mpk_flate = { path = "../mpk_flate" }
 mpk_gear = { path = "../mpk_gear" }

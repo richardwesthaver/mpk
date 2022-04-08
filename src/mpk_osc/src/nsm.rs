@@ -24,8 +24,31 @@ pub const NSM_API_VERSION_MAJOR: u8 = 1;
 pub const NSM_API_VERSION_MINOR: u8 = 1;
 pub const NSM_URL_VAR: &str = "NSM_URL";
 
-pub fn parse_nsm_url(url: &str) -> SocketAddr {
-  url.strip_prefix("osc.udp://").unwrap().strip_suffix('/').unwrap().to_socket_addrs().unwrap().next().unwrap()
+pub fn nsmd_pid() -> String {
+  let pid = String::from_utf8(
+    std::process::Command::new("pgrep")
+      .args(["-f","nsmd"]).output().unwrap().stdout
+  ).unwrap();
+  if !pid.is_empty() {
+    pid.lines().next().unwrap().to_string()
+  } else {
+    panic!("could not find pid for nsmd. make sure to start it first.")
+  }
+}
+
+pub fn parse_nsm_url(url: &str) -> Result<SocketAddr> {
+  match url.strip_prefix("osc.udp://").unwrap().strip_suffix("/\n").unwrap().to_socket_addrs() {
+    Ok(mut s) => Ok(s.next().unwrap()),
+    Err(e) => Err(Error::Io(e))
+  }
+}
+
+pub fn get_nsm_url<'a>(pid: &'a str) -> Result<SocketAddr> {
+  let id = String::from_utf8(std::process::Command::new("id")
+			     .arg("-u").output().unwrap().stdout).unwrap();
+  let url = std::fs::read_to_string(format!("/run/user/{}/nsm/d/{}",
+					  id.trim(), pid)).unwrap();
+  parse_nsm_url(&url)
 }
 
 #[derive(Debug)]
@@ -41,12 +64,25 @@ impl<'a> NsmClient<'a> {
   pub fn new(
     name: &'a str,
     addr: &'a str,
-    nsm_url: &'a str,
-    caps: &'a [ClientCap],
+    nsm_url: Option<&'a str>,
+    caps: ClientCaps<'a>,
   ) -> Result<Self> {
     let socket = UdpSocket::bind(addr)?;
-    let nsm_url: SocketAddr = nsm_url.parse().unwrap();
-    let caps = ClientCaps(caps);
+    let nsm_url: SocketAddr = if let Some(s) = nsm_url {
+      match s.to_socket_addrs() {
+	Ok(mut s) => s.next().unwrap(),
+	Err(_) => match parse_nsm_url(s) {
+	  Ok(s) => s,
+	  Err(_) => {
+	    let pid = nsmd_pid();
+	    get_nsm_url(&pid)?
+	  }
+	}
+      }
+    } else {
+      let pid = nsmd_pid();
+      get_nsm_url(&pid)?
+    };
     Ok(NsmClient {
       name,
       socket,
@@ -57,10 +93,33 @@ impl<'a> NsmClient<'a> {
   }
 
   pub fn announce(&mut self) -> Result<()> {
-    let m = ClientMessage::Announce(self.name, self.caps).msg();
-    let msg = encoder::encode(&m)?;
-    self.socket.send_to(&msg, self.nsm_url)?;
-    Ok(())
+    self.send(ClientMessage::Announce(self.name, self.caps))?;
+    self.recv_reply()?;
+    self.recv_msg()
+  }
+
+  pub fn list(&mut self) -> Result<()> {
+    self.send(ClientMessage::Control(ClientControl::List))?;
+    self.recv_reply()
+  }
+
+  pub fn new_project(&mut self, project_name: &str) -> Result<()> {
+    self.send(ClientMessage::Control(ClientControl::New(project_name)))
+  }
+
+  pub fn open(&mut self, project_name: &str) -> Result<()> {
+    self.send(ClientMessage::Control(ClientControl::Open(project_name)))?;
+    self.recv_reply()
+  }
+
+  pub fn add(&mut self, exe_name: &str) -> Result<()> {
+    self.send(ClientMessage::Control(ClientControl::Add(exe_name)))?;
+    self.recv_reply()
+  }
+
+  pub fn abort(&mut self) -> Result<()> {
+    self.send(ClientMessage::Control(ClientControl::Abort))?;
+    self.recv_reply()
   }
 
   pub fn send(&self, msg: ClientMessage) -> Result<()> {
@@ -80,17 +139,40 @@ impl<'a> NsmClient<'a> {
     }
   }
 
-  pub fn handshake(&mut self) -> Result<()> {
-    self.announce()?;
+  pub fn recv_msg(&mut self) -> Result<()> {
     match self.recv() {
       Ok(ref p) => {
-	ServerReply::parse(p)?;
+	match ServerMessage::parse(p) {
+	  Ok(r) => println!("{:?}", r),
+	  Err(e) => {
+	    let err = ErrorCode::parse(p)?;
+	    println!("{:?}", err);
+	    return Err(e)
+	  }
+	};
 	Ok(())
       },
       Err(e) => Err(e),
     }
   }
 
+  pub fn recv_reply(&mut self) -> Result<()> {
+    match self.recv() {
+      Ok(ref p) => {
+	match ServerReply::parse(p) {
+	  Ok(r) => println!("{:?}", r),
+	  Err(e) => {
+	    let err = ErrorCode::parse(p)?;
+	    println!("{:?}", err);
+	    return Err(e)
+	  }
+	};
+	Ok(())
+      },
+      Err(e) => Err(e),
+    }
+  }
+    
   pub fn reply(&mut self, p: &'a OscPacket) -> Result<ClientReply<'a>> {
     ClientReply::parse(p)
   }
@@ -134,6 +216,18 @@ impl fmt::Display for ClientCap {
 #[derive(Debug, Clone, Copy)]
 pub struct ClientCaps<'a>(&'a [ClientCap]);
 
+impl<'a> ClientCaps<'a> {
+  pub fn new(caps: &'a [ClientCap]) -> ClientCaps<'a> {
+    ClientCaps(caps)
+  }
+  pub fn from_vec(caps: Vec<ClientCap>) -> ClientCaps<'a> {
+    ClientCaps(caps.leak())
+  }
+  pub fn all() -> ClientCaps<'a> {
+    ClientCaps(&[ClientCap::Dirty,ClientCap::Switch,ClientCap::Progress,ClientCap::Message])
+  }
+}
+
 impl<'a> fmt::Display for ClientCaps<'a> {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut s = String::new();
@@ -142,15 +236,6 @@ impl<'a> fmt::Display for ClientCaps<'a> {
       s.push(':');
     }
     f.write_str(&s)
-  }
-}
-
-impl<'a> ClientCaps<'a> {
-  pub fn new(caps: &'a [ClientCap]) -> ClientCaps<'a> {
-    ClientCaps(caps)
-  }
-  pub fn from_vec(caps: Vec<ClientCap>) -> ClientCaps<'a> {
-    ClientCaps(caps.leak())
   }
 }
 
@@ -195,23 +280,38 @@ impl FromStr for ServerCap {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ServerCaps<'a>(&'a [ServerCap]);
+pub struct ServerCaps<'a>(Option<&'a [ServerCap]>);
 
 impl<'a> ServerCaps<'a> {
   pub fn new(caps: &'a [ServerCap]) -> ServerCaps<'a> {
-    ServerCaps(caps)
+    if caps.is_empty() {
+      ServerCaps(None)
+    } else {
+      ServerCaps(Some(caps))
+    }
   }
   pub fn from_vec(caps: Vec<ServerCap>) -> ServerCaps<'a> {
-    ServerCaps(caps.leak())
+    if caps.is_empty() {
+      ServerCaps(None)
+    } else {
+      ServerCaps(Some(caps.leak()))
+    }
   }
 }
 
 impl<'a> fmt::Display for ServerCaps<'a> {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut s = String::new();
-    for i in self.0.iter() {
-      s.push_str(&i.to_string());
-      s.push(':');
+    match self.0 {
+      Some(c) => {
+	for i in c.iter() {
+	  s.push_str(&i.to_string());
+	  s.push(':');
+	}
+      },
+      None => {
+	s.push_str("NULL");
+      }
     }
     f.write_str(&s)
   }
@@ -220,14 +320,19 @@ impl<'a> fmt::Display for ServerCaps<'a> {
 impl<'a> FromStr for ServerCaps<'a> {
   type Err = Error;
   fn from_str(input: &str) -> Result<Self> {
-    let mut vec = Vec::new();
-    for i in input.split(':') {
-      vec.push(ServerCap::from_str(i)?);
+    if input.is_empty() {
+      Ok(ServerCaps(None))
+    } else {
+      let mut vec = Vec::new();
+      for i in input.trim_matches(':').split(':') {
+	vec.push(ServerCap::from_str(i)?);
+      }
+      Ok(ServerCaps::from_vec(vec))
     }
-    Ok(ServerCaps::from_vec(vec))
   }
 }
 
+#[derive(Debug)]
 pub enum ErrorCode<'a> {
   General(&'a str, &'a str),
   IncompatibleApi(&'a str, &'a str),
@@ -366,6 +471,7 @@ impl<'a> TryFrom<&'a OscPacket> for ErrorCode<'a> {
 
 pub type NsmResult<T, ErrorCode> = std::result::Result<T, ErrorCode>;
 
+#[derive(Debug)]
 pub enum ClientMessage<'a> {
   Announce(&'a str, ClientCaps<'a>),
   Progress(f32),
@@ -502,6 +608,7 @@ impl<'a> TryFrom<&'a OscPacket> for ClientMessage<'a> {
   }
 }
 
+#[derive(Debug)]
 pub enum ClientReply<'a> {
   Open(&'a str),
   Save(&'a str),
@@ -579,6 +686,7 @@ impl<'a> TryFrom<&'a OscPacket> for ClientReply<'a> {
   }
 }
 
+#[derive(Debug)]
 pub enum ClientControl<'a> {
   Add(&'a str),
   Save,
@@ -699,6 +807,7 @@ impl<'a> TryFrom<&'a OscPacket> for ClientControl<'a> {
   }
 }
 
+#[derive(Debug)]
 pub enum ServerMessage<'a> {
   Reply(ServerReply<'a>),
   Open(&'a str, &'a str, &'a str),
@@ -748,6 +857,10 @@ impl<'a> ServerMessage<'a> {
       }
     }
   }
+
+  pub fn parse(p: &'a OscPacket) -> Result<Self> {
+    ServerMessage::try_from(p)
+  }
 }
 
 impl<'a> TryFrom<&'a OscPacket> for ServerMessage<'a> {
@@ -789,6 +902,7 @@ impl<'a> TryFrom<&'a OscPacket> for ServerMessage<'a> {
   }
 }
 
+#[derive(Debug)]
 pub enum ServerReply<'a> {
   Announce(&'a str, &'a str, ServerCaps<'a>),
   Add(&'a str),

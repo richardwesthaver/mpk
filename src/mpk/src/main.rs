@@ -34,6 +34,11 @@ struct Args {
 enum Command {
   /// Initialize MPK
   Init,
+  /// Interact with sessions
+  Sesh {
+    #[clap(subcommand)]
+    cmd: SeshCmd,
+  },
   /// Play an audio file
   Play {
     file: Option<PathBuf>,
@@ -51,8 +56,6 @@ enum Command {
     #[clap(subcommand)]
     runner: Runner,
   },
-  /// Save a session
-  Save,
   /// Interact with the database
   Db {
     #[clap(subcommand)]
@@ -85,8 +88,6 @@ enum Command {
     #[clap(short, long)]
     replace: bool,
   },
-  /// Shutdown services
-  Quit,
 }
 
 #[derive(Subcommand)]
@@ -173,6 +174,15 @@ enum DbCmd {
   Restore {
     input: PathBuf,
   },
+}
+
+#[derive(Subcommand)]
+pub enum SeshCmd {
+  New {
+    name: String,
+  },
+  List,
+  Abort,
 }
 
 fn ppln(i: &str, s: char) {
@@ -432,7 +442,25 @@ fn main() -> Result<()> {
           Some(|p| mpk_db::print_progress(p)),
         )?,
       }
-    }
+    },
+    Command::Sesh { cmd } => {
+      let mut client = mpk_osc::nsm::NsmClient::new(
+	"mpk",
+	"127.0.0.1:0",
+	None,
+	mpk_osc::nsm::ClientCaps::all()).unwrap();
+      match cmd {
+	SeshCmd::New { name } => {
+	  client.new_project(&name).unwrap()
+	},
+	SeshCmd::List => {
+	  client.list().unwrap()
+	}
+	SeshCmd::Abort => {
+	  client.abort().unwrap()
+	},
+      }
+    },
     Command::Pack {
       input,
       output,
@@ -512,7 +540,6 @@ fn main() -> Result<()> {
       Runner::Monitor => mpk_midi::monitor()?,
       _ => println!("starting jack server"),
     },
-    _ => ppln("Invalid command", 'E'),
   }
 
   Ok(())
