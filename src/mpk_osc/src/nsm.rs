@@ -131,8 +131,7 @@ impl<'a> NsmClient<'a> {
     match self.socket.recv_from(&mut self.buf) {
       Ok((size, _addr)) => {
 	let packet = decoder::decode_udp(&self.buf[..size])
-          .expect("failed to decode packet")
-          .1;
+          .expect("failed to decode packet").1;
 	Ok(packet)
       },
       Err(e) => Err(Error::Io(e)),
@@ -913,7 +912,7 @@ pub enum ServerReply<'a> {
   Close(&'a str),
   Abort(&'a str),
   Quit(&'a str),
-  List(&'a str),
+  List(Vec<String>),
 }
 
 impl<'a> ServerReply<'a> {
@@ -971,8 +970,7 @@ impl<'a> ServerReply<'a> {
 	  OscType::String(a.to_string())]
       }
       ServerReply::List(a) => {
-        vec![OscType::String("/nsm/server/list".to_string()),
-	  OscType::String(a.to_string())]
+	a.iter().map(|l| OscType::String(l.to_owned())).collect()
       }
     }
   }
@@ -1028,7 +1026,18 @@ impl<'a> TryFrom<&'a OscPacket> for ServerReply<'a> {
 	      "/nsm/server/close" => Ok(ServerReply::Close(msg.unwrap())),
 	      "/nsm/server/abort" => Ok(ServerReply::Abort(msg.unwrap())),
 	      "/nsm/server/quit" => Ok(ServerReply::Quit(msg.unwrap())),
-	      "/nsm/server/list" => Ok(ServerReply::List(msg.unwrap())),
+	      "/nsm/server/list" => {
+		let mut buf = Vec::new();
+		for i in args {
+		  buf.push(i.clone().string().unwrap())
+		}
+		let reply = ServerReply::List(
+		  args.iter().skip(1)
+		    .filter_map(
+		      |l| l.clone().string().filter(|s| !s.is_empty()))
+		    .collect::<Vec<String>>());
+		Ok(reply)
+	      },
 	      _ => Err(Error::Osc(rosc::OscError::BadMessage("Unable to parse ServerReply")))
 	    }
 	  } else {

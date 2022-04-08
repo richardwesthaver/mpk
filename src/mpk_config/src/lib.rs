@@ -42,6 +42,7 @@ pub struct Config {
   pub jack: JackConfig,
   pub metro: MetroConfig,
   pub extractor: ExtractorConfig,
+  pub sesh: SeshConfig,
 }
 
 impl Config {
@@ -52,6 +53,7 @@ impl Config {
       jack,
       metro: MetroConfig::default(),
       extractor: ExtractorConfig::default(),
+      sesh: SeshConfig::default(),
     })
   }
 
@@ -480,16 +482,8 @@ impl From<Config> for ExtractorConfig {
   }
 }
 
-/// Configurations for Sets.
-#[derive(Serialize, Deserialize)]
-pub struct SetConfig {}
-
-/// Configuration for Projects.
-#[derive(Serialize, Deserialize)]
-pub struct ProjectConfig {}
-
 /// Configuration for Patches.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SeshConfig {
   client_addr: SocketAddr,
   nsm_url: Option<SocketAddr>,
@@ -499,7 +493,13 @@ impl Default for SeshConfig {
   fn default() -> Self {
     SeshConfig {
       client_addr: "127.0.0.1:0".parse().unwrap(),
-      nsm_url: std::env::var("NSM_URL").map(|u| u.parse().unwrap()).ok(),
+      nsm_url: None,
     }
+  }
+}
+
+impl From<Config> for SeshConfig {
+  fn from(cfg: Config) -> SeshConfig {
+    cfg.sesh
   }
 }

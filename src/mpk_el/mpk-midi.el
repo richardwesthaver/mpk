@@ -24,10 +24,15 @@
 
 ;;; Code:
 
-(make-process :name "mpk-midi"
-	      :buffer "mpk-midi"
-	      :command '("mpk" "run" "monitor"))
-(process-send-string "mpk-midi" "2\n")
+(defun mpk-midi-init (device)
+  (make-process :name "mpk-midi"
+		:buffer "mpk-midi"
+		:command '("mpk" "run" "monitor"))
+  (process-send-string "mpk-midi" (format "%s\n" device)))
+
+(defun mpk-midi-process-filter (process str)
+  (let ((buffer (process-buffer process)))
+    ))
 
 (provide 'mpk-midi)
 ;;; mpk-midi.el ends here
