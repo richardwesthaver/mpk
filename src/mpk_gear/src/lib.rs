@@ -15,6 +15,5 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_mount() {
-  }
+  fn test_mount() {}
 }

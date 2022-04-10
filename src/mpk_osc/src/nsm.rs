@@ -24,6 +24,11 @@ pub const NSM_API_VERSION_MAJOR: u8 = 1;
 pub const NSM_API_VERSION_MINOR: u8 = 1;
 pub const NSM_URL_VAR: &str = "NSM_URL";
 
+/// Lazily get the PID for a running nsmd server.
+///
+/// Note that this command will return only the first line of the
+/// output of `pgrep`, so if there are multiple servers running you
+/// will need to obtain the PID elsewhere.
 pub fn nsmd_pid() -> String {
   let pid = String::from_utf8(
     std::process::Command::new("pgrep")
@@ -40,6 +45,8 @@ pub fn nsmd_pid() -> String {
   }
 }
 
+/// Parse a NSM_URL of form `osc.udp://HOST:PORT/` and return a
+/// SocketAddr.
 pub fn parse_nsm_url(url: &str) -> Result<SocketAddr> {
   match url
     .strip_prefix("osc.udp://")
@@ -53,6 +60,10 @@ pub fn parse_nsm_url(url: &str) -> Result<SocketAddr> {
   }
 }
 
+/// Get the NSM_URL given the PID of a running nsmd server and return
+/// a SocketAddr. The server needs to be started by the same user
+/// executing this function. The NSM_URL is parsed from the daemon
+/// file at `/run/user/UID/nsm/d/PID`.
 pub fn get_nsm_url<'a>(pid: &'a str) -> Result<SocketAddr> {
   let id = String::from_utf8(
     std::process::Command::new("id")
@@ -67,6 +78,8 @@ pub fn get_nsm_url<'a>(pid: &'a str) -> Result<SocketAddr> {
   parse_nsm_url(&url)
 }
 
+/// A Client for NSM. This struct communicates with the NSM daemon
+/// over a UDP Socket.
 #[derive(Debug)]
 pub struct NsmClient<'a> {
   pub name: &'a str,
@@ -108,34 +121,81 @@ impl<'a> NsmClient<'a> {
     })
   }
 
-  pub fn announce(&mut self) -> Result<()> {
+  pub fn announce(&'a mut self) -> Result<()> {
     self.send(ClientMessage::Announce(self.name, self.caps))?;
-    self.recv_reply()?;
-    self.recv_msg()
+    let p = self.recv()?;
+    let res = self.handle(&p)?;
+    println!("{:?}", res);
+    Ok(())
   }
 
   pub fn list(&mut self) -> Result<()> {
     self.send(ClientMessage::Control(ClientControl::List))?;
-    self.recv_reply()
+    'i: while let Ok(ref p) = self.recv() {
+      let p = self.handle(p)?;
+      let i = &p.args()[1];
+      let res = i.clone().string().unwrap();
+      if !&res.is_empty() {
+        println!("{}", res);
+      } else {
+        break 'i;
+      }
+    }
+    Ok(())
   }
 
   pub fn new_project(&mut self, project_name: &str) -> Result<()> {
-    self.send(ClientMessage::Control(ClientControl::New(project_name)))
+    self.send(ClientMessage::Control(ClientControl::New(project_name)))?;
+    let p = self.recv()?;
+    self.handle(&p).unwrap();
+    Ok(())
   }
 
   pub fn open(&mut self, project_name: &str) -> Result<()> {
     self.send(ClientMessage::Control(ClientControl::Open(project_name)))?;
-    self.recv_reply()
+    self.recv()?;
+    Ok(())
+  }
+
+  pub fn save(&mut self) -> Result<()> {
+    self.send(ClientMessage::Control(ClientControl::Save))?;
+    self.recv()?;
+    Ok(())
+  }
+
+  pub fn duplicate(&mut self, project_name: &str) -> Result<()> {
+    self.send(ClientMessage::Control(ClientControl::Duplicate(
+      project_name,
+    )))?;
+    self.recv()?;
+    Ok(())
   }
 
   pub fn add(&mut self, exe_name: &str) -> Result<()> {
     self.send(ClientMessage::Control(ClientControl::Add(exe_name)))?;
-    self.recv_reply()
+    let p = self.recv()?;
+    self.handle(&p).unwrap();
+    Ok(())
+  }
+
+  pub fn close(&mut self) -> Result<()> {
+    self.send(ClientMessage::Control(ClientControl::Close))?;
+    self.recv()?;
+    Ok(())
   }
 
   pub fn abort(&mut self) -> Result<()> {
     self.send(ClientMessage::Control(ClientControl::Abort))?;
-    self.recv_reply()
+    let p = self.recv()?;
+    self.handle(&p).unwrap();
+    Ok(())
+  }
+
+  pub fn quit(&mut self) -> Result<()> {
+    self.send(ClientMessage::Control(ClientControl::Quit))?;
+    let p = self.recv()?;
+    self.handle(&p).unwrap();
+    Ok(())
   }
 
   pub fn send(&self, msg: ClientMessage) -> Result<()> {
@@ -157,36 +217,9 @@ impl<'a> NsmClient<'a> {
     }
   }
 
-  pub fn recv_msg(&mut self) -> Result<()> {
-    match self.recv() {
-      Ok(ref p) => {
-        match ServerMessage::parse(p) {
-          Ok(r) => println!("{:?}", r),
-          Err(e) => {
-            let err = ErrorCode::parse(p)?;
-            println!("{:?}", err);
-            return Err(e);
-          }
-        };
-        Ok(())
-      }
-      Err(e) => Err(e),
-    }
-  }
-
-  pub fn recv_reply(&mut self) -> Result<()> {
-    match self.recv() {
-      Ok(ref p) => {
-        match ServerReply::parse(p) {
-          Ok(r) => println!("{:?}", r),
-          Err(e) => {
-            let err = ErrorCode::parse(p)?;
-            println!("{:?}", err);
-            return Err(e);
-          }
-        };
-        Ok(())
-      }
+  pub fn handle(&self, p: &'a OscPacket) -> Result<ServerMessage<'a>> {
+    match ServerMessage::parse(p) {
+      Ok(r) => Ok(r),
       Err(e) => Err(e),
     }
   }
@@ -522,8 +555,6 @@ impl<'a> TryFrom<&'a OscPacket> for ErrorCode<'a> {
   }
 }
 
-pub type NsmResult<T, ErrorCode> = std::result::Result<T, ErrorCode>;
-
 #[derive(Debug)]
 pub enum ClientMessage<'a> {
   Announce(&'a str, ClientCaps<'a>),
@@ -536,6 +567,7 @@ pub enum ClientMessage<'a> {
   Broadcast,
   Control(ClientControl<'a>),
   Reply(ClientReply<'a>),
+  Error(ErrorCode<'a>),
 }
 
 impl<'a> ClientMessage<'a> {
@@ -558,6 +590,7 @@ impl<'a> ClientMessage<'a> {
       ClientMessage::Broadcast => "/nsm/server/broadcast".to_string(),
       ClientMessage::Control(m) => m.addr(),
       ClientMessage::Reply(m) => m.addr(),
+      ClientMessage::Error(e) => e.addr(),
     }
   }
 
@@ -596,6 +629,7 @@ impl<'a> ClientMessage<'a> {
       }
       ClientMessage::Control(p) => p.args(),
       ClientMessage::Reply(p) => p.args(),
+      ClientMessage::Error(e) => e.args(),
     }
   }
 }
@@ -607,6 +641,7 @@ impl<'a> TryFrom<&'a OscPacket> for ClientMessage<'a> {
       OscPacket::Message(ref m) => {
         match m.addr.as_str() {
           "/reply" => Ok(ClientMessage::Reply(ClientReply::try_from(p)?)),
+          "/error" => Ok(ClientMessage::Error(ErrorCode::try_from(p)?)),
           "/nsm/server/announce" => {
             let name = if let OscType::String(ref s) = m.args[0] {
               Some(s)
@@ -885,6 +920,7 @@ impl<'a> TryFrom<&'a OscPacket> for ClientControl<'a> {
 #[derive(Debug)]
 pub enum ServerMessage<'a> {
   Reply(ServerReply<'a>),
+  Error(ErrorCode<'a>),
   Open(&'a str, &'a str, &'a str),
   Save,
   SessionLoaded,
@@ -904,6 +940,7 @@ impl<'a> ServerMessage<'a> {
   pub fn addr(&self) -> String {
     match self {
       ServerMessage::Reply(m) => m.addr(),
+      ServerMessage::Error(e) => e.addr(),
       ServerMessage::Open(_, _, _) => "/nsm/client/open".to_string(),
       ServerMessage::Save => "/nsm/client/save".to_string(),
       ServerMessage::SessionLoaded => "/nsm/client/session_is_loaded".to_string(),
@@ -916,6 +953,7 @@ impl<'a> ServerMessage<'a> {
   pub fn args(&self) -> Vec<OscType> {
     match self {
       ServerMessage::Reply(m) => m.args(),
+      ServerMessage::Error(e) => e.args(),
       ServerMessage::Open(a, b, c) => {
         vec![
           OscType::String(a.to_string()),
@@ -945,6 +983,7 @@ impl<'a> TryFrom<&'a OscPacket> for ServerMessage<'a> {
       OscPacket::Message(ref m) => {
         match m.addr.as_str() {
           "/reply" => Ok(ServerMessage::Reply(ServerReply::try_from(p)?)),
+          "/error" => Ok(ServerMessage::Error(ErrorCode::try_from(p)?)),
           "/nsm/client/open" => {
             let path = if let OscType::String(ref s) = m.args[0] {
               Some(s)
@@ -996,7 +1035,7 @@ pub enum ServerReply<'a> {
   Close(&'a str),
   Abort(&'a str),
   Quit(&'a str),
-  List(Vec<String>),
+  List(&'a str),
 }
 
 impl<'a> ServerReply<'a> {
@@ -1069,7 +1108,10 @@ impl<'a> ServerReply<'a> {
           OscType::String(a.to_string()),
         ]
       }
-      ServerReply::List(a) => a.iter().map(|l| OscType::String(l.to_owned())).collect(),
+      ServerReply::List(a) => vec![
+        OscType::String("/nsm/server/list".to_string()),
+        OscType::String(a.to_string()),
+      ],
     }
   }
 
@@ -1128,20 +1170,7 @@ impl<'a> TryFrom<&'a OscPacket> for ServerReply<'a> {
               "/nsm/server/close" => Ok(ServerReply::Close(msg.unwrap())),
               "/nsm/server/abort" => Ok(ServerReply::Abort(msg.unwrap())),
               "/nsm/server/quit" => Ok(ServerReply::Quit(msg.unwrap())),
-              "/nsm/server/list" => {
-                let mut buf = Vec::new();
-                for i in args {
-                  buf.push(i.clone().string().unwrap())
-                }
-                let reply = ServerReply::List(
-                  args
-                    .iter()
-                    .skip(1)
-                    .filter_map(|l| l.clone().string().filter(|s| !s.is_empty()))
-                    .collect::<Vec<String>>(),
-                );
-                Ok(reply)
-              }
+              "/nsm/server/list" => Ok(ServerReply::List(msg.unwrap())),
               _ => Err(Error::Osc(rosc::OscError::BadMessage(
                 "Unable to parse ServerReply",
               ))),

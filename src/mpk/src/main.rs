@@ -179,8 +179,15 @@ enum DbCmd {
 #[derive(Subcommand)]
 pub enum SeshCmd {
   New { name: String },
+  Add { exe: String },
+  Open { name: String },
+  Save,
+  Duplicate { name: String },
+  Announce,
   List,
+  Close,
   Abort,
+  Quit,
 }
 
 fn ppln(i: &str, s: char) {
@@ -451,8 +458,15 @@ fn main() -> Result<()> {
       .unwrap();
       match cmd {
         SeshCmd::New { name } => client.new_project(&name).unwrap(),
+        SeshCmd::Add { exe } => client.add(&exe).unwrap(),
+        SeshCmd::Open { name } => client.open(&name).unwrap(),
+        SeshCmd::Save => client.save().unwrap(),
+        SeshCmd::Duplicate { name } => client.duplicate(&name).unwrap(),
         SeshCmd::List => client.list().unwrap(),
+        SeshCmd::Close => client.close().unwrap(),
         SeshCmd::Abort => client.abort().unwrap(),
+        SeshCmd::Quit => client.quit().unwrap(),
+        SeshCmd::Announce => client.announce().unwrap(),
       }
     }
     Command::Pack {
