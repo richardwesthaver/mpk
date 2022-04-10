@@ -18,6 +18,7 @@ use crate::{Error, Result};
 use rosc::{decoder, encoder, OscMessage, OscPacket, OscType};
 use std::fmt;
 use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
+use std::path::PathBuf;
 use std::str::FromStr;
 
 pub const NSM_API_VERSION_MAJOR: u8 = 1;
@@ -63,7 +64,7 @@ pub fn parse_nsm_url(url: &str) -> Result<SocketAddr> {
 /// Get the NSM_URL given the PID of a running nsmd server and return
 /// a SocketAddr. The server needs to be started by the same user
 /// executing this function. The NSM_URL is parsed from the daemon
-/// file at `/run/user/UID/nsm/d/PID`.
+/// state file at `/run/user/UID/nsm/d/PID`.
 pub fn get_nsm_url<'a>(pid: &'a str) -> Result<SocketAddr> {
   let id = String::from_utf8(
     std::process::Command::new("id")
@@ -78,8 +79,9 @@ pub fn get_nsm_url<'a>(pid: &'a str) -> Result<SocketAddr> {
   parse_nsm_url(&url)
 }
 
-/// A Client for NSM. This struct communicates with the NSM daemon
-/// over a UDP Socket.
+/// A Client for NSM.
+///
+/// This struct communicates with the NSM daemon over a UDP Socket.
 #[derive(Debug)]
 pub struct NsmClient<'a> {
   pub name: &'a str,
@@ -121,27 +123,37 @@ impl<'a> NsmClient<'a> {
     })
   }
 
-  pub fn announce(&'a mut self) -> Result<()> {
+  pub fn announce(&'a mut self) -> Result<(PathBuf, String, String)> {
     self.send(ClientMessage::Announce(self.name, self.caps))?;
     let p = self.recv()?;
-    let res = self.handle(&p)?;
-    println!("{:?}", res);
-    Ok(())
+    println!("{:?}", self.handle(&p)?);
+    let open = self.recv()?;
+    match self.handle(&open) {
+      Ok(p) => {
+        let args = &p.args()[0..2];
+        let path = PathBuf::from(args[0].clone().string().unwrap());
+        let name = args[1].clone().string().unwrap();
+        let cid = args[2].clone().string().unwrap();
+        Ok((path, name, cid))
+      }
+      Err(e) => Err(e),
+    }
   }
 
-  pub fn list(&mut self) -> Result<()> {
+  pub fn list(&mut self) -> Result<Vec<String>> {
     self.send(ClientMessage::Control(ClientControl::List))?;
+    let mut res = Vec::new();
     'i: while let Ok(ref p) = self.recv() {
       let p = self.handle(p)?;
       let i = &p.args()[1];
-      let res = i.clone().string().unwrap();
-      if !&res.is_empty() {
-        println!("{}", res);
+      let l = i.clone().string().unwrap();
+      if !&l.is_empty() {
+        res.push(l)
       } else {
         break 'i;
       }
     }
-    Ok(())
+    Ok(res)
   }
 
   pub fn new_project(&mut self, project_name: &str) -> Result<()> {
@@ -388,6 +400,17 @@ impl<'a> FromStr for ServerCaps<'a> {
   }
 }
 
+pub trait ToOsc {
+  fn msg(&self) -> OscPacket {
+    OscPacket::Message(OscMessage {
+      addr: self.addr(),
+      args: self.args(),
+    })
+  }
+  fn addr(&self) -> String;
+  fn args(&self) -> Vec<OscType>;
+}
+
 #[derive(Debug)]
 pub enum ErrorCode<'a> {
   General(&'a str, &'a str),
@@ -404,77 +427,6 @@ pub enum ErrorCode<'a> {
 }
 
 impl<'a> ErrorCode<'a> {
-  pub fn msg(&self) -> OscPacket {
-    OscPacket::Message(OscMessage {
-      addr: self.addr(),
-      args: self.args(),
-    })
-  }
-
-  pub fn addr(&self) -> String {
-    "/error".to_string()
-  }
-
-  pub fn args(&self) -> Vec<OscType> {
-    match self {
-      ErrorCode::General(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-      ErrorCode::IncompatibleApi(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-      ErrorCode::Blacklisted(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-      ErrorCode::LaunchFailed(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-      ErrorCode::NoSuchFile(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-      ErrorCode::NoSessionOpen(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-      ErrorCode::UnsavedChanges(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-      ErrorCode::NotNow(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-      ErrorCode::BadProject(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-      ErrorCode::CreateFailed(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-      ErrorCode::SaveFailed(r, m) => vec![
-        OscType::String(r.to_string()),
-        OscType::Int(self.code()),
-        OscType::String(m.to_string()),
-      ],
-    }
-  }
-
   pub fn code(&self) -> i32 {
     match self {
       ErrorCode::General(_, _) => -1,
@@ -555,6 +507,72 @@ impl<'a> TryFrom<&'a OscPacket> for ErrorCode<'a> {
   }
 }
 
+impl<'a> ToOsc for ErrorCode<'a> {
+  fn addr(&self) -> String {
+    "/error".to_string()
+  }
+
+  fn args(&self) -> Vec<OscType> {
+    match self {
+      ErrorCode::General(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::IncompatibleApi(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::Blacklisted(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::LaunchFailed(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::NoSuchFile(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::NoSessionOpen(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::UnsavedChanges(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::NotNow(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::BadProject(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::CreateFailed(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+      ErrorCode::SaveFailed(r, m) => vec![
+        OscType::String(r.to_string()),
+        OscType::Int(self.code()),
+        OscType::String(m.to_string()),
+      ],
+    }
+  }
+}
+
 #[derive(Debug)]
 pub enum ClientMessage<'a> {
   Announce(&'a str, ClientCaps<'a>),
@@ -571,66 +589,8 @@ pub enum ClientMessage<'a> {
 }
 
 impl<'a> ClientMessage<'a> {
-  pub fn msg(&self) -> OscPacket {
-    OscPacket::Message(OscMessage {
-      addr: self.addr(),
-      args: self.args(),
-    })
-  }
-
-  pub fn addr(&self) -> String {
-    match self {
-      ClientMessage::Announce(_, _) => "/nsm/server/announce".to_string(),
-      ClientMessage::Status(_, _) => "/nsm/client/message".to_string(),
-      ClientMessage::Progress(_) => "/nsm/client/progress".to_string(),
-      ClientMessage::GuiShown => "/nsm/client/gui_is_hidden".to_string(),
-      ClientMessage::GuiHidden => "/nsm/client/gui_is_shown".to_string(),
-      ClientMessage::Clean => "/nsm/client/is_clean".to_string(),
-      ClientMessage::Dirty => "/nsm/client/is_dirty".to_string(),
-      ClientMessage::Broadcast => "/nsm/server/broadcast".to_string(),
-      ClientMessage::Control(m) => m.addr(),
-      ClientMessage::Reply(m) => m.addr(),
-      ClientMessage::Error(e) => e.addr(),
-    }
-  }
-
-  pub fn args(&self) -> Vec<OscType> {
-    match self {
-      ClientMessage::Announce(a, b) => {
-        vec![
-          OscType::String(a.to_string()),
-          OscType::String(b.to_string()),
-          OscType::String(std::env::args().nth(0).unwrap()),
-          OscType::Int(NSM_API_VERSION_MAJOR as i32),
-          OscType::Int(NSM_API_VERSION_MINOR as i32),
-          OscType::Int(std::process::id() as i32),
-        ]
-      }
-      ClientMessage::Status(a, b) => {
-        vec![OscType::Int(*a), OscType::String(b.to_string())]
-      }
-      ClientMessage::Progress(a) => {
-        vec![OscType::Float(*a)]
-      }
-      ClientMessage::GuiShown => {
-        vec![]
-      }
-      ClientMessage::GuiHidden => {
-        vec![]
-      }
-      ClientMessage::Clean => {
-        vec![]
-      }
-      ClientMessage::Dirty => {
-        vec![]
-      }
-      ClientMessage::Broadcast => {
-        vec![]
-      }
-      ClientMessage::Control(p) => p.args(),
-      ClientMessage::Reply(p) => p.args(),
-      ClientMessage::Error(e) => e.args(),
-    }
+  pub fn parse(p: &'a OscPacket) -> Result<Self> {
+    ClientMessage::try_from(p)
   }
 }
 
@@ -706,6 +666,63 @@ impl<'a> TryFrom<&'a OscPacket> for ClientMessage<'a> {
   }
 }
 
+impl<'a> ToOsc for ClientMessage<'a> {
+  fn addr(&self) -> String {
+    match self {
+      ClientMessage::Announce(_, _) => "/nsm/server/announce".to_string(),
+      ClientMessage::Status(_, _) => "/nsm/client/message".to_string(),
+      ClientMessage::Progress(_) => "/nsm/client/progress".to_string(),
+      ClientMessage::GuiShown => "/nsm/client/gui_is_hidden".to_string(),
+      ClientMessage::GuiHidden => "/nsm/client/gui_is_shown".to_string(),
+      ClientMessage::Clean => "/nsm/client/is_clean".to_string(),
+      ClientMessage::Dirty => "/nsm/client/is_dirty".to_string(),
+      ClientMessage::Broadcast => "/nsm/server/broadcast".to_string(),
+      ClientMessage::Control(m) => m.addr(),
+      ClientMessage::Reply(m) => m.addr(),
+      ClientMessage::Error(e) => e.addr(),
+    }
+  }
+
+  fn args(&self) -> Vec<OscType> {
+    match self {
+      ClientMessage::Announce(a, b) => {
+        vec![
+          OscType::String(a.to_string()),
+          OscType::String(b.to_string()),
+          OscType::String(std::env::args().nth(0).unwrap()),
+          OscType::Int(NSM_API_VERSION_MAJOR as i32),
+          OscType::Int(NSM_API_VERSION_MINOR as i32),
+          OscType::Int(std::process::id() as i32),
+        ]
+      }
+      ClientMessage::Status(a, b) => {
+        vec![OscType::Int(*a), OscType::String(b.to_string())]
+      }
+      ClientMessage::Progress(a) => {
+        vec![OscType::Float(*a)]
+      }
+      ClientMessage::GuiShown => {
+        vec![]
+      }
+      ClientMessage::GuiHidden => {
+        vec![]
+      }
+      ClientMessage::Clean => {
+        vec![]
+      }
+      ClientMessage::Dirty => {
+        vec![]
+      }
+      ClientMessage::Broadcast => {
+        vec![]
+      }
+      ClientMessage::Control(p) => p.args(),
+      ClientMessage::Reply(p) => p.args(),
+      ClientMessage::Error(e) => e.args(),
+    }
+  }
+}
+
 #[derive(Debug)]
 pub enum ClientReply<'a> {
   Open(&'a str),
@@ -713,34 +730,6 @@ pub enum ClientReply<'a> {
 }
 
 impl<'a> ClientReply<'a> {
-  pub fn msg(&self) -> OscPacket {
-    OscPacket::Message(OscMessage {
-      addr: self.addr(),
-      args: self.args(),
-    })
-  }
-
-  pub fn addr(&self) -> String {
-    "/reply".to_string()
-  }
-
-  pub fn args(&self) -> Vec<OscType> {
-    match self {
-      ClientReply::Open(m) => {
-        vec![
-          OscType::String("/nsm/client/open".to_string()),
-          OscType::String(m.to_string()),
-        ]
-      }
-      ClientReply::Save(m) => {
-        vec![
-          OscType::String("/nsm/client/save".to_string()),
-          OscType::String(m.to_string()),
-        ]
-      }
-    }
-  }
-
   pub fn parse(p: &'a OscPacket) -> Result<Self> {
     ClientReply::try_from(p)
   }
@@ -792,6 +781,29 @@ impl<'a> TryFrom<&'a OscPacket> for ClientReply<'a> {
   }
 }
 
+impl<'a> ToOsc for ClientReply<'a> {
+  fn addr(&self) -> String {
+    "/reply".to_string()
+  }
+
+  fn args(&self) -> Vec<OscType> {
+    match self {
+      ClientReply::Open(m) => {
+        vec![
+          OscType::String("/nsm/client/open".to_string()),
+          OscType::String(m.to_string()),
+        ]
+      }
+      ClientReply::Save(m) => {
+        vec![
+          OscType::String("/nsm/client/save".to_string()),
+          OscType::String(m.to_string()),
+        ]
+      }
+    }
+  }
+}
+
 #[derive(Debug)]
 pub enum ClientControl<'a> {
   Add(&'a str),
@@ -806,58 +818,8 @@ pub enum ClientControl<'a> {
 }
 
 impl<'a> ClientControl<'a> {
-  pub fn msg(&self) -> OscPacket {
-    OscPacket::Message(OscMessage {
-      addr: self.addr(),
-      args: self.args(),
-    })
-  }
-
-  pub fn addr(&self) -> String {
-    let addr = match self {
-      ClientControl::Add(_) => "/nsm/server/add",
-      ClientControl::Save => "/nsm/server/save",
-      ClientControl::Open(_) => "/nsm/server/open",
-      ClientControl::New(_) => "/nsm/server/new",
-      ClientControl::Duplicate(_) => "/nsm/server/duplicate",
-      ClientControl::Close => "/nsm/server/close",
-      ClientControl::Abort => "/nsm/server/abort",
-      ClientControl::Quit => "/nsm/server/quit",
-      ClientControl::List => "/nsm/server/list",
-    };
-    addr.to_string()
-  }
-
-  pub fn args(&self) -> Vec<OscType> {
-    match self {
-      ClientControl::Add(a) => {
-        vec![OscType::String(a.to_string())]
-      }
-      ClientControl::Save => {
-        vec![]
-      }
-      ClientControl::Open(a) => {
-        vec![OscType::String(a.to_string())]
-      }
-      ClientControl::New(a) => {
-        vec![OscType::String(a.to_string())]
-      }
-      ClientControl::Duplicate(a) => {
-        vec![OscType::String(a.to_string())]
-      }
-      ClientControl::Close => {
-        vec![]
-      }
-      ClientControl::Abort => {
-        vec![]
-      }
-      ClientControl::Quit => {
-        vec![]
-      }
-      ClientControl::List => {
-        vec![]
-      }
-    }
+  pub fn parse(p: &'a OscPacket) -> Result<Self> {
+    ClientControl::try_from(p)
   }
 }
 
@@ -917,6 +879,55 @@ impl<'a> TryFrom<&'a OscPacket> for ClientControl<'a> {
   }
 }
 
+impl<'a> ToOsc for ClientControl<'a> {
+  fn addr(&self) -> String {
+    let addr = match self {
+      ClientControl::Add(_) => "/nsm/server/add",
+      ClientControl::Save => "/nsm/server/save",
+      ClientControl::Open(_) => "/nsm/server/open",
+      ClientControl::New(_) => "/nsm/server/new",
+      ClientControl::Duplicate(_) => "/nsm/server/duplicate",
+      ClientControl::Close => "/nsm/server/close",
+      ClientControl::Abort => "/nsm/server/abort",
+      ClientControl::Quit => "/nsm/server/quit",
+      ClientControl::List => "/nsm/server/list",
+    };
+    addr.to_string()
+  }
+
+  fn args(&self) -> Vec<OscType> {
+    match self {
+      ClientControl::Add(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ClientControl::Save => {
+        vec![]
+      }
+      ClientControl::Open(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ClientControl::New(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ClientControl::Duplicate(a) => {
+        vec![OscType::String(a.to_string())]
+      }
+      ClientControl::Close => {
+        vec![]
+      }
+      ClientControl::Abort => {
+        vec![]
+      }
+      ClientControl::Quit => {
+        vec![]
+      }
+      ClientControl::List => {
+        vec![]
+      }
+    }
+  }
+}
+
 #[derive(Debug)]
 pub enum ServerMessage<'a> {
   Reply(ServerReply<'a>),
@@ -930,47 +941,6 @@ pub enum ServerMessage<'a> {
 }
 
 impl<'a> ServerMessage<'a> {
-  pub fn msg(&self) -> OscPacket {
-    OscPacket::Message(OscMessage {
-      addr: self.addr(),
-      args: self.args(),
-    })
-  }
-
-  pub fn addr(&self) -> String {
-    match self {
-      ServerMessage::Reply(m) => m.addr(),
-      ServerMessage::Error(e) => e.addr(),
-      ServerMessage::Open(_, _, _) => "/nsm/client/open".to_string(),
-      ServerMessage::Save => "/nsm/client/save".to_string(),
-      ServerMessage::SessionLoaded => "/nsm/client/session_is_loaded".to_string(),
-      ServerMessage::ShowGui => "/nsm/client/show_optional_gui".to_string(),
-      ServerMessage::HideGui => "/nsm/client/hide_optional_gui".to_string(),
-      ServerMessage::Broadcast(a, _) => a.to_string(),
-    }
-  }
-
-  pub fn args(&self) -> Vec<OscType> {
-    match self {
-      ServerMessage::Reply(m) => m.args(),
-      ServerMessage::Error(e) => e.args(),
-      ServerMessage::Open(a, b, c) => {
-        vec![
-          OscType::String(a.to_string()),
-          OscType::String(b.to_string()),
-          OscType::String(c.to_string()),
-        ]
-      }
-      ServerMessage::Save => vec![],
-      ServerMessage::SessionLoaded => vec![],
-      ServerMessage::ShowGui => vec![],
-      ServerMessage::HideGui => vec![],
-      ServerMessage::Broadcast(_, b) => {
-        vec![OscType::String(b.to_string())]
-      }
-    }
-  }
-
   pub fn parse(p: &'a OscPacket) -> Result<Self> {
     ServerMessage::try_from(p)
   }
@@ -1024,6 +994,42 @@ impl<'a> TryFrom<&'a OscPacket> for ServerMessage<'a> {
   }
 }
 
+impl<'a> ToOsc for ServerMessage<'a> {
+  fn addr(&self) -> String {
+    match self {
+      ServerMessage::Reply(m) => m.addr(),
+      ServerMessage::Error(e) => e.addr(),
+      ServerMessage::Open(_, _, _) => "/nsm/client/open".to_string(),
+      ServerMessage::Save => "/nsm/client/save".to_string(),
+      ServerMessage::SessionLoaded => "/nsm/client/session_is_loaded".to_string(),
+      ServerMessage::ShowGui => "/nsm/client/show_optional_gui".to_string(),
+      ServerMessage::HideGui => "/nsm/client/hide_optional_gui".to_string(),
+      ServerMessage::Broadcast(a, _) => a.to_string(),
+    }
+  }
+
+  fn args(&self) -> Vec<OscType> {
+    match self {
+      ServerMessage::Reply(m) => m.args(),
+      ServerMessage::Error(e) => e.args(),
+      ServerMessage::Open(a, b, c) => {
+        vec![
+          OscType::String(a.to_string()),
+          OscType::String(b.to_string()),
+          OscType::String(c.to_string()),
+        ]
+      }
+      ServerMessage::Save => vec![],
+      ServerMessage::SessionLoaded => vec![],
+      ServerMessage::ShowGui => vec![],
+      ServerMessage::HideGui => vec![],
+      ServerMessage::Broadcast(_, b) => {
+        vec![OscType::String(b.to_string())]
+      }
+    }
+  }
+}
+
 #[derive(Debug)]
 pub enum ServerReply<'a> {
   Announce(&'a str, &'a str, ServerCaps<'a>),
@@ -1039,82 +1045,6 @@ pub enum ServerReply<'a> {
 }
 
 impl<'a> ServerReply<'a> {
-  pub fn msg(&self) -> OscPacket {
-    OscPacket::Message(OscMessage {
-      addr: self.addr(),
-      args: self.args(),
-    })
-  }
-
-  pub fn addr(&self) -> String {
-    "/reply".to_string()
-  }
-
-  pub fn args(&self) -> Vec<OscType> {
-    match self {
-      ServerReply::Announce(a, b, c) => {
-        vec![
-          OscType::String("/nsm/server/announce".to_string()),
-          OscType::String(a.to_string()),
-          OscType::String(b.to_string()),
-          OscType::String(c.to_string()),
-        ]
-      }
-      ServerReply::Add(a) => {
-        vec![
-          OscType::String("/nsm/server/add".to_string()),
-          OscType::String(a.to_string()),
-        ]
-      }
-      ServerReply::Save(a) => {
-        vec![
-          OscType::String("/nsm/server/save".to_string()),
-          OscType::String(a.to_string()),
-        ]
-      }
-      ServerReply::Open(a) => {
-        vec![
-          OscType::String("/nsm/server/open".to_string()),
-          OscType::String(a.to_string()),
-        ]
-      }
-      ServerReply::New(a) => {
-        vec![
-          OscType::String("/nsm/server/new".to_string()),
-          OscType::String(a.to_string()),
-        ]
-      }
-      ServerReply::Duplicate(a) => {
-        vec![
-          OscType::String("/nsm/server/duplicate".to_string()),
-          OscType::String(a.to_string()),
-        ]
-      }
-      ServerReply::Close(a) => {
-        vec![
-          OscType::String("/nsm/server/close".to_string()),
-          OscType::String(a.to_string()),
-        ]
-      }
-      ServerReply::Abort(a) => {
-        vec![
-          OscType::String("/nsm/server/abort".to_string()),
-          OscType::String(a.to_string()),
-        ]
-      }
-      ServerReply::Quit(a) => {
-        vec![
-          OscType::String("/nsm/server/quit".to_string()),
-          OscType::String(a.to_string()),
-        ]
-      }
-      ServerReply::List(a) => vec![
-        OscType::String("/nsm/server/list".to_string()),
-        OscType::String(a.to_string()),
-      ],
-    }
-  }
-
   pub fn parse(p: &'a OscPacket) -> Result<Self> {
     ServerReply::try_from(p)
   }
@@ -1189,6 +1119,77 @@ impl<'a> TryFrom<&'a OscPacket> for ServerReply<'a> {
       _ => Err(Error::Osc(rosc::OscError::BadMessage(
         "Unable to parse ServerReply",
       ))),
+    }
+  }
+}
+
+impl<'a> ToOsc for ServerReply<'a> {
+  fn addr(&self) -> String {
+    "/reply".to_string()
+  }
+
+  fn args(&self) -> Vec<OscType> {
+    match self {
+      ServerReply::Announce(a, b, c) => {
+        vec![
+          OscType::String("/nsm/server/announce".to_string()),
+          OscType::String(a.to_string()),
+          OscType::String(b.to_string()),
+          OscType::String(c.to_string()),
+        ]
+      }
+      ServerReply::Add(a) => {
+        vec![
+          OscType::String("/nsm/server/add".to_string()),
+          OscType::String(a.to_string()),
+        ]
+      }
+      ServerReply::Save(a) => {
+        vec![
+          OscType::String("/nsm/server/save".to_string()),
+          OscType::String(a.to_string()),
+        ]
+      }
+      ServerReply::Open(a) => {
+        vec![
+          OscType::String("/nsm/server/open".to_string()),
+          OscType::String(a.to_string()),
+        ]
+      }
+      ServerReply::New(a) => {
+        vec![
+          OscType::String("/nsm/server/new".to_string()),
+          OscType::String(a.to_string()),
+        ]
+      }
+      ServerReply::Duplicate(a) => {
+        vec![
+          OscType::String("/nsm/server/duplicate".to_string()),
+          OscType::String(a.to_string()),
+        ]
+      }
+      ServerReply::Close(a) => {
+        vec![
+          OscType::String("/nsm/server/close".to_string()),
+          OscType::String(a.to_string()),
+        ]
+      }
+      ServerReply::Abort(a) => {
+        vec![
+          OscType::String("/nsm/server/abort".to_string()),
+          OscType::String(a.to_string()),
+        ]
+      }
+      ServerReply::Quit(a) => {
+        vec![
+          OscType::String("/nsm/server/quit".to_string()),
+          OscType::String(a.to_string()),
+        ]
+      }
+      ServerReply::List(a) => vec![
+        OscType::String("/nsm/server/list".to_string()),
+        OscType::String(a.to_string()),
+      ],
     }
   }
 }

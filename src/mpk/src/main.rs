@@ -462,11 +462,24 @@ fn main() -> Result<()> {
         SeshCmd::Open { name } => client.open(&name).unwrap(),
         SeshCmd::Save => client.save().unwrap(),
         SeshCmd::Duplicate { name } => client.duplicate(&name).unwrap(),
-        SeshCmd::List => client.list().unwrap(),
+        SeshCmd::List => {
+          let ps = client.list().unwrap();
+          for l in ps {
+            println!("{}", l);
+          }
+        }
         SeshCmd::Close => client.close().unwrap(),
         SeshCmd::Abort => client.abort().unwrap(),
         SeshCmd::Quit => client.quit().unwrap(),
-        SeshCmd::Announce => client.announce().unwrap(),
+        SeshCmd::Announce => {
+          let res = client.announce().unwrap();
+          println!(
+            "opening project ::\n  name: {}\n  path: {}\n  client_id: {}",
+            res.0.to_str().unwrap(),
+            res.1,
+            res.2
+          );
+        }
       }
     }
     Command::Pack {
