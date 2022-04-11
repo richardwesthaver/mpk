@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 zstd = "0.9"
 tar = "0.4"
+zip = { version = "0.6", default-features = false }

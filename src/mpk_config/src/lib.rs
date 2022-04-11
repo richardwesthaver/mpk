@@ -4,7 +4,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::net::SocketAddr;
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 use std::str::FromStr;
 
@@ -43,6 +42,7 @@ pub struct Config {
   pub metro: MetroConfig,
   pub extractor: ExtractorConfig,
   pub sesh: SeshConfig,
+  pub net: NetworkConfig,
 }
 
 impl Config {
@@ -54,6 +54,7 @@ impl Config {
       metro: MetroConfig::default(),
       extractor: ExtractorConfig::default(),
       sesh: SeshConfig::default(),
+      net: NetworkConfig::default(),
     })
   }
 
@@ -485,14 +486,14 @@ impl From<Config> for ExtractorConfig {
 /// Configuration for Patches.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SeshConfig {
-  client_addr: SocketAddr,
-  nsm_url: Option<SocketAddr>,
+  client_addr: String,
+  nsm_url: Option<String>,
 }
 
 impl Default for SeshConfig {
   fn default() -> Self {
     SeshConfig {
-      client_addr: "127.0.0.1:0".parse().unwrap(),
+      client_addr: "127.0.0.1:0".to_string(),
       nsm_url: None,
     }
   }
@@ -501,5 +502,40 @@ impl Default for SeshConfig {
 impl From<Config> for SeshConfig {
   fn from(cfg: Config) -> SeshConfig {
     cfg.sesh
+  }
+}
+
+/// Network configuration for HTTP API clients.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct NetworkConfig {
+  pub socket: String,
+  pub freesound: Option<ClientConfig>,
+  pub musicbrainz: Option<ClientConfig>,
+  pub youtube: Option<ClientConfig>,
+  pub spotify: Option<ClientConfig>,
+}
+
+impl Default for NetworkConfig {
+  fn default() -> Self {
+    NetworkConfig {
+      socket: "127.0.0.1:0".to_string(),
+      freesound: None,
+      musicbrainz: None,
+      youtube: None,
+      spotify: None,
+    }
+  }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ClientConfig {
+  pub client_id: String,
+  pub client_secret: String,
+  pub redirect_url: String,
+}
+
+impl From<Config> for NetworkConfig {
+  fn from(cfg: Config) -> NetworkConfig {
+    cfg.net
   }
 }
