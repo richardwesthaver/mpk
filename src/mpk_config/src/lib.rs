@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 use std::str::FromStr;
+use std::time::{Duration, SystemTime};
 
 mod err;
 pub use err::{Error, Result};
@@ -527,15 +528,38 @@ impl Default for NetworkConfig {
   }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+impl From<Config> for NetworkConfig {
+  fn from(cfg: Config) -> NetworkConfig {
+    cfg.net
+  }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ClientConfig {
   pub client_id: String,
   pub client_secret: String,
   pub redirect_url: String,
+  pub access_token: Option<String>,
+  pub refresh_token: Option<String>,
+  pub scopes: Option<Vec<String>>,
+  pub expires: Option<u64>,
 }
 
-impl From<Config> for NetworkConfig {
-  fn from(cfg: Config) -> NetworkConfig {
-    cfg.net
+impl ClientConfig {
+  pub fn update(
+    &mut self,
+    access_token: &str,
+    refresh_token: &str,
+    expires_in: Duration,
+    scopes: &[String],
+  ) {
+    self.access_token = Some(access_token.to_string());
+    self.refresh_token = Some(refresh_token.to_string());
+    self.scopes = Some(scopes.to_vec());
+    let expires = SystemTime::now()
+      .duration_since(SystemTime::UNIX_EPOCH)
+      .expect("SystemTime is before UNIX_EPOCH!?")
+      + expires_in;
+    self.expires = Some(expires.as_secs());
   }
 }

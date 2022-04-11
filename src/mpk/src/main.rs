@@ -39,6 +39,10 @@ enum Command {
     #[clap(subcommand)]
     cmd: SeshCmd,
   },
+  Net {
+    #[clap(subcommand)]
+    cmd: NetCmd,
+  },
   /// Play an audio file
   Play {
     file: Option<PathBuf>,
@@ -190,6 +194,15 @@ pub enum SeshCmd {
   Quit,
 }
 
+#[derive(Subcommand)]
+pub enum NetCmd {
+  Freesound {
+    cmd: String,
+    #[clap(short, long)]
+    auto: bool,
+  },
+}
+
 fn ppln(i: &str, s: char) {
   match s {
     // progress
@@ -207,7 +220,7 @@ fn ppln(i: &str, s: char) {
 fn main() -> Result<()> {
   let args = Args::parse();
   let cfg_path = expand_tilde(&args.cfg).unwrap();
-  let cfg = if cfg_path.exists() {
+  let mut cfg = if cfg_path.exists() {
     Config::load(&cfg_path)?
   } else {
     Config::default()
@@ -479,6 +492,23 @@ fn main() -> Result<()> {
             res.1,
             res.2
           );
+        }
+      }
+    }
+    Command::Net { cmd } => {
+      let rt = tokio::runtime::Runtime::new().unwrap();
+      match cmd {
+        NetCmd::Freesound { cmd, auto } => {
+          rt.block_on(async {
+            let mut client = mpk_http::freesound::FreeSoundClient::new_with_config(
+              cfg.net.freesound.as_ref().unwrap(),
+            );
+            if cmd.eq("auth") {
+              client.auth(auto).await.unwrap();
+              client.save_to_config(&mut cfg);
+              cfg.write(cfg_path).unwrap();
+            }
+          });
         }
       }
     }
