@@ -120,7 +120,9 @@ enum Runner {
     bpm: Option<u16>,
     time_sig: Option<String>,
   },
-  Monitor,
+  Monitor {
+    input: Option<usize>,
+  },
 }
 
 #[derive(Subcommand)]
@@ -588,7 +590,7 @@ fn main() -> Result<()> {
           .query_sample_features_rhythm(1)?
           .histogram;
       }
-      Runner::Monitor => mpk_midi::monitor()?,
+      Runner::Monitor {input} => mpk_midi::monitor(input)?,
       _ => println!("starting jack server"),
     },
   }
