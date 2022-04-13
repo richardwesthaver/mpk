@@ -3,6 +3,7 @@ use mpk::Result;
 use mpk_audio::gen::SampleChain;
 use mpk_config::{expand_tilde, Config};
 use mpk_db::{AudioType, DbValue, Mdb, NaiveDate, QueryBy, QueryFor, QueryType};
+use mpk_http::freesound::{write_sound, FreeSoundRequest, FreeSoundResponse};
 use std::io;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -17,8 +18,10 @@ use std::thread;
 ///
 /// Tools for building and managing creative workflows on UNIX systems.
 struct Args {
+  /// Command to execute
   #[clap(subcommand)]
   cmd: Command,
+  /// Use specified config file
   #[clap(short,long, default_value_t = String::from("~/mpk/mpk.toml"))]
   cfg: String,
   /// Enable DB tracing
@@ -34,11 +37,12 @@ struct Args {
 enum Command {
   /// Initialize MPK
   Init,
-  /// Interact with sessions
+  /// Sessions
   Sesh {
     #[clap(subcommand)]
     cmd: SeshCmd,
   },
+  /// Web APIs
   Net {
     #[clap(subcommand)]
     cmd: NetCmd,
@@ -55,12 +59,12 @@ enum Command {
     #[clap(short)]
     device: Option<String>,
   },
-  /// Run a service
+  /// Run services
   Run {
     #[clap(subcommand)]
     runner: Runner,
   },
-  /// Interact with the database
+  /// MPK DB
   Db {
     #[clap(subcommand)]
     cmd: DbCmd,
@@ -100,8 +104,6 @@ enum Runner {
   Jack {
     name: String,
   },
-  /// start a network service
-  Net,
   /// create a sample chain
   Chain {
     #[clap(parse(from_os_str))]
@@ -120,6 +122,7 @@ enum Runner {
     bpm: Option<u16>,
     time_sig: Option<String>,
   },
+  /// Monitor MIDI messages from input
   Monitor {
     input: Option<usize>,
   },
@@ -184,24 +187,43 @@ enum DbCmd {
 
 #[derive(Subcommand)]
 pub enum SeshCmd {
+  /// Create a new session
   New { name: String },
+  /// Add a client to current session
   Add { exe: String },
+  /// Open a session
   Open { name: String },
+  /// Save current session
   Save,
+  /// Duplicate current session
   Duplicate { name: String },
+  /// Register client with nsmd
   Announce,
+  /// List sessions
   List,
+  /// Close current session
   Close,
+  /// Close current session without saving
   Abort,
+  /// Close current session and nsmd
   Quit,
 }
 
 #[derive(Subcommand)]
 pub enum NetCmd {
+  /// Freesound API Client
   Freesound {
+    /// API command
     cmd: String,
+    /// Automatically open browser during authentication
     #[clap(short, long)]
     auto: bool,
+    /// Query for API requests
+    #[clap(short, long)]
+    query: Option<String>,
+    /// Output path for downloads
+    #[clap(short, long)]
+    out: Option<PathBuf>,
   },
 }
 
@@ -500,7 +522,12 @@ fn main() -> Result<()> {
     Command::Net { cmd } => {
       let rt = tokio::runtime::Runtime::new().unwrap();
       match cmd {
-        NetCmd::Freesound { cmd, auto } => {
+        NetCmd::Freesound {
+          cmd,
+          auto,
+          query,
+          out,
+        } => {
           rt.block_on(async {
             let mut client = mpk_http::freesound::FreeSoundClient::new_with_config(
               cfg.net.freesound.as_ref().unwrap(),
@@ -509,6 +536,40 @@ fn main() -> Result<()> {
               client.auth(auto).await.unwrap();
               client.save_to_config(&mut cfg);
               cfg.write(cfg_path).unwrap();
+            } else if cmd.eq("search") {
+              let req = FreeSoundRequest::SearchText {
+                query: &query.unwrap(),
+                filter: "tag:guitar",
+                sort: "",
+                group_by_pack: false,
+                weights: "",
+                page: 1,
+                page_size: 150,
+                fields: &["id", "name"],
+                descriptors: &[],
+                normalized: false,
+              };
+              let res = client.request(req).await.unwrap();
+              let response = FreeSoundResponse::parse(res).await;
+              println!("{}", response);
+            } else if cmd.eq("raw") {
+              let res = client
+                .get_raw(query.unwrap())
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap();
+              println!("{}", res);
+            } else if cmd.eq("dl") || cmd.eq("download") {
+              let out = out.unwrap();
+              let query = query.unwrap();
+              let req = FreeSoundRequest::SoundDownload {
+                id: query.parse().unwrap(),
+              };
+              let res = client.request(req).await.unwrap();
+              write_sound(res, &out, true).await.unwrap();
+              println!("sound_id {} downloaded to {}", query, out.to_str().unwrap());
             }
           });
         }
@@ -548,15 +609,17 @@ fn main() -> Result<()> {
         even,
         ot,
       } => {
-        let mut chain = SampleChain::default();
-        chain.output_file = output.with_extension("");
-        chain.output_ext = output
-          .extension()
-          .unwrap()
-          .to_str()
-          .unwrap()
-          .parse()
-          .unwrap();
+        let mut chain = SampleChain {
+          output_file: output.with_extension(""),
+          output_ext: output
+            .extension()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .parse()
+            .unwrap(),
+          ..Default::default()
+        };
         for i in &input {
           chain.add_file(i)?;
         }
@@ -575,23 +638,30 @@ fn main() -> Result<()> {
         let sig: (u8, u8) = match time_sig {
           Some(t) => {
             let tsig: Vec<u8> =
-              t.trim().split("/").map(|x| x.parse().unwrap()).collect();
+              t.trim().split('/').map(|x| x.parse().unwrap()).collect();
             (tsig[0], tsig[1])
           }
           None => cfg.metro.time_sig,
         };
 
         let metro = mpk_audio::gen::Metro::new(bpm, sig.0, sig.1);
-        metro.start(cfg.metro.tic.unwrap(), cfg.metro.toc.unwrap());
-        loop {}
+        let tx = metro.start(cfg.metro.tic.unwrap(), cfg.metro.toc.unwrap());
+        println!("Press enter to stop...");
+        thread::spawn(move || {
+          let mut input = String::new();
+          io::stdin().read_line(&mut input).unwrap();
+          tx.send(mpk_audio::gen::metro::MetroMsg::Stop).unwrap();
+          std::process::exit(1);
+        })
+        .join()
+        .unwrap();
       }
       Runner::Plot => {
         let _data = mpk_db::Mdb::new_with_config(cfg.db)?
           .query_sample_features_rhythm(1)?
           .histogram;
       }
-      Runner::Monitor {input} => mpk_midi::monitor(input)?,
-      _ => println!("starting jack server"),
+      Runner::Monitor { input } => mpk_midi::monitor(input)?,
     },
   }
 

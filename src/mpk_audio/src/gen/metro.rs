@@ -59,6 +59,8 @@ impl Metro {
     self.last_time_run = std::time::Instant::now();
   }
 
+  // TODO calculate duration of audio sample AOT, subtract from sleep
+  // time. current bpm isn't right.
   pub fn play(self, t: TicToc) {
     let st = match t {
       TicToc::Tic(p) => p,
@@ -82,7 +84,7 @@ impl Metro {
     eprintln!("Metro started!");
     let (tx, rx) = channel();
     thread::spawn(move || loop {
-      let msg = rx.recv();
+      let msg = rx.try_recv();
       match msg {
         Ok(MetroMsg::Stop) => break,
         Err(_) => (),
