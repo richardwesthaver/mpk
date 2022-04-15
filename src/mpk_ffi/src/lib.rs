@@ -137,7 +137,7 @@ pub unsafe extern "C" fn mpk_checksum_free(ptr: *mut Checksum) {
   if ptr.is_null() {
     return;
   }
-    Box::from_raw(ptr);
+  Box::from_raw(ptr);
 }
 
 /// Drop a c_char pointer
@@ -146,7 +146,7 @@ pub unsafe extern "C" fn mpk_string_free(ptr: *mut c_char) {
   if ptr.is_null() {
     return;
   }
-    Box::from_raw(ptr);
+  Box::from_raw(ptr);
 }
 
 /// Build a new Config from inner configs FS, DB, and JACK. Returns a
@@ -431,17 +431,12 @@ pub unsafe extern "C" fn mdb_musicbrainz_tags_new(
     albumartistid: if albumartistid.is_null() {
       None
     } else {
-      Some(
-        Uuid::parse_str(CStr::from_ptr(albumartistid).to_str().unwrap())
-          .unwrap(),
-      )
+      Some(Uuid::parse_str(CStr::from_ptr(albumartistid).to_str().unwrap()).unwrap())
     },
     albumid: if albumid.is_null() {
       None
     } else {
-      Some(
-        Uuid::parse_str(CStr::from_ptr(albumid).to_str().unwrap()).unwrap(),
-      )
+      Some(Uuid::parse_str(CStr::from_ptr(albumid).to_str().unwrap()).unwrap())
     },
     albumstatus: if albumstatus.is_null() {
       None
@@ -456,32 +451,22 @@ pub unsafe extern "C" fn mdb_musicbrainz_tags_new(
     artistid: if artistid.is_null() {
       None
     } else {
-      Some(
-        Uuid::parse_str(CStr::from_ptr(artistid).to_str().unwrap()).unwrap(),
-      )
+      Some(Uuid::parse_str(CStr::from_ptr(artistid).to_str().unwrap()).unwrap())
     },
     releasegroupid: if releasegroupid.is_null() {
       None
     } else {
-      Some(
-        Uuid::parse_str(CStr::from_ptr(releasegroupid).to_str().unwrap())
-          .unwrap(),
-      )
+      Some(Uuid::parse_str(CStr::from_ptr(releasegroupid).to_str().unwrap()).unwrap())
     },
     releasetrackid: if releasetrackid.is_null() {
       None
     } else {
-      Some(
-        Uuid::parse_str(CStr::from_ptr(releasetrackid).to_str().unwrap())
-          .unwrap(),
-      )
+      Some(Uuid::parse_str(CStr::from_ptr(releasetrackid).to_str().unwrap()).unwrap())
     },
     trackid: if trackid.is_null() {
       None
     } else {
-      Some(
-        Uuid::parse_str(CStr::from_ptr(trackid).to_str().unwrap()).unwrap(),
-      )
+      Some(Uuid::parse_str(CStr::from_ptr(trackid).to_str().unwrap()).unwrap())
     },
     asin: if asin.is_null() {
       None
@@ -491,10 +476,7 @@ pub unsafe extern "C" fn mdb_musicbrainz_tags_new(
     musicip_puid: if musicip_puid.is_null() {
       None
     } else {
-      Some(
-        Uuid::parse_str(CStr::from_ptr(musicip_puid).to_str().unwrap())
-          .unwrap(),
-      )
+      Some(Uuid::parse_str(CStr::from_ptr(musicip_puid).to_str().unwrap()).unwrap())
     },
   };
   let tags_box = Box::new(tags);
@@ -506,7 +488,7 @@ pub unsafe extern "C" fn mdb_musicbrainz_tags_free(ptr: *mut MusicbrainzTags) {
   if ptr.is_null() {
     return;
   }
-    Box::from_raw(ptr);
+  Box::from_raw(ptr);
 }
 
 #[no_mangle]
@@ -595,7 +577,7 @@ pub unsafe extern "C" fn mdb_lowlevel_features_free(ptr: *mut LowlevelFeatures) 
   if ptr.is_null() {
     return;
   }
-    Box::from_raw(ptr);
+  Box::from_raw(ptr);
 }
 
 #[no_mangle]
@@ -648,7 +630,7 @@ pub unsafe extern "C" fn mdb_rhythm_features_free(ptr: *mut RhythmFeatures) {
   if ptr.is_null() {
     return;
   }
-    Box::from_raw(ptr);
+  Box::from_raw(ptr);
 }
 
 #[no_mangle]
@@ -719,7 +701,9 @@ pub unsafe extern "C" fn mdb_tonal_features_new(
     key_key: CStr::from_ptr(key_key).to_str().unwrap().to_string(),
     key_scale: CStr::from_ptr(key_scale).to_str().unwrap().to_string(),
     chords_progression: VecText(
-      CStr::from_ptr(chords_progression).to_str().unwrap()
+      CStr::from_ptr(chords_progression)
+        .to_str()
+        .unwrap()
         .split('|')
         .collect::<Vec<_>>()
         .iter()
@@ -801,7 +785,7 @@ pub unsafe extern "C" fn mdb_free(ptr: *mut Mdb) {
   if ptr.is_null() {
     return;
   }
-    Box::from_raw(ptr);
+  Box::from_raw(ptr);
 }
 
 #[no_mangle]
@@ -810,7 +794,10 @@ pub unsafe extern "C" fn mdb_init(db: *const Mdb) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mdb_insert_track(db: *const Mdb, data: *const AudioData) -> i64 {
+pub unsafe extern "C" fn mdb_insert_track(
+  db: *const Mdb,
+  data: *const AudioData,
+) -> i64 {
   let data = &*data;
   let mdb = &*db;
   mdb.insert_track(data).unwrap()
@@ -894,7 +881,10 @@ pub unsafe extern "C" fn mdb_insert_track_images(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mdb_insert_sample(db: *const Mdb, data: *const AudioData) -> i64 {
+pub unsafe extern "C" fn mdb_insert_sample(
+  db: *const Mdb,
+  data: *const AudioData,
+) -> i64 {
   let data = &*data;
   let mdb = &*db;
   mdb.insert_sample(data).unwrap()
@@ -979,10 +969,7 @@ pub unsafe extern "C" fn mdb_query_check_file(
   let cstr = CStr::from_ptr(path);
   let p: &Path = Path::new(OsStr::from_bytes(cstr.to_bytes()));
   assert!(!ty.is_null());
-  let t = AudioType::from_str(
-    CStr::from_ptr(ty).to_str().unwrap()
-  )
-  .unwrap();
+  let t = AudioType::from_str(CStr::from_ptr(ty).to_str().unwrap()).unwrap();
   let c = Checksum::from_path(p);
   let db = &*db;
   let res = db.query_check_file(p, c, t).unwrap();

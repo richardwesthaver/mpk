@@ -60,8 +60,7 @@ impl Metro {
     self.last_time_run = Instant::now();
   }
 
-  // TODO calculate duration of audio sample AOT, subtract from sleep
-  // time. current bpm isn't right.
+  // TODO audio player handle time. current bpm isn't right.
   pub fn play(self, t: TicToc) {
     let now = Instant::now();
     let st = match t {

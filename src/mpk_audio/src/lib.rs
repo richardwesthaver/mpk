@@ -68,11 +68,16 @@ pub fn play<P: AsRef<Path>>(
           sink.play();
         }
       }
-      false => if pause.recv_timeout(std::time::Duration::from_millis(500)).is_ok() {
-        sink.pause()
-      } else {
-        continue;
-      },
+      false => {
+        if pause
+          .recv_timeout(std::time::Duration::from_millis(500))
+          .is_ok()
+        {
+          sink.pause()
+        } else {
+          continue;
+        }
+      }
     }
   }
 }

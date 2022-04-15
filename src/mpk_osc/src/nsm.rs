@@ -176,6 +176,10 @@ impl<'client> NsmClient<'client> {
     }
   }
 
+  pub fn listen(&mut self) -> Result<()> {
+    Ok(())
+  }
+
   pub fn handle<'msg>(&self, p: &'msg OscPacket) -> Result<ServerMessage<'msg>> {
     match ServerMessage::parse(p) {
       Ok(r) => Ok(r),
@@ -438,10 +442,10 @@ impl<'a> TryFrom<&'a OscPacket> for ErrorCode<'a> {
             Err(Error::BadArg("error code is missing"))
           }
         } else {
-          Err(Error::BadAddr("address not '/error'"))
+          Err(Error::BadAddr(m.addr.clone()))
         }
       }
-      _ => Err(Error::BadMessage("unable to parse ErrorCode")),
+      e => Err(Error::BadPacket(e.to_owned())),
     }
   }
 }
@@ -593,10 +597,10 @@ impl<'a> TryFrom<&'a OscPacket> for ClientMessage<'a> {
           | "/nsm/server/list" => {
             Ok(ClientMessage::Control(ClientControl::try_from(p)?))
           }
-          _ => Err(Error::BadAddr("expected ClientMessage addr")),
+          e => Err(Error::BadAddr(e.to_owned())),
         }
       }
-      _ => Err(Error::BadMessage("unable to parse ClientMessage")),
+      e => Err(Error::BadPacket(e.to_owned())),
     }
   }
 }
@@ -694,16 +698,16 @@ impl<'a> TryFrom<&'a OscPacket> for ClientReply<'a> {
             match s.as_str() {
               "/nsm/client/open" => Ok(ClientReply::Open(msg.unwrap())),
               "nsm/client/save" => Ok(ClientReply::Open(msg.unwrap())),
-              _ => Err(Error::BadReplyAddr("expected client reply addr")),
+              e => Err(Error::BadReplyAddr(e.to_owned())),
             }
           } else {
             Err(Error::BadArg("reply address missing"))
           }
         } else {
-          Err(Error::BadAddr("address not '/reply'"))
+          Err(Error::BadAddr(m.addr.clone()))
         }
       }
-      _ => Err(Error::BadMessage("unable to parse ClientReply")),
+      e => Err(Error::BadPacket(e.to_owned())),
     }
   }
 }
@@ -794,10 +798,10 @@ impl<'a> TryFrom<&'a OscPacket> for ClientControl<'a> {
           "/nsm/server/quit" => Ok(ClientControl::Quit),
           "/nsm/server/list" => Ok(ClientControl::List),
           // "" => Ok(ServerMessage::Broadcast(a, b)),
-          _ => Err(Error::BadAddr("expected ClientControl addr")),
+          e => Err(Error::BadAddr(e.to_owned())),
         }
       }
-      _ => Err(Error::BadMessage("expected OSC message")),
+      e => Err(Error::BadPacket(e.to_owned())),
     }
   }
 }
@@ -905,10 +909,10 @@ impl<'a> TryFrom<&'a OscPacket> for ServerMessage<'a> {
           "/nsm/client/show_optional_gui" => Ok(ServerMessage::ShowGui),
           "/nsm/client/hide_optional_gui" => Ok(ServerMessage::HideGui),
           // "" => Ok(ServerMessage::Broadcast(a, b)),
-          _ => Err(Error::BadAddr("expected server_message addr")),
+          e => Err(Error::BadAddr(e.to_owned())),
         }
       }
-      _ => Err(Error::BadMessage("expected OSC message")),
+      e => Err(Error::BadPacket(e.to_owned())),
     }
   }
 }
@@ -1020,16 +1024,16 @@ impl<'a> TryFrom<&'a OscPacket> for ServerReply<'a> {
               "/nsm/server/abort" => Ok(ServerReply::Abort(msg.unwrap())),
               "/nsm/server/quit" => Ok(ServerReply::Quit(msg.unwrap())),
               "/nsm/server/list" => Ok(ServerReply::List(msg.unwrap())),
-              _ => Err(Error::BadReplyAddr("expected server reply addr")),
+              e => Err(Error::BadReplyAddr(e.to_owned())),
             }
           } else {
             Err(Error::BadArg("reply addr missing"))
           }
         } else {
-          Err(Error::BadAddr("address not '/reply'"))
+          Err(Error::BadAddr(m.addr.clone()))
         }
       }
-      _ => Err(Error::BadMessage("Unable to parse ServerReply")),
+      e => Err(Error::BadPacket(e.to_owned())),
     }
   }
 }

@@ -422,7 +422,7 @@ impl fmt::Display for FreeSoundResponse {
         let previous = previous
           .as_ref()
           .map(|u| u.to_string())
-          .unwrap_or_else (|| "null".to_string());
+          .unwrap_or_else(|| "null".to_string());
         let res: String = results
           .iter()
           .map(|r| r.to_string())

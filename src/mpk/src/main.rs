@@ -27,7 +27,7 @@ struct Args {
   cmd: Command,
   /// Use specified config file
   #[clap(short,long, default_value_t = String::from("~/mpk/mpk.toml"))]
-  cfg: String
+  cfg: String,
 }
 
 #[derive(Subcommand)]

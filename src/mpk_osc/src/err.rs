@@ -5,10 +5,11 @@ pub enum Error {
   Osc(rosc::OscError),
   Io(std::io::Error),
   BadType(String),
-  BadMessage(&'static str),
+  BadMessage(String),
+  BadPacket(rosc::OscPacket),
   BadArg(&'static str),
-  BadReplyAddr(&'static str),
-  BadAddr(&'static str),
+  BadReplyAddr(String),
+  BadAddr(String),
   BadCode(i32),
 }
 
@@ -29,6 +30,7 @@ impl std::fmt::Display for Error {
       Error::Io(ref err) => write!(f, "IO error: {}", err.to_string()),
       Error::BadType(s) => write!(f, "bad type: {}", s),
       Error::BadMessage(s) => write!(f, "bad OSC message: {}", s),
+      Error::BadPacket(s) => write!(f, "bad OSC packet: {:?}", s),
       Error::BadArg(s) => write!(f, "bad OSC arg: {}", s),
       Error::BadReplyAddr(s) => write!(f, "bad OSC reply address: {}", s),
       Error::BadAddr(s) => write!(f, "bad OSC address: {}", s),
