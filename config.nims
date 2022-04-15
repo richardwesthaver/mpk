@@ -124,9 +124,9 @@ task build, "build MPK":
 task run, "run MPK binary":
   withDir getVcRoot():
     var args: seq[string]
-    when release:
-      args.insert(" --release")
-    exec "cargo run" & args.join
+#    when release:
+#      args.insert(" --release")
+    exec "cargo run --bin mpk " & args.join
 
 task install, "install MPK":
   withDir getVcRoot():

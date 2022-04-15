@@ -1,14 +1,18 @@
-use clap::{AppSettings, Parser, Subcommand};
 use mpk::Result;
 use mpk_audio::gen::SampleChain;
-use mpk_config::{expand_tilde, Config};
+use mpk_config::Config;
 use mpk_db::{AudioType, DbValue, Mdb, NaiveDate, QueryBy, QueryFor, QueryType};
 use mpk_http::freesound::{write_sound, FreeSoundRequest, FreeSoundResponse};
+use mpk_util::expand_tilde;
+
+use clap::{AppSettings, Parser, Subcommand};
+
 use std::io;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::mpsc::sync_channel;
 use std::thread;
+
 #[derive(Parser)]
 #[clap(name = "mpk")]
 #[clap(about = "media programming kit")]
@@ -24,12 +28,6 @@ struct Args {
   /// Use specified config file
   #[clap(short,long, default_value_t = String::from("~/mpk/mpk.toml"))]
   cfg: String,
-  /// Enable DB tracing
-  #[clap(long)]
-  trace: bool,
-  /// Enable DB profiling
-  #[clap(long)]
-  profile: bool,
 }
 
 #[derive(Subcommand)]
@@ -68,9 +66,17 @@ enum Command {
   Db {
     #[clap(subcommand)]
     cmd: DbCmd,
+    /// Enable DB tracing
+    #[clap(long)]
+    trace: bool,
+    /// Enable DB profiling
+    #[clap(long)]
+    profile: bool,
   },
+  /// Start the REPL
+  Repl,
   /// Print info
-  Info {
+  Status {
     #[clap(short, long)]
     audio: bool,
     #[clap(short, long)]
@@ -259,7 +265,7 @@ fn main() -> Result<()> {
       Mdb::new(db_path.as_deref())?.init()?;
       ppln("[DONE]", 'd');
     }
-    Command::Info {
+    Command::Status {
       mut audio,
       mut midi,
       mut db,
@@ -314,12 +320,16 @@ fn main() -> Result<()> {
       mpk_audio::play(file.unwrap(), &device, volume, speed, rx)
     }
 
-    Command::Db { cmd } => {
+    Command::Db {
+      cmd,
+      trace,
+      profile,
+    } => {
       let mut conn = Mdb::new_with_config(cfg.db)?;
-      if args.trace {
+      if trace {
         conn.set_tracer(Some(|x| println!("{}", x)))
       }
-      if args.profile {
+      if profile {
         conn.set_profiler(Some(|x, y| println!("{} -- {}ms", x, y.as_millis())))
       }
 
@@ -475,14 +485,10 @@ fn main() -> Result<()> {
             let _projs = cfg.fs.get_path("projects")?;
           }
         }
-        DbCmd::Backup { output } => {
-          conn.backup(output, Some(|p| mpk_db::print_progress(p)))?
+        DbCmd::Backup { output } => conn.backup(output, true)?,
+        DbCmd::Restore { input } => {
+          conn.restore(mpk_db::DatabaseName::Main, input, false)?
         }
-        DbCmd::Restore { input } => conn.restore(
-          mpk_db::DatabaseName::Main,
-          input,
-          Some(|p| mpk_db::print_progress(p)),
-        )?,
       }
     }
     Command::Sesh { cmd } => {
@@ -562,8 +568,14 @@ fn main() -> Result<()> {
                 .unwrap();
               println!("{}", res);
             } else if cmd.eq("dl") || cmd.eq("download") {
-              let out = out.unwrap();
               let query = query.unwrap();
+              let out = if let Some(p) = out {
+                p
+              } else {
+                let mut path = cfg.fs.get_path("samples").unwrap();
+                path.push(&query);
+                path
+              };
               let req = FreeSoundRequest::SoundDownload {
                 id: query.parse().unwrap(),
               };
@@ -574,6 +586,21 @@ fn main() -> Result<()> {
           });
         }
       }
+    }
+    Command::Repl => {
+      let mut repl = mpk_repl::init_sesh_repl().unwrap();
+      let printer = repl.create_external_printer().unwrap();
+      let rt = tokio::runtime::Runtime::new().unwrap();
+      rt.spawn(async move {
+        let mut client = mpk_http::freesound::FreeSoundClient::new_with_config(
+          cfg.net.freesound.as_ref().unwrap(),
+        );
+        let req = FreeSoundRequest::SoundDownload { id: 21216 };
+        let res = client.request(req).await.unwrap();
+        write_sound(res, "test.sound", true).await.unwrap();
+        mpk_repl::print_external(printer, "all good".to_string());
+      });
+      mpk_repl::run_repl(&mut repl).unwrap();
     }
     Command::Pack {
       input,

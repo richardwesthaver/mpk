@@ -15,6 +15,7 @@
 //!
 //! REF: https://new-session-manager.jackaudio.org
 use crate::{Error, Result};
+use mpk_util::nsm::*;
 use rosc::{decoder, encoder, OscMessage, OscPacket, OscType};
 use std::fmt;
 use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
@@ -25,78 +26,24 @@ pub const NSM_API_VERSION_MAJOR: u8 = 1;
 pub const NSM_API_VERSION_MINOR: u8 = 1;
 pub const NSM_URL_VAR: &str = "NSM_URL";
 
-/// Lazily get the PID for a running nsmd server.
-///
-/// Note that this command will return only the first line of the
-/// output of `pgrep`, so if there are multiple servers running you
-/// will need to obtain the PID elsewhere.
-pub fn nsmd_pid() -> String {
-  let pid = String::from_utf8(
-    std::process::Command::new("pgrep")
-      .args(["-f", "nsmd"])
-      .output()
-      .unwrap()
-      .stdout,
-  )
-  .unwrap();
-  if !pid.is_empty() {
-    pid.lines().next().unwrap().to_string()
-  } else {
-    panic!("could not find pid for nsmd. make sure to start it first.")
-  }
-}
-
-/// Parse a NSM_URL of form `osc.udp://HOST:PORT/` and return a
-/// SocketAddr.
-pub fn parse_nsm_url(url: &str) -> Result<SocketAddr> {
-  match url
-    .strip_prefix("osc.udp://")
-    .unwrap()
-    .strip_suffix("/\n")
-    .unwrap()
-    .to_socket_addrs()
-  {
-    Ok(mut s) => Ok(s.next().unwrap()),
-    Err(e) => Err(Error::Io(e)),
-  }
-}
-
-/// Get the NSM_URL given the PID of a running nsmd server and return
-/// a SocketAddr. The server needs to be started by the same user
-/// executing this function. The NSM_URL is parsed from the daemon
-/// state file at `/run/user/UID/nsm/d/PID`.
-pub fn get_nsm_url<'a>(pid: &'a str) -> Result<SocketAddr> {
-  let id = String::from_utf8(
-    std::process::Command::new("id")
-      .arg("-u")
-      .output()
-      .unwrap()
-      .stdout,
-  )
-  .unwrap();
-  let url =
-    std::fs::read_to_string(format!("/run/user/{}/nsm/d/{}", id.trim(), pid)).unwrap();
-  parse_nsm_url(&url)
-}
-
 /// A Client for NSM.
 ///
 /// This struct communicates with the NSM daemon over a UDP Socket.
 #[derive(Debug)]
-pub struct NsmClient<'a> {
-  pub name: &'a str,
+pub struct NsmClient<'client> {
+  pub name: &'client str,
   pub socket: UdpSocket,
   pub nsm_url: SocketAddr,
-  pub caps: ClientCaps<'a>,
+  pub caps: ClientCaps<'client>,
   pub buf: [u8; decoder::MTU],
 }
 
-impl<'a> NsmClient<'a> {
+impl<'client> NsmClient<'client> {
   pub fn new(
-    name: &'a str,
-    addr: &'a str,
-    nsm_url: Option<&'a str>,
-    caps: ClientCaps<'a>,
+    name: &'client str,
+    addr: &str,
+    nsm_url: Option<&str>,
+    caps: ClientCaps<'client>,
   ) -> Result<Self> {
     let socket = UdpSocket::bind(addr)?;
     let nsm_url: SocketAddr = if let Some(s) = nsm_url {
@@ -123,7 +70,7 @@ impl<'a> NsmClient<'a> {
     })
   }
 
-  pub fn announce(&'a mut self) -> Result<(PathBuf, String, String)> {
+  pub fn announce(&mut self) -> Result<(PathBuf, String, String)> {
     self.send(ClientMessage::Announce(self.name, self.caps))?;
     let p = self.recv()?;
     println!("{:?}", self.handle(&p)?);
@@ -229,14 +176,14 @@ impl<'a> NsmClient<'a> {
     }
   }
 
-  pub fn handle(&self, p: &'a OscPacket) -> Result<ServerMessage<'a>> {
+  pub fn handle<'msg>(&self, p: &'msg OscPacket) -> Result<ServerMessage<'msg>> {
     match ServerMessage::parse(p) {
       Ok(r) => Ok(r),
       Err(e) => Err(e),
     }
   }
 
-  pub fn reply(&mut self, p: &'a OscPacket) -> Result<ClientReply<'a>> {
+  pub fn reply<'msg>(&mut self, p: &'msg OscPacket) -> Result<ClientReply<'msg>> {
     ClientReply::parse(p)
   }
 }
@@ -277,16 +224,16 @@ impl fmt::Display for ClientCap {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ClientCaps<'a>(&'a [ClientCap]);
+pub struct ClientCaps<'caps>(&'caps [ClientCap]);
 
-impl<'a> ClientCaps<'a> {
-  pub fn new(caps: &'a [ClientCap]) -> ClientCaps<'a> {
+impl<'caps> ClientCaps<'caps> {
+  pub fn new(caps: &[ClientCap]) -> ClientCaps {
     ClientCaps(caps)
   }
-  pub fn from_vec(caps: Vec<ClientCap>) -> ClientCaps<'a> {
+  pub fn from_vec(caps: Vec<ClientCap>) -> ClientCaps<'caps> {
     ClientCaps(caps.leak())
   }
-  pub fn all() -> ClientCaps<'a> {
+  pub fn all() -> ClientCaps<'caps> {
     ClientCaps(&[
       ClientCap::Dirty,
       ClientCap::Switch,
@@ -296,7 +243,7 @@ impl<'a> ClientCaps<'a> {
   }
 }
 
-impl<'a> fmt::Display for ClientCaps<'a> {
+impl<'caps> fmt::Display for ClientCaps<'caps> {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut s = String::new();
     for i in self.0.iter() {
@@ -307,7 +254,7 @@ impl<'a> fmt::Display for ClientCaps<'a> {
   }
 }
 
-impl<'a> FromStr for ClientCaps<'a> {
+impl<'caps> FromStr for ClientCaps<'caps> {
   type Err = Error;
   fn from_str(input: &str) -> Result<Self> {
     let mut vec = Vec::new();
@@ -348,17 +295,17 @@ impl FromStr for ServerCap {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ServerCaps<'a>(Option<&'a [ServerCap]>);
+pub struct ServerCaps<'caps>(Option<&'caps [ServerCap]>);
 
-impl<'a> ServerCaps<'a> {
-  pub fn new(caps: &'a [ServerCap]) -> ServerCaps<'a> {
+impl<'caps> ServerCaps<'caps> {
+  pub fn new(caps: &[ServerCap]) -> ServerCaps {
     if caps.is_empty() {
       ServerCaps(None)
     } else {
       ServerCaps(Some(caps))
     }
   }
-  pub fn from_vec(caps: Vec<ServerCap>) -> ServerCaps<'a> {
+  pub fn from_vec(caps: Vec<ServerCap>) -> ServerCaps<'caps> {
     if caps.is_empty() {
       ServerCaps(None)
     } else {
@@ -367,7 +314,7 @@ impl<'a> ServerCaps<'a> {
   }
 }
 
-impl<'a> fmt::Display for ServerCaps<'a> {
+impl<'caps> fmt::Display for ServerCaps<'caps> {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut s = String::new();
     match self.0 {
@@ -385,7 +332,7 @@ impl<'a> fmt::Display for ServerCaps<'a> {
   }
 }
 
-impl<'a> FromStr for ServerCaps<'a> {
+impl<'caps> FromStr for ServerCaps<'caps> {
   type Err = Error;
   fn from_str(input: &str) -> Result<Self> {
     if input.is_empty() {
@@ -485,24 +432,16 @@ impl<'a> TryFrom<&'a OscPacket> for ErrorCode<'a> {
               -9 => Ok(ErrorCode::BadProject(raddr.unwrap(), msg.unwrap())),
               -10 => Ok(ErrorCode::CreateFailed(raddr.unwrap(), msg.unwrap())),
               -11 => Ok(ErrorCode::SaveFailed(raddr.unwrap(), msg.unwrap())),
-              _ => Err(Error::Osc(rosc::OscError::BadMessage(
-                "Unable to parse ErrorCode",
-              ))),
+              err => Err(Error::BadCode(err)),
             }
           } else {
-            Err(Error::Osc(rosc::OscError::BadMessage(
-              "Unable to parse ErrorCode",
-            )))
+            Err(Error::BadArg("error code is missing"))
           }
         } else {
-          Err(Error::Osc(rosc::OscError::BadMessage(
-            "Unable to parse ErrorCode",
-          )))
+          Err(Error::BadAddr("address not '/error'"))
         }
       }
-      _ => Err(Error::Osc(rosc::OscError::BadMessage(
-        "Unable to parse ErrorCode",
-      ))),
+      _ => Err(Error::BadMessage("unable to parse ErrorCode")),
     }
   }
 }
@@ -654,14 +593,10 @@ impl<'a> TryFrom<&'a OscPacket> for ClientMessage<'a> {
           | "/nsm/server/list" => {
             Ok(ClientMessage::Control(ClientControl::try_from(p)?))
           }
-          _ => Err(Error::Osc(rosc::OscError::BadMessage(
-            "Unable to parse ClientMessage",
-          ))),
+          _ => Err(Error::BadAddr("expected ClientMessage addr")),
         }
       }
-      _ => Err(Error::Osc(rosc::OscError::BadMessage(
-        "Unable to parse ClientMessage",
-      ))),
+      _ => Err(Error::BadMessage("unable to parse ClientMessage")),
     }
   }
 }
@@ -759,24 +694,16 @@ impl<'a> TryFrom<&'a OscPacket> for ClientReply<'a> {
             match s.as_str() {
               "/nsm/client/open" => Ok(ClientReply::Open(msg.unwrap())),
               "nsm/client/save" => Ok(ClientReply::Open(msg.unwrap())),
-              _ => Err(Error::Osc(rosc::OscError::BadMessage(
-                "Unable to parse ClientReply",
-              ))),
+              _ => Err(Error::BadReplyAddr("expected client reply addr")),
             }
           } else {
-            Err(Error::Osc(rosc::OscError::BadMessage(
-              "Unable to parse ClientReply",
-            )))
+            Err(Error::BadArg("reply address missing"))
           }
         } else {
-          Err(Error::Osc(rosc::OscError::BadMessage(
-            "Unable to parse ClientReply",
-          )))
+          Err(Error::BadAddr("address not '/reply'"))
         }
       }
-      _ => Err(Error::Osc(rosc::OscError::BadMessage(
-        "Unable to parse ClientReply",
-      ))),
+      _ => Err(Error::BadMessage("unable to parse ClientReply")),
     }
   }
 }
@@ -867,14 +794,10 @@ impl<'a> TryFrom<&'a OscPacket> for ClientControl<'a> {
           "/nsm/server/quit" => Ok(ClientControl::Quit),
           "/nsm/server/list" => Ok(ClientControl::List),
           // "" => Ok(ServerMessage::Broadcast(a, b)),
-          _ => Err(Error::Osc(rosc::OscError::BadMessage(
-            "Unable to parse ClientControl message",
-          ))),
+          _ => Err(Error::BadAddr("expected ClientControl addr")),
         }
       }
-      _ => Err(Error::Osc(rosc::OscError::BadMessage(
-        "Unable to parse ClientControl message",
-      ))),
+      _ => Err(Error::BadMessage("expected OSC message")),
     }
   }
 }
@@ -982,14 +905,10 @@ impl<'a> TryFrom<&'a OscPacket> for ServerMessage<'a> {
           "/nsm/client/show_optional_gui" => Ok(ServerMessage::ShowGui),
           "/nsm/client/hide_optional_gui" => Ok(ServerMessage::HideGui),
           // "" => Ok(ServerMessage::Broadcast(a, b)),
-          _ => Err(Error::Osc(rosc::OscError::BadMessage(
-            "Unable to parse ServerMessage",
-          ))),
+          _ => Err(Error::BadAddr("expected server_message addr")),
         }
       }
-      _ => Err(Error::Osc(rosc::OscError::BadMessage(
-        "Unable to parse ServerMessage",
-      ))),
+      _ => Err(Error::BadMessage("expected OSC message")),
     }
   }
 }
@@ -1101,24 +1020,16 @@ impl<'a> TryFrom<&'a OscPacket> for ServerReply<'a> {
               "/nsm/server/abort" => Ok(ServerReply::Abort(msg.unwrap())),
               "/nsm/server/quit" => Ok(ServerReply::Quit(msg.unwrap())),
               "/nsm/server/list" => Ok(ServerReply::List(msg.unwrap())),
-              _ => Err(Error::Osc(rosc::OscError::BadMessage(
-                "Unable to parse ServerReply",
-              ))),
+              _ => Err(Error::BadReplyAddr("expected server reply addr")),
             }
           } else {
-            Err(Error::Osc(rosc::OscError::BadMessage(
-              "Unable to parse ServerReply",
-            )))
+            Err(Error::BadArg("reply addr missing"))
           }
         } else {
-          Err(Error::Osc(rosc::OscError::BadMessage(
-            "Unable to parse ServerReply",
-          )))
+          Err(Error::BadAddr("address not '/reply'"))
         }
       }
-      _ => Err(Error::Osc(rosc::OscError::BadMessage(
-        "Unable to parse ServerReply",
-      ))),
+      _ => Err(Error::BadMessage("Unable to parse ServerReply")),
     }
   }
 }

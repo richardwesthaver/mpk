@@ -12,10 +12,10 @@
 //!
 //! REF: https://freesound.org/docs/api/
 //! ENDPOINT: https://freesound.org/apiv2/
-use crate::{open_browser, Client, Error, Result};
+use crate::{Client, Error, Result};
 use futures_util::StreamExt;
-use indicatif::{ProgressBar, ProgressStyle};
 use mpk_config::{ClientConfig, Config};
+use mpk_util::{open_browser, ProgressBar, ProgressStyle};
 use oauth2::{
   basic::{BasicClient, BasicTokenType},
   AuthUrl, AuthorizationCode, ClientId, ClientSecret, EmptyExtraTokenFields,

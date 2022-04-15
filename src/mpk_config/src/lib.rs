@@ -8,31 +8,14 @@ use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 use std::str::FromStr;
 use std::time::{Duration, SystemTime};
 
+use mpk_util::expand_tilde;
+
 mod err;
 pub use err::{Error, Result};
 
 pub const DEFAULT_PATH: &str = "~/mpk";
 pub const CONFIG_FILE: &str = "mpk.toml";
 pub const DB_FILE: &str = "mpk.db";
-
-/// utility function to expand `~` in PATH.
-pub fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
-  let p = path.as_ref();
-  if !p.starts_with("~") {
-    return Some(p.to_path_buf());
-  }
-  if p == Path::new("~") {
-    return dirs::home_dir();
-  }
-  dirs::home_dir().map(|mut h| {
-    if h == Path::new("/") {
-      p.strip_prefix("~").unwrap().to_path_buf()
-    } else {
-      h.push(p.strip_prefix("~/").unwrap());
-      h
-    }
-  })
-}
 
 /// MPK Configuration
 #[derive(Serialize, Deserialize, Clone, Default)]

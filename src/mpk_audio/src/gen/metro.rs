@@ -1,3 +1,4 @@
+use rodio::{Decoder, Source};
 use std::io::BufReader;
 use std::path::Path;
 use std::sync::mpsc::{channel, Sender};
@@ -56,24 +57,27 @@ impl Metro {
   }
   pub fn next(&mut self) {
     self.current_beat = (self.current_beat + 1) % self.cfg.time_sig.upper;
-    self.last_time_run = std::time::Instant::now();
+    self.last_time_run = Instant::now();
   }
 
   // TODO calculate duration of audio sample AOT, subtract from sleep
   // time. current bpm isn't right.
   pub fn play(self, t: TicToc) {
+    let now = Instant::now();
     let st = match t {
       TicToc::Tic(p) => p,
       TicToc::Toc(p) => p,
     };
     let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
-    let file = std::fs::File::open(st).unwrap();
-    eprintln!("metro: {}", self.current_beat + 1);
-    stream_handle
-      .play_once(BufReader::new(file))
+    let sink = rodio::Sink::try_new(&stream_handle).unwrap();
+    let src = Decoder::new(BufReader::new(std::fs::File::open(st).unwrap()))
       .unwrap()
-      .detach();
-    std::thread::sleep(self.beat_delta);
+      .take_duration(self.beat_delta);
+    eprintln!("metro: {}", self.current_beat + 1);
+    sink.append(src);
+    sink.play();
+    sink.detach();
+    std::thread::sleep(self.beat_delta - now.elapsed());
   }
 
   pub fn start<P: 'static + AsRef<Path> + std::marker::Send>(

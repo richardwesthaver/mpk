@@ -3,6 +3,7 @@
 //! Types for interacting with the SQLite DB. The schema is defined in 'init.sql'.
 use mpk_config::DbConfig;
 use mpk_hash::Checksum;
+use mpk_util::{ProgressBar, ProgressStyle};
 use rusqlite::backup::{Backup, Progress};
 use rusqlite::types::FromSql;
 pub use rusqlite::DatabaseName;
@@ -880,24 +881,52 @@ or checksum = ?2",
     Ok(res)
   }
 
-  pub fn backup<P: AsRef<Path>>(
-    &self,
-    dst: P,
-    progress: Option<fn(Progress)>,
-  ) -> Result<()> {
-    let mut dst = Connection::open(&dst)?;
-    let backup = Backup::new(&self.conn, &mut dst)?;
-    backup.run_to_completion(2048, std::time::Duration::from_millis(10), progress)?;
-    Ok(())
+  pub fn backup<P: AsRef<Path>>(&self, dst: P, progress: bool) -> Result<()> {
+    let mut conn = Connection::open(&dst)?;
+    let backup = Backup::new(&self.conn, &mut conn)?;
+    if progress {
+      let pb = ProgressBar::new(0).with_style(ProgressStyle::default_spinner().template("{spinner:.green} [{elapsed_precise}][{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+		    .progress_chars("#>-"));
+      while let Ok(_) = backup.step(2048) {
+        let prog = backup.progress();
+        pb.set_length(prog.pagecount as u64);
+        pb.set_position((prog.pagecount - prog.remaining) as u64);
+        if prog.remaining == 0 {
+          pb.finish_with_message("backup complete");
+          break;
+        }
+      }
+      return Ok(());
+    } else {
+      backup.run_to_completion(2048, std::time::Duration::from_millis(10), None)?;
+      return Ok(());
+    };
   }
 
   pub fn restore<P: AsRef<Path>>(
     &mut self,
     name: DatabaseName,
     src: P,
-    progress: Option<fn(Progress)>,
+    progress: bool,
   ) -> Result<()> {
-    self.conn.restore(name.into(), src, progress)?;
+    if progress {
+      self.conn.restore(
+        name.into(),
+        src,
+        Some(|p: Progress| {
+          let current: f32 =
+            ((p.pagecount - p.remaining) as f32 / p.pagecount as f32) * 100 as f32;
+          println!(
+            "progress: {}/{} {}%",
+            (p.pagecount - p.remaining),
+            p.pagecount,
+            current
+          )
+        }),
+      )?;
+    } else {
+      self.conn.restore::<_, fn(_)>(name.into(), src, None)?;
+    }
     Ok(())
   }
 
@@ -915,17 +944,6 @@ or checksum = ?2",
   pub fn close(self) {
     self.conn.close().unwrap();
   }
-}
-
-pub fn print_progress(p: Progress) {
-  let current: f32 =
-    ((p.pagecount - p.remaining) as f32 / p.pagecount as f32) * 100 as f32;
-  println!(
-    "progress: {}/{} {}%",
-    (p.pagecount - p.remaining),
-    p.pagecount,
-    current
-  )
 }
 
 pub fn print_csv<S: Serialize>(input: S) {

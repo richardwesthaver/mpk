@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 rosc = "0.7"
+mpk_util = { path = "../mpk_util" }

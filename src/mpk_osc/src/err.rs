@@ -5,9 +5,14 @@ pub enum Error {
   Osc(rosc::OscError),
   Io(std::io::Error),
   BadType(String),
+  BadMessage(&'static str),
+  BadArg(&'static str),
+  BadReplyAddr(&'static str),
+  BadAddr(&'static str),
+  BadCode(i32),
 }
 
-impl<'a> std::error::Error for Error {
+impl std::error::Error for Error {
   fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
     match *self {
       Error::Osc(ref err) => Some(err),
@@ -17,12 +22,17 @@ impl<'a> std::error::Error for Error {
   }
 }
 
-impl<'a> std::fmt::Display for Error {
+impl std::fmt::Display for Error {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    match *self {
-      Error::Osc(ref err) => err.fmt(f),
-      Error::Io(ref err) => err.fmt(f),
-      Error::BadType(ref s) => f.write_str(&format!("Invalid Type: {}", s)),
+    match &self {
+      Error::Osc(ref err) => write!(f, "OSC error: {}", err.to_string()),
+      Error::Io(ref err) => write!(f, "IO error: {}", err.to_string()),
+      Error::BadType(s) => write!(f, "bad type: {}", s),
+      Error::BadMessage(s) => write!(f, "bad OSC message: {}", s),
+      Error::BadArg(s) => write!(f, "bad OSC arg: {}", s),
+      Error::BadReplyAddr(s) => write!(f, "bad OSC reply address: {}", s),
+      Error::BadAddr(s) => write!(f, "bad OSC address: {}", s),
+      Error::BadCode(n) => write!(f, "bad error code: {}", n),
     }
   }
 }
