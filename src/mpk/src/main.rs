@@ -27,7 +27,7 @@ struct Args {
   cmd: Command,
   /// Use specified config file
   #[clap(short,long, default_value_t = String::from("~/mpk/mpk.toml"))]
-  cfg: String,
+  cfg: String
 }
 
 #[derive(Subcommand)]
@@ -233,20 +233,6 @@ pub enum NetCmd {
   },
 }
 
-fn ppln(i: &str, s: char) {
-  match s {
-    // progress
-    'p' => eprint!("  \x1b[1m{}\x1b[0m ... ", i),
-    // done
-    'd' => eprint!("\x1b[1;32m{}\x1b[0m\n", i),
-    // err
-    'e' => eprint!("\x1b[0:31m{}\x1b[0m", i),
-    // Error
-    'E' => eprintln!("\x1b[0:31m{}\x1b[0m", i),
-    _ => eprintln!("{}", i),
-  }
-}
-
 fn main() -> Result<()> {
   let args = Args::parse();
   let cfg_path = expand_tilde(&args.cfg).unwrap();
@@ -258,12 +244,12 @@ fn main() -> Result<()> {
 
   match args.cmd {
     Command::Init => {
-      ppln("Initializing MPK", 'p');
+      print!("Initializing MPK... ");
       cfg.build()?;
       cfg.write(cfg_path)?;
       let db_path = cfg.db.path();
       Mdb::new(db_path.as_deref())?.init()?;
-      ppln("[DONE]", 'd');
+      println!("\x1b[1;32mDONE\x1b[0m");
     }
     Command::Status {
       mut audio,
@@ -285,7 +271,7 @@ fn main() -> Result<()> {
       }
       if db {
         println!("\x1b[1mDB INFO\x1b[0m");
-        let db = Mdb::new_with_config(cfg.db.to_owned())?;
+        let db = Mdb::new_with_config(cfg.db)?;
         let ts = db.track_count()?;
         let ss = db.sample_count()?;
         println!("sqlite_version: {}", db.version());
@@ -390,9 +376,7 @@ fn main() -> Result<()> {
               _ => Some(QueryBy::Date(d)),
             }
           } else if let Some(n) = sr {
-            match by.map(|b| QueryType::from_str(&b).unwrap()) {
-              _ => Some(QueryBy::SampleRate(n)),
-            }
+            Some(QueryBy::SampleRate(n))
           } else if let Some(n) = bpm {
             match by.map(|b| QueryType::from_str(&b).unwrap()) {
               Some(QueryType::GreaterThan) => Some(QueryBy::BpmGreater(n)),

@@ -39,14 +39,14 @@ pub fn generate_ot_file(chain: &mut SampleChain) -> Result<()> {
 
   // Add data to the .ot buffer
   data = push_u32(data, tempo); // Tempo
-  data = push_u32(data, bars.clone()); // Trimlen
-  data = push_u32(data, bars.clone()); // loopLen
+  data = push_u32(data, bars); // Trimlen
+  data = push_u32(data, bars); // loopLen
   data = push_u32(data, 0); // Stretch
   data = push_u32(data, 0); // Loop
   data = push_u16(data, 48); // Gain
   data.push(255); // Quantize
   data = push_u32(data, 0); // trimStart
-  data = push_u32(data, total_samples.clone()); // trimEnd
+  data = push_u32(data, total_samples); // trimEnd
   data = push_u32(data, 0); // loopPoint
 
   // Add data for each of the slices
@@ -66,10 +66,11 @@ pub fn generate_ot_file(chain: &mut SampleChain) -> Result<()> {
 
   let mut checksum: u16 = 0;
 
+  // TODO: check this is correct
+  //
   // Checksum formula (basically add all values except the data)
-  let len = data.len();
-  for i in 16..len {
-    checksum += data[i] as u16;
+  for i in data.iter().skip(16) {
+    checksum += data[*i as usize] as u16;
   }
 
   data = push_u16(data, checksum); // Push Checksum

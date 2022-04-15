@@ -67,6 +67,7 @@ pub async fn write_sound<P: AsRef<Path>>(
   Ok(())
 }
 
+#[derive(Debug, Default)]
 pub struct FreeSoundClient {
   pub client: Client,
   pub cfg: ClientConfig,
@@ -112,10 +113,8 @@ impl FreeSoundClient {
     .unwrap();
     let token_url =
       TokenUrl::new(format!("{}/oauth2/access_token/", FREESOUND_ENDPOINT)).unwrap();
-    let client =
-      BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
-        .set_redirect_uri(RedirectUrl::new(self.cfg.redirect_url.clone()).unwrap());
-    client
+    BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
+      .set_redirect_uri(RedirectUrl::new(self.cfg.redirect_url.clone()).unwrap())
   }
 
   pub fn update_cfg(
@@ -152,7 +151,7 @@ impl FreeSoundClient {
   pub async fn auth(&mut self, auto: bool) -> Result<()> {
     if self.refresh_auth().await.is_ok() {
       println!("token refresh successful");
-      return Ok(());
+      Ok(())
     } else {
       let client = self.auth_client();
       println!(
@@ -419,11 +418,11 @@ impl fmt::Display for FreeSoundResponse {
         let next = next
           .as_ref()
           .map(|u| u.to_string())
-          .unwrap_or("null".to_string());
+          .unwrap_or_else(|| "null".to_string());
         let previous = previous
           .as_ref()
           .map(|u| u.to_string())
-          .unwrap_or("null".to_string());
+          .unwrap_or_else (|| "null".to_string());
         let res: String = results
           .iter()
           .map(|r| r.to_string())

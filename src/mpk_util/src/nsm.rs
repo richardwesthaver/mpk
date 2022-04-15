@@ -2,8 +2,8 @@
 use std::io::Error;
 use std::net::{SocketAddr, ToSocketAddrs};
 
-#[cfg(linux)]
-pub fn start_nsmd(args: &[&str]) -> Result<std::process::Child> {
+#[cfg(target_os = "linux")]
+pub fn start_nsmd(args: &[&str]) -> Result<std::process::Child, Error> {
   std::process::Command::new("nsmd")
     .args(args)
     .spawn()

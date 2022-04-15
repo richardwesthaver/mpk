@@ -48,7 +48,7 @@ pub fn play<P: AsRef<Path>>(
   pause: Receiver<bool>,
 ) {
   let (_stream, handle) = if let Some(d) = device {
-    rodio::OutputStream::try_from_device(&d).unwrap()
+    rodio::OutputStream::try_from_device(d).unwrap()
   } else {
     rodio::OutputStream::try_default().unwrap()
   };
@@ -68,9 +68,10 @@ pub fn play<P: AsRef<Path>>(
           sink.play();
         }
       }
-      false => match pause.recv_timeout(std::time::Duration::from_millis(500)) {
-        Ok(_) => sink.pause(),
-        Err(_) => (),
+      false => if pause.recv_timeout(std::time::Duration::from_millis(500)).is_ok() {
+        sink.pause()
+      } else {
+        continue;
       },
     }
   }

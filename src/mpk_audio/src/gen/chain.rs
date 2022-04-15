@@ -114,7 +114,7 @@ impl SampleChain {
       false => {
         let spec = hound::WavSpec {
           channels: 1,
-          sample_rate: self.sample_rate.clone(),
+          sample_rate: self.sample_rate,
           bits_per_sample: 16,
           sample_format: hound::SampleFormat::Int,
         };
@@ -143,14 +143,14 @@ impl SampleChain {
         for i in 0..self.max_duration {
           let mut s_value: i16 = 0;
           if i < samples.len() {
-            s_value = samples[i].clone()
+            s_value = samples[i]
           }
           writer.write_sample(s_value).unwrap();
         }
       }
       false => {
-        for i in 0..samples.len() {
-          writer.write_sample(samples[i].clone()).unwrap();
+        for i in &samples {
+          writer.write_sample(*i).unwrap();
         }
       }
     }
