@@ -11,7 +11,6 @@ use std::io;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::mpsc::sync_channel;
-use std::thread;
 
 #[derive(Parser)]
 #[clap(name = "mpk")]
@@ -233,7 +232,8 @@ pub enum NetCmd {
   },
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
   let args = Args::parse();
   let cfg_path = expand_tilde(&args.cfg).unwrap();
   let mut cfg = if cfg_path.exists() {
@@ -510,7 +510,6 @@ fn main() -> Result<()> {
       }
     }
     Command::Net { cmd } => {
-      let rt = tokio::runtime::Runtime::new().unwrap();
       match cmd {
         NetCmd::Freesound {
           cmd,
@@ -518,7 +517,7 @@ fn main() -> Result<()> {
           query,
           out,
         } => {
-          rt.block_on(async {
+          tokio::spawn(async move {
             let mut client = mpk_http::freesound::FreeSoundClient::new_with_config(
               cfg.net.freesound.as_ref().unwrap(),
             );
@@ -572,17 +571,13 @@ fn main() -> Result<()> {
       }
     }
     Command::Repl => {
-      let mut repl = mpk_repl::init_sesh_repl().unwrap();
-      let printer = repl.create_external_printer().unwrap();
-      let rt = tokio::runtime::Runtime::new().unwrap();
-      rt.spawn(async move {
-        let mut client = mpk_http::freesound::FreeSoundClient::new_with_config(
-          cfg.net.freesound.as_ref().unwrap(),
-        );
-        let req = FreeSoundRequest::SoundDownload { id: 21216 };
-        let res = client.request(req).await.unwrap();
-        write_sound(res, "test.sound", true).await.unwrap();
-        mpk_repl::print_external(printer, "all good".to_string());
+      let mut repl = mpk_repl::init_repl().unwrap();
+      let mut printer = repl.create_external_printer().unwrap();
+      tokio::spawn(async move {
+	loop {
+	  tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+          mpk_repl::print_external(&mut printer, "all good");
+	}
       });
       mpk_repl::run_repl(&mut repl).unwrap();
     }
@@ -607,7 +602,7 @@ fn main() -> Result<()> {
         // Wait for user input to quit
         let (tx, rx) = sync_channel(1);
         println!("Press enter to quit...");
-        thread::spawn(move || {
+        tokio::spawn(async move {
           let mut input = String::new();
           io::stdin().read_line(&mut input).ok();
           tx.send(()).unwrap();
@@ -658,14 +653,12 @@ fn main() -> Result<()> {
         let metro = mpk_audio::gen::Metro::new(bpm, sig.0, sig.1);
         let tx = metro.start(cfg.metro.tic.unwrap(), cfg.metro.toc.unwrap());
         println!("Press enter to stop...");
-        thread::spawn(move || {
+        tokio::spawn(async move {
           let mut input = String::new();
           io::stdin().read_line(&mut input).unwrap();
           tx.send(mpk_audio::gen::metro::MetroMsg::Stop).unwrap();
           std::process::exit(1);
-        })
-        .join()
-        .unwrap();
+        });
       }
       Runner::Plot => {
         let _data = mpk_db::Mdb::new_with_config(cfg.db)?

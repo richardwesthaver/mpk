@@ -27,6 +27,7 @@ pub struct Config {
   pub extractor: ExtractorConfig,
   pub sesh: SeshConfig,
   pub net: NetworkConfig,
+  pub daemon: DaemonConfig,
 }
 
 impl Config {
@@ -34,10 +35,11 @@ impl Config {
     Ok(Config {
       fs,
       db,
+      daemon: DaemonConfig::default(),
+      sesh: SeshConfig::default(),
       jack,
       metro: MetroConfig::default(),
       extractor: ExtractorConfig::default(),
-      sesh: SeshConfig::default(),
       net: NetworkConfig::default(),
     })
   }
@@ -336,6 +338,20 @@ impl From<Config> for DbConfig {
   }
 }
 
+/// Daemon Configuration.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DaemonConfig {
+  socket: String,
+}
+
+impl Default for DaemonConfig {
+  fn default() -> Self {
+    DaemonConfig {
+      socket: "127.0.0.1:0".to_string(),
+    }
+  }
+}
+
 /// JACK Configuration.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct JackConfig {
@@ -467,7 +483,7 @@ impl From<Config> for ExtractorConfig {
   }
 }
 
-/// Configuration for Patches.
+/// Configuration for Sessions.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SeshConfig {
   client_addr: String,

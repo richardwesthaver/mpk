@@ -17,6 +17,13 @@ members = [
   "src/mpk_ffi",
   "src/mpk_http",
   "src/mpk_osc",
+  "src/mpk_ast",
 ]
 
 exclude = [ "vendor/" ]
+
+[profile.release]
+lto = true
+strip = true
+panic = "abort"
+codegen-units = 1

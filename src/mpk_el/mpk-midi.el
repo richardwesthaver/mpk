@@ -65,7 +65,9 @@ unsigned integer index. Use `mpk info -m` to list all devices."
   "Parse lines from mpk-midi process buffer.
 `TIME: [CHAN, NOTE, VAL]`"
   (goto-char (marker-position mpk-midi-examination-marker))
-  (while (re-search-forward "\\([[:digit:]]*\\): \\[\\([[:digit:]]*\\), \\([[:digit:]]*\\), \\([[:digit:]]*\\)\\]$" nil t)
+  (while (re-search-forward
+	  "\\([[:digit:]]*\\): \\[\\([[:digit:]]*\\), \\([[:digit:]]*\\), \\([[:digit:]]*\\)\\]$"
+	  nil t)
     (let* ((seq-start (match-beginning 0))
            (seq-end   (match-end 0))
            (sequence  (buffer-substring seq-start seq-end))

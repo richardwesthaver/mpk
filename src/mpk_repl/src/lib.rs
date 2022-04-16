@@ -1,23 +1,30 @@
+//! MPK_REPL
 use rustyline::{
   completion::FilenameCompleter, highlight::MatchingBracketHighlighter,
   hint::HistoryHinter, validate::MatchingBracketValidator, CompletionType, Config,
   EditMode, Editor, Helper,
 };
-
+use lalrpop_util::lalrpop_mod;
 use rustyline::ExternalPrinter;
 
+pub use mpk_ast as ast;
+
 mod err;
-pub use err::{Error, Result};
+pub use err::{Error, ParserError, Result};
 
-mod sesh;
-pub use sesh::SeshHelper;
+mod helper;
+pub use helper::ReplHelper;
 
-pub fn init_sesh_repl() -> Result<Editor<SeshHelper>> {
+mod dispatch;
+
+lalrpop_mod!(pub grammar);
+
+pub fn init_repl() -> Result<Editor<ReplHelper>> {
   let config = Config::builder()
     .completion_type(CompletionType::Circular)
     .edit_mode(EditMode::Emacs)
     .build();
-  let h = SeshHelper {
+  let h = ReplHelper {
     completer: FilenameCompleter::new(),
     highlighter: MatchingBracketHighlighter::new(),
     hinter: HistoryHinter {},
@@ -54,11 +61,17 @@ pub fn run_repl<H: Helper>(rl: &mut Editor<H>) -> Result<()> {
   Ok(())
 }
 
-pub fn print_external<T: ExternalPrinter>(mut printer: T, msg: String) {
-  printer.print(msg).expect("failed to print remotely")
+pub fn print_external<'a, T: ExternalPrinter>(printer: &'a mut T, msg: &'a str) {
+  printer.print(msg.to_string()).expect("failed to print remotely")
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
+  #[test]
+  fn grammar_test() {
+    assert!(grammar::TermParser::new().parse("2287823824738").is_ok());
+    assert!(grammar::TermParser::new().parse("22878238247389999999999999").is_err());
+
+  }
 }

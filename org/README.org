@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-04-14
+#+DATE: 2022-04-15
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Production Kit
@@ -933,7 +933,29 @@ to Proxy to external Endpoints and then sends status back to Client.
   - UDP or UDS
 
 - encoding/decoding:
-  - 
+  - raw or bincode
+*** DSL
+[[https://github.com/cloudflare/wirefilter][GitHub - cloudflare/wirefilter: An execution engine for Wireshark-like filters]]
+[[https://blog.cloudflare.com/building-fast-interpreters-in-rust/][Cloudflare - Building Fast Interpreters in Rust]]
+[[https://rust-hosted-langs.github.io/book/][Introduction - Writing Interpreters in Rust: a Guide]]
+[[http://craftinginterpreters.com/][Crafting Interpreters]]
+#+begin_example
+fs == freesound
+
+db == database
+
+se == sesh
+
+au == audio
+
+jk == jack
+
+cfg == config
+
+= == assign
+
+() == expr
+#+end_example
 ** COMMENT local_vars
 #+begin_comment
 Local variables:
