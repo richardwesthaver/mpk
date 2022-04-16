@@ -1,11 +1,11 @@
 //! MPK_REPL
+use lalrpop_util::lalrpop_mod;
+use rustyline::ExternalPrinter;
 use rustyline::{
   completion::FilenameCompleter, highlight::MatchingBracketHighlighter,
   hint::HistoryHinter, validate::MatchingBracketValidator, CompletionType, Config,
   EditMode, Editor, Helper,
 };
-use lalrpop_util::lalrpop_mod;
-use rustyline::ExternalPrinter;
 
 pub use mpk_ast as ast;
 
@@ -62,7 +62,9 @@ pub fn run_repl<H: Helper>(rl: &mut Editor<H>) -> Result<()> {
 }
 
 pub fn print_external<'a, T: ExternalPrinter>(printer: &'a mut T, msg: &'a str) {
-  printer.print(msg.to_string()).expect("failed to print remotely")
+  printer
+    .print(msg.to_string())
+    .expect("failed to print remotely")
 }
 
 #[cfg(test)]
@@ -71,7 +73,8 @@ mod tests {
   #[test]
   fn grammar_test() {
     assert!(grammar::TermParser::new().parse("2287823824738").is_ok());
-    assert!(grammar::TermParser::new().parse("22878238247389999999999999").is_err());
-
+    assert!(grammar::TermParser::new()
+      .parse("22878238247389999999999999")
+      .is_err());
   }
 }

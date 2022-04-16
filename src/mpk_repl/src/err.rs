@@ -73,22 +73,25 @@ impl std::fmt::Display for ParserError {
 
     match self {
       ParserError::Unexpected {
-	unexpected,
-	expected
+        unexpected,
+        expected,
       } => {
-	write!(f, "found {}", unexpected)?;
-	write_expected(f, expected)
-      },
+        write!(f, "found {}", unexpected)?;
+        write_expected(f, expected)
+      }
       ParserError::EndOfStream { expected } => {
         write!(f, "unexpected end of token stream")?;
         write_expected(f, expected)
-      },
+      }
       ParserError::RecursionLimit => write!(f, "recursion limit reached"),
-      ParserError::UnexpectedChar(c) => write!(f, "unexpected character: '{}'", std::char::from_u32(*c as u32).unwrap_or(std::char::REPLACEMENT_CHARACTER)),
+      ParserError::UnexpectedChar(c) => write!(
+        f,
+        "unexpected character: '{}'",
+        std::char::from_u32(*c as u32).unwrap_or(std::char::REPLACEMENT_CHARACTER)
+      ),
       ParserError::BadNumber => write!(f, "malformed number"),
     }
   }
 }
 
 impl std::error::Error for ParserError {}
-

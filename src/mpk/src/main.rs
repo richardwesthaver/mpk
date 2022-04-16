@@ -509,75 +509,73 @@ async fn main() -> Result<()> {
         }
       }
     }
-    Command::Net { cmd } => {
-      match cmd {
-        NetCmd::Freesound {
-          cmd,
-          auto,
-          query,
-          out,
-        } => {
-          tokio::spawn(async move {
-            let mut client = mpk_http::freesound::FreeSoundClient::new_with_config(
-              cfg.net.freesound.as_ref().unwrap(),
-            );
-            if cmd.eq("auth") {
-              client.auth(auto).await.unwrap();
-              client.save_to_config(&mut cfg);
-              cfg.write(cfg_path).unwrap();
-            } else if cmd.eq("search") {
-              let req = FreeSoundRequest::SearchText {
-                query: &query.unwrap(),
-                filter: "tag:guitar",
-                sort: "",
-                group_by_pack: false,
-                weights: "",
-                page: 1,
-                page_size: 150,
-                fields: &["id", "name"],
-                descriptors: &[],
-                normalized: false,
-              };
-              let res = client.request(req).await.unwrap();
-              let response = FreeSoundResponse::parse(res).await;
-              println!("{}", response);
-            } else if cmd.eq("raw") {
-              let res = client
-                .get_raw(query.unwrap())
-                .await
-                .unwrap()
-                .text()
-                .await
-                .unwrap();
-              println!("{}", res);
-            } else if cmd.eq("dl") || cmd.eq("download") {
-              let query = query.unwrap();
-              let out = if let Some(p) = out {
-                p
-              } else {
-                let mut path = cfg.fs.get_path("samples").unwrap();
-                path.push(&query);
-                path
-              };
-              let req = FreeSoundRequest::SoundDownload {
-                id: query.parse().unwrap(),
-              };
-              let res = client.request(req).await.unwrap();
-              write_sound(res, &out, true).await.unwrap();
-              println!("sound_id {} downloaded to {}", query, out.to_str().unwrap());
-            }
-          });
-        }
+    Command::Net { cmd } => match cmd {
+      NetCmd::Freesound {
+        cmd,
+        auto,
+        query,
+        out,
+      } => {
+        tokio::spawn(async move {
+          let mut client = mpk_http::freesound::FreeSoundClient::new_with_config(
+            cfg.net.freesound.as_ref().unwrap(),
+          );
+          if cmd.eq("auth") {
+            client.auth(auto).await.unwrap();
+            client.save_to_config(&mut cfg);
+            cfg.write(cfg_path).unwrap();
+          } else if cmd.eq("search") {
+            let req = FreeSoundRequest::SearchText {
+              query: &query.unwrap(),
+              filter: "tag:guitar",
+              sort: "",
+              group_by_pack: false,
+              weights: "",
+              page: 1,
+              page_size: 150,
+              fields: &["id", "name"],
+              descriptors: &[],
+              normalized: false,
+            };
+            let res = client.request(req).await.unwrap();
+            let response = FreeSoundResponse::parse(res).await;
+            println!("{}", response);
+          } else if cmd.eq("raw") {
+            let res = client
+              .get_raw(query.unwrap())
+              .await
+              .unwrap()
+              .text()
+              .await
+              .unwrap();
+            println!("{}", res);
+          } else if cmd.eq("dl") || cmd.eq("download") {
+            let query = query.unwrap();
+            let out = if let Some(p) = out {
+              p
+            } else {
+              let mut path = cfg.fs.get_path("samples").unwrap();
+              path.push(&query);
+              path
+            };
+            let req = FreeSoundRequest::SoundDownload {
+              id: query.parse().unwrap(),
+            };
+            let res = client.request(req).await.unwrap();
+            write_sound(res, &out, true).await.unwrap();
+            println!("sound_id {} downloaded to {}", query, out.to_str().unwrap());
+          }
+        });
       }
-    }
+    },
     Command::Repl => {
       let mut repl = mpk_repl::init_repl().unwrap();
       let mut printer = repl.create_external_printer().unwrap();
       tokio::spawn(async move {
-	loop {
-	  tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        loop {
+          tokio::time::sleep(std::time::Duration::from_secs(5)).await;
           mpk_repl::print_external(&mut printer, "all good");
-	}
+        }
       });
       mpk_repl::run_repl(&mut repl).unwrap();
     }
