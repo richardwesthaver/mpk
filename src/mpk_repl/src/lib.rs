@@ -1,5 +1,4 @@
 //! MPK_REPL
-use lalrpop_util::lalrpop_mod;
 use rustyline::ExternalPrinter;
 use rustyline::{
   completion::FilenameCompleter, highlight::MatchingBracketHighlighter,
@@ -7,17 +6,15 @@ use rustyline::{
   EditMode, Editor, Helper,
 };
 
-pub use mpk_ast as ast;
+pub use mpk_parser as parser;
 
 mod err;
-pub use err::{Error, ParserError, Result};
+pub use err::{Error, Result};
 
 mod helper;
 pub use helper::ReplHelper;
 
 mod dispatch;
-
-lalrpop_mod!(pub grammar);
 
 pub fn init_repl() -> Result<Editor<ReplHelper>> {
   let config = Config::builder()
@@ -36,13 +33,14 @@ pub fn init_repl() -> Result<Editor<ReplHelper>> {
   Ok(rl)
 }
 
-pub fn run_repl<H: Helper>(rl: &mut Editor<H>) -> Result<()> {
+pub fn run_repl<H: Helper>(rl: &mut Editor<H>, cb: fn(String)) -> Result<()> {
   loop {
     let readline = rl.readline("|| ");
     match readline {
       Ok(line) => {
         rl.add_history_entry(line.as_str()); // writes to mem buffer (i think?)
-        println!("{}", line);
+	cb(line)
+//        println!("{}", line);
       }
       Err(rustyline::error::ReadlineError::Interrupted) => {
         println!("CTRL-C");
@@ -65,16 +63,4 @@ pub fn print_external<'a, T: ExternalPrinter>(printer: &'a mut T, msg: &'a str) 
   printer
     .print(msg.to_string())
     .expect("failed to print remotely")
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  #[test]
-  fn grammar_test() {
-    assert!(grammar::TermParser::new().parse("2287823824738").is_ok());
-    assert!(grammar::TermParser::new()
-      .parse("22878238247389999999999999")
-      .is_err());
-  }
 }

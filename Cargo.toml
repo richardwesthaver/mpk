@@ -17,7 +17,7 @@ members = [
   "src/mpk_ffi",
   "src/mpk_http",
   "src/mpk_osc",
-  "src/mpk_ast",
+  "src/mpk_parser",
 ]
 
 exclude = [ "vendor/" ]

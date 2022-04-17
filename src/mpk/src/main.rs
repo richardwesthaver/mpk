@@ -573,11 +573,10 @@ async fn main() -> Result<()> {
       let mut printer = repl.create_external_printer().unwrap();
       tokio::spawn(async move {
         loop {
-          tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-          mpk_repl::print_external(&mut printer, "all good");
+//          mpk_repl::print_external(&mut printer, "all good");
         }
       });
-      mpk_repl::run_repl(&mut repl).unwrap();
+      mpk_repl::run_repl(&mut repl, |s| {println!("{:?}", mpk_repl::parser::grammar::AddParser::new().parse(&s).unwrap())}).unwrap();
     }
     Command::Pack {
       input,

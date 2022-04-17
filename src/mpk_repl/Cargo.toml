@@ -6,11 +6,6 @@ edition = "2021"
 [dependencies]
 rustyline = { git = "https://github.com/kkawakam/rustyline" }
 rustyline-derive = "0.6"
-lalrpop-util = "0.19.7"
-regex = "1"
 tokio = { version = "1.0", features = ["net"] }
 mpk_config = { path = "../mpk_config" }
-mpk_ast = { path = "../mpk_ast" }
-
-[build-dependencies]
-lalrpop = "0.19.7"
+mpk_parser = { path = "../mpk_parser" }

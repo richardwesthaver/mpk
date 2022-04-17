@@ -2,8 +2,12 @@
 pub use rosc::OscPacket;
 
 mod err;
-pub mod nsm;
 pub use err::{Error, Result};
+
+pub mod nsm;
+pub mod mpk;
+pub mod ardour;
+pub mod supercollider;
 
 #[cfg(test)]
 mod tests {
