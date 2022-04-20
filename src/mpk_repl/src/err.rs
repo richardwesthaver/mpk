@@ -4,7 +4,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
   Readline(rustyline::error::ReadlineError),
   Io(std::io::Error),
-  Parser(crate::parser::ParserError),
 }
 
 impl std::error::Error for Error {
@@ -12,7 +11,6 @@ impl std::error::Error for Error {
     match *self {
       Error::Readline(ref err) => Some(err),
       Error::Io(ref err) => Some(err),
-      Error::Parser(ref err) => Some(err),
     }
   }
 }
@@ -22,7 +20,6 @@ impl std::fmt::Display for Error {
     match *self {
       Error::Readline(ref err) => err.fmt(f),
       Error::Io(ref err) => err.fmt(f),
-      Error::Parser(ref err) => err.fmt(f),
     }
   }
 }
@@ -38,10 +35,3 @@ impl From<rustyline::error::ReadlineError> for Error {
     Error::Readline(err)
   }
 }
-
-impl From<crate::parser::ParserError> for Error {
-  fn from(err: crate::parser::ParserError) -> Self {
-    Error::Parser(err)
-  }
-}
-

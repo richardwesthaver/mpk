@@ -1,0 +1,45 @@
+program = _{ SOI ~ "\n"* ~ (stmt ~ "\n"+) * ~ stmt? ~ EOI }
+
+stmt = _{ expr }
+
+expr = {
+      assgmtExpr
+    | monadicExpr
+    | dyadicExpr
+    | sysExpr
+    | nouns
+}
+
+monadicExpr = { verb ~ expr }
+
+dyadicExpr = { (monadicExpr | nouns) ~ verb ~ expr }
+
+assgmtExpr = { ident ~ ":" ~ expr }
+
+sysExpr = { sverb ~ expr* }
+
+sverb = {
+  "0:http" | "0:osc" | "0:sql"
+}
+
+nouns = { noun+ }
+
+noun = _{ decimal | integer | ident | string | "(" ~ expr ~ ")" }
+
+verb = {
+    ">:" | "*:" | "-"  | "%" | "#" | ">."
+  | "+"  | "*"  | "<"  | "=" | "^" | "|"
+  | ">"  | "$"
+}
+
+integer = @{ ASCII_DIGIT+ }
+
+decimal = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+
+ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+
+string = @{ "\"" ~ ( "\"\"" | (!"\"" ~ ANY) )* ~ "\"" }
+
+WHITESPACE = _{ " " | "\t" }
+
+COMMENT = _{ "/ " ~ (!"\n" ~ ANY)* }

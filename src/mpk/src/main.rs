@@ -565,18 +565,23 @@ async fn main() -> Result<()> {
             write_sound(res, &out, true).await.unwrap();
             println!("sound_id {} downloaded to {}", query, out.to_str().unwrap());
           }
-        });
+        })
+        .await
+        .unwrap();
       }
     },
     Command::Repl => {
       let mut repl = mpk_repl::init_repl().unwrap();
-      let mut printer = repl.create_external_printer().unwrap();
+      let printer = repl.create_external_printer().unwrap();
+      let (tx, rx) = mpk_repl::split_eval(32);
       tokio::spawn(async move {
-        loop {
-//          mpk_repl::print_external(&mut printer, "all good");
-        }
+        let mut dispatcher =
+          mpk_repl::Dispatcher::new(printer, "127.0.0.1:0", "127.0.0.1:57813", rx)
+            .await;
+        dispatcher.run().await
       });
-      mpk_repl::run_repl(&mut repl, |s| {println!("{:?}", mpk_repl::parser::grammar::AddParser::new().parse(&s).unwrap())}).unwrap();
+      let mut evaluator = mpk_repl::Evaluator::new(repl, tx);
+      evaluator.parse(true).await;
     }
     Command::Pack {
       input,

@@ -14,9 +14,8 @@
 //! so for full session support you need a Linux box available.
 //!
 //! REF: https://new-session-manager.jackaudio.org
-use crate::{Error, Result};
+use crate::{decoder, encoder, Error, OscPacket, OscType, Result, ToOsc};
 use mpk_util::nsm::*;
-use rosc::{decoder, encoder, OscMessage, OscPacket, OscType};
 use std::fmt;
 use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
 use std::path::PathBuf;
@@ -349,17 +348,6 @@ impl<'caps> FromStr for ServerCaps<'caps> {
       Ok(ServerCaps::from_vec(vec))
     }
   }
-}
-
-pub trait ToOsc {
-  fn msg(&self) -> OscPacket {
-    OscPacket::Message(OscMessage {
-      addr: self.addr(),
-      args: self.args(),
-    })
-  }
-  fn addr(&self) -> String;
-  fn args(&self) -> Vec<OscType>;
 }
 
 #[derive(Debug)]

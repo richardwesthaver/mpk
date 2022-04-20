@@ -3,7 +3,7 @@ use rustyline::ExternalPrinter;
 use rustyline::{
   completion::FilenameCompleter, highlight::MatchingBracketHighlighter,
   hint::HistoryHinter, validate::MatchingBracketValidator, CompletionType, Config,
-  EditMode, Editor, Helper,
+  EditMode, Editor,
 };
 
 pub use mpk_parser as parser;
@@ -15,6 +15,10 @@ mod helper;
 pub use helper::ReplHelper;
 
 mod dispatch;
+pub use dispatch::Dispatcher;
+
+mod eval;
+pub use eval::{split_eval, Evaluator};
 
 pub fn init_repl() -> Result<Editor<ReplHelper>> {
   let config = Config::builder()
@@ -31,32 +35,6 @@ pub fn init_repl() -> Result<Editor<ReplHelper>> {
   let mut rl = Editor::with_config(config);
   rl.set_helper(Some(h));
   Ok(rl)
-}
-
-pub fn run_repl<H: Helper>(rl: &mut Editor<H>, cb: fn(String)) -> Result<()> {
-  loop {
-    let readline = rl.readline("|| ");
-    match readline {
-      Ok(line) => {
-        rl.add_history_entry(line.as_str()); // writes to mem buffer (i think?)
-	cb(line)
-//        println!("{}", line);
-      }
-      Err(rustyline::error::ReadlineError::Interrupted) => {
-        println!("CTRL-C");
-        break;
-      }
-      Err(rustyline::error::ReadlineError::Eof) => {
-        println!("CTRL-D");
-        break;
-      }
-      Err(err) => {
-        println!("Error: {:?}", err);
-        break;
-      }
-    }
-  }
-  Ok(())
 }
 
 pub fn print_external<'a, T: ExternalPrinter>(printer: &'a mut T, msg: &'a str) {

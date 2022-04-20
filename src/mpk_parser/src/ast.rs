@@ -1,50 +1,64 @@
-pub use crate::Location;
+use std::ffi::CString;
 
-pub type Id = String;
+pub type Program = Vec<AstNode>;
 
-#[derive(Debug, PartialEq)]
-pub struct Located<T, U = ()> {
-    pub location: Location,
-    pub custom: U,
-    pub node: T,
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum MonadicVerb {
+  Increment,
+  Square,
+  Negate,
+  Reciprocal,
+  Tally,
+  Ceiling,
+  ShapeOf,
 }
 
-impl<T> Located<T> {
-    pub fn new(location: Location, node: T) -> Self {
-        Self {
-            location,
-            custom: (),
-            node,
-        }
-    }
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum DyadicVerb {
+  Plus,
+  Times,
+  LessThan,
+  LargerThan,
+  Equal,
+  Minus,
+  Divide,
+  Power,
+  Residue,
+  Copy,
+  LargerOf,
+  LargerOrEqual,
+  Shape,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Verb {
-    Add,
-    Sub,
-    Mult,
-    Div,
-    Mod,
-    Pow,
-    LShift,
-    RShift,
-    Or,
-    Xor,
-    And,
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum SysVerb {
+  Http,
+  Osc,
+  Sql,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Adverb {
-
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Cmpop {
-    Eq,
-    NotEq,
-    Lt,
-    LtEq,
-    Gt,
-    GtEq,
+#[derive(PartialEq, Debug, Clone)]
+pub enum AstNode {
+  Integer(i32),
+  Float(f64),
+  MonadicOp {
+    verb: MonadicVerb,
+    expr: Box<AstNode>,
+  },
+  DyadicOp {
+    verb: DyadicVerb,
+    lhs: Box<AstNode>,
+    rhs: Box<AstNode>,
+  },
+  SysOp {
+    verb: SysVerb,
+    expr: Option<Box<AstNode>>,
+  },
+  Nouns(Vec<AstNode>),
+  IsGlobal {
+    ident: String,
+    expr: Box<AstNode>,
+  },
+  Ident(String),
+  Str(CString),
 }

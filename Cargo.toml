@@ -10,6 +10,7 @@ members = [
   "src/mpk_hash",
   "src/mpk_gear",
   "src/mpk_codec",
+  "src/mpk_engine",
   "src/mpk_db",
   "src/mpk_plot",
   "src/mpk_sesh",

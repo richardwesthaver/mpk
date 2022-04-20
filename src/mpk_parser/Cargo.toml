@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-lalrpop-util = "0.19.7"
-regex = "1"
-
-[build-dependencies]
-lalrpop = "0.19.7"
+pest = "2.0"
+pest_derive = "2.0"
+phf = { version = "0.10", features = ["macros"] }

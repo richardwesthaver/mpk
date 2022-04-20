@@ -1,13 +1,24 @@
 //! MPK_OSC
-pub use rosc::OscPacket;
+pub use rosc::{decoder, encoder, OscMessage, OscPacket, OscType};
 
 mod err;
 pub use err::{Error, Result};
 
-pub mod nsm;
-pub mod mpk;
 pub mod ardour;
+pub mod mpk;
+pub mod nsm;
 pub mod supercollider;
+
+pub trait ToOsc {
+  fn msg(&self) -> OscPacket {
+    OscPacket::Message(OscMessage {
+      addr: self.addr(),
+      args: self.args(),
+    })
+  }
+  fn addr(&self) -> String;
+  fn args(&self) -> Vec<OscType>;
+}
 
 #[cfg(test)]
 mod tests {

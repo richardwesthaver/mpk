@@ -27,7 +27,7 @@ pub struct Config {
   pub extractor: ExtractorConfig,
   pub sesh: SeshConfig,
   pub net: NetworkConfig,
-  pub daemon: DaemonConfig,
+  pub engine: EngineConfig,
 }
 
 impl Config {
@@ -35,7 +35,7 @@ impl Config {
     Ok(Config {
       fs,
       db,
-      daemon: DaemonConfig::default(),
+      engine: EngineConfig::default(),
       sesh: SeshConfig::default(),
       jack,
       metro: MetroConfig::default(),
@@ -338,15 +338,15 @@ impl From<Config> for DbConfig {
   }
 }
 
-/// Daemon Configuration.
+/// Engine Configuration.
 #[derive(Serialize, Deserialize, Clone)]
-pub struct DaemonConfig {
-  socket: String,
+pub struct EngineConfig {
+  pub socket: String,
 }
 
-impl Default for DaemonConfig {
+impl Default for EngineConfig {
   fn default() -> Self {
-    DaemonConfig {
+    EngineConfig {
       socket: "127.0.0.1:0".to_string(),
     }
   }
