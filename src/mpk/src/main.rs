@@ -6,6 +6,7 @@ use mpk_http::freesound::{write_sound, FreeSoundRequest, FreeSoundResponse};
 use mpk_util::expand_tilde;
 
 use clap::{AppSettings, Parser, Subcommand};
+use tokio::task::JoinHandle;
 
 use std::io;
 use std::path::PathBuf;
@@ -571,17 +572,18 @@ async fn main() -> Result<()> {
       }
     },
     Command::Repl => {
-      let mut repl = mpk_repl::init_repl().unwrap();
-      let printer = repl.create_external_printer().unwrap();
-      let (tx, rx) = mpk_repl::split_eval(32);
-      tokio::spawn(async move {
+      let mut rl = mpk_repl::init_repl().unwrap();
+      let printer = rl.create_external_printer().unwrap();
+      let (mut evaluator, rx) = mpk_repl::Evaluator::new(rl);
+      let disp = tokio::spawn(async move {
         let mut dispatcher =
           mpk_repl::Dispatcher::new(printer, "127.0.0.1:0", "127.0.0.1:57813", rx)
             .await;
-        dispatcher.run().await
+        dispatcher.run().await;
       });
-      let mut evaluator = mpk_repl::Evaluator::new(repl, tx);
       evaluator.parse(true).await;
+      disp.abort();
+      std::process::exit(0);
     }
     Command::Pack {
       input,

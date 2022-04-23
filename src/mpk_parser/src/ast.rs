@@ -1,64 +1,98 @@
+use chrono::naive::{NaiveDate, NaiveTime};
 use std::ffi::CString;
-
 pub type Program = Vec<AstNode>;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum MonadicVerb {
-  Increment,
-  Square,
-  Negate,
-  Reciprocal,
-  Tally,
-  Ceiling,
-  ShapeOf,
+  Flip,     // +
+  Negate,   // -
+  First,    // *
+  Sqrt,     // %
+  Enum,     // !
+  Where,    // &
+  Reverse,  // |
+  Asc,      // <
+  Desc,     // >
+  Group,    // =
+  Not,      // ~
+  Enlist,   // ,
+  Null,     // ^
+  Count,    // #
+  Floor,    // _
+  String,   // $
+  Distinct, // ?
+  Type,     // @
+  Eval,     // .
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum DyadicVerb {
-  Plus,
-  Times,
-  LessThan,
-  LargerThan,
-  Equal,
-  Minus,
-  Divide,
-  Power,
-  Residue,
-  Copy,
-  LargerOf,
-  LargerOrEqual,
-  Shape,
+  Plus,   // +
+  Minus,  // -
+  Times,  // *
+  Divide, // %
+  Mod,    // !
+  Min,    // &
+  Max,    // |
+  Less,   // <
+  More,   // >
+  Equal,  // =
+  Match,  // ~
+  Concat, // ,
+  Except, // ^
+  Take,   // #
+  Drop,   // _
+  Cast,   // $
+  Find,   // ?
+  At,     // @
+  Dot,    // .
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum AdVerb {
+  Each,      // '
+  Over,      // /
+  Scan,      // \
+  EachPrior, // ':
+  EachRight, // /:
+  EachLeft,  // \:
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum SysVerb {
-  Http,
-  Osc,
-  Sql,
+  Sesh, // 0:sesh
+  Http, // 0:http
+  Osc,  // 0:osc
+  Db,   // 0:db
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum AstNode {
-  Integer(i32),
+  Int(i32),
   Float(f64),
-  MonadicOp {
+  Date(NaiveDate),
+  Time(NaiveTime),
+  Name(String),
+  Str(CString),
+  Symbol(String),
+  Nouns(Vec<AstNode>),
+  Monad {
     verb: MonadicVerb,
+    adverb: Option<AdVerb>,
     expr: Box<AstNode>,
   },
-  DyadicOp {
-    verb: DyadicVerb,
+  Dyad {
     lhs: Box<AstNode>,
+    verb: DyadicVerb,
+    adverb: Option<AdVerb>,
     rhs: Box<AstNode>,
   },
-  SysOp {
+  SysFn {
     verb: SysVerb,
-    expr: Option<Box<AstNode>>,
+    args: Option<Box<AstNode>>,
   },
-  Nouns(Vec<AstNode>),
   IsGlobal {
-    ident: String,
+    name: String,
     expr: Box<AstNode>,
   },
-  Ident(String),
-  Str(CString),
 }

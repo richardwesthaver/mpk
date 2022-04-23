@@ -3,42 +3,49 @@ program = _{ SOI ~ "\n"* ~ (stmt ~ "\n"+) * ~ stmt? ~ EOI }
 stmt = _{ expr }
 
 expr = {
-      assgmtExpr
-    | monadicExpr
-    | dyadicExpr
-    | sysExpr
-    | nouns
+  nouns
+  | sysExpr
+  | assgmtExpr
+  | monadicExpr
+  | dyadicExpr
 }
 
-monadicExpr = { verb ~ expr }
+monadicExpr = { verb ~ adverb* ~ expr }
 
-dyadicExpr = { (monadicExpr | nouns) ~ verb ~ expr }
+dyadicExpr = { (monadicExpr | nouns) ~ verb ~ adverb* ~ expr }
 
-assgmtExpr = { ident ~ ":" ~ expr }
+sysExpr = { sysverb ~ expr* }
 
-sysExpr = { sverb ~ expr* }
-
-sverb = {
-  "0:http" | "0:osc" | "0:sql"
-}
+assgmtExpr = { name ~ ":" ~ expr }
 
 nouns = { noun+ }
 
-noun = _{ decimal | integer | ident | string | "(" ~ expr ~ ")" }
+noun = _{ decimal | int | name | string | symbol | "(" ~ expr ~ ")" }
 
 verb = {
-    ">:" | "*:" | "-"  | "%" | "#" | ">."
-  | "+"  | "*"  | "<"  | "=" | "^" | "|"
-  | ">"  | "$"
+  "+" | "-" | "*" | "%" | "!" | "&"
+| "|" | "<" | ">" | "=" | "~" | ","
+| "^" | "#" | "_" | "$" | "?" | "@"
+| "."
 }
 
-integer = @{ ASCII_DIGIT+ }
+adverb = {
+  "':" | "/:" | "\\:" | "'" | "/" | "\\"
+}
 
-decimal = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+sysverb = {
+  "0:sesh" | "0:http" | "0:osc" | "0:db"
+}
 
-ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+int = @{ "-"* ~ ASCII_DIGIT+ }
+
+decimal = @{ "-"* ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+
+name = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 
 string = @{ "\"" ~ ( "\"\"" | (!"\"" ~ ANY) )* ~ "\"" }
+
+symbol = @{ "`" ~ (ASCII_ALPHA | string)* }
 
 WHITESPACE = _{ " " | "\t" }
 

@@ -16,7 +16,7 @@ const
   fastexport {.strdefine.}: string = expandTilde("~/stash/fast-export/hg-fast-export.sh")
   stash {.strdefine.}: string = expandTilde("~/stash")
   rs {.booldefine.} = true
-  py {.booldefine.} = true
+  py {.booldefine.} = false
   f {.booldefine.} = false
   MPK_BIN = "src/mpk"
 
@@ -53,7 +53,6 @@ let
   ffi_lib = "libmpk_ffi" & ext
   ffi_h = "mpk_ffi.h"
   mpk_py = "build.py"
-  include_dir = build_dir / "include"
 
 proc DepMissing(dep: string) =
   var d = case dep:
@@ -96,7 +95,7 @@ proc rustTest() =
   
 proc ffiTest() =
   let ffi_test = "mpk_ffi_test"
-  exec "LD_RUN_PATH=" & '"' & build_dir & '"' & " gcc tests/mpk_ffi_test.c -I" & include_dir & " -L" & build_dir & " -lmpk_ffi -o " & build_dir / ffi_test
+  exec "LD_RUN_PATH=" & '"' & build_dir & '"' & " gcc tests/mpk_ffi_test.c -I" & build_dir & " -L" & build_dir & " -lmpk_ffi -o " & build_dir / ffi_test
   cpFile("tests" / ffi_test & ".py", build_dir / ffi_test & ".py")
   exec "cd " & build_dir & " && python3 " & build_dir / ffi_test & ".py"
   exec build_dir / ffi_test
@@ -111,12 +110,9 @@ task build, "build MPK":
     when defined(p):
       args.add(" -p " & p)
     exec "cargo build" & args.join
-    mkDir(include_dir)
+    mkDir(build_dir)
     cpFile(target_dir / ffi_lib, build_dir / ffi_lib)
-    if fileExists(ffi_h):
-      mvFile(ffi_h, include_dir / ffi_h)
-    if fileExists(mpk_py):
-      mvFile(mpk_py, build_dir / mpk_py)
+    if fileExists(build_dir / mpk_py):
       exec "cd " & build_dir & " && " & "python3 " & mpk_py
     when not release:
       exec "cp build/_mpk* build/libmpk_ffi* src/mpk_py/mpk/"
@@ -124,9 +120,13 @@ task build, "build MPK":
 task run, "run MPK binary":
   withDir getVcRoot():
     var args: seq[string]
-#    when release:
-#      args.insert(" --release")
-    exec "cargo run --bin mpk " & args.join
+    when release:
+      args.insert("--release ")
+    if p == "mpk" or not defined(p):
+      args.add("--bin mpk ")
+    elif p == "daemon" or p == "mpkd":
+      args.add("--bin mpkd ")
+    exec "cargo run " & args.join
 
 task install, "install MPK":
   withDir getVcRoot():
@@ -144,6 +144,8 @@ task clean, "clean build artifacts":
     exec "cargo clean"
     rmDir(build_dir)
     rmFile("Cargo.lock")
+    rmFile("poetry.lock")
+    echo "root cleaned"
 
 task test, "run MPK tests":
   withDir getVcRoot():
@@ -184,6 +186,10 @@ task fmt, "format code":
   withDir getVcRoot():
     exec "cargo fmt"
     exec "black ."
+
+task check, "check code lints":
+  withDir getVcRoot():
+    exec "cargo clippy"
 
 task ox, "export readme to GitHub-flavored Markdown":
   withDir getVcRoot():

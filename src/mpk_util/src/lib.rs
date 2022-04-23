@@ -49,3 +49,10 @@ pub fn open_browser(url: &str) {
     unimplemented!() // ignore others
   }
 }
+
+pub fn timestamp() -> u64 {
+  std::time::SystemTime::now()
+    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+    .expect("SystemTime is before UNIX_EPOCH?")
+    .as_secs()
+}

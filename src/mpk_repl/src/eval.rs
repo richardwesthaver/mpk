@@ -3,9 +3,7 @@ use crate::parser::parse;
 use rustyline::{Editor, Helper};
 use tokio::sync::mpsc;
 
-pub fn split_eval(size: usize) -> (mpsc::Sender<AstNode>, mpsc::Receiver<AstNode>) {
-  mpsc::channel(size)
-}
+pub const CH_LEN: usize = 32;
 
 #[derive(Debug)]
 pub struct Evaluator<H: Helper> {
@@ -17,20 +15,22 @@ impl<H> Evaluator<H>
 where
   H: Helper,
 {
-  pub fn new(rl: Editor<H>, tx: mpsc::Sender<AstNode>) -> Self {
-    Evaluator { rl, tx }
+  pub fn new(rl: Editor<H>) -> (Self, mpsc::Receiver<AstNode>) {
+    let (tx, rx) = mpsc::channel(CH_LEN);
+    (Evaluator { rl, tx }, rx)
   }
 
   pub async fn parse(&mut self, debug: bool) {
     while let Ok(line) = self.rl.readline("|| ") {
       match parse(line.as_str()) {
         Ok(prog) => {
+          self.rl.add_history_entry(line);
           if debug {
             println!("{:?}", prog)
           }
           for n in prog {
             match n {
-              AstNode::SysOp { verb: _, expr: _ } => {
+              AstNode::SysFn { verb: _, args: _ } => {
                 self.tx(n).await;
               }
               _ => (),

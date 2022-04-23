@@ -24,11 +24,11 @@ def init_ffi(cdef):
     ffi.set_source(
         "_mpk",
         """
-                 #include "mpk_ffi.h"
-                 """,
+        #include "mpk_ffi.h"
+        """,
         libraries=["mpk_ffi"],
         library_dirs=["."],
-        include_dirs=["./include"],
+        include_dirs=["."],
     )
 
     ffi.cdef(cdef)
@@ -43,6 +43,6 @@ def compile(ffi, lib_dir, v):
 
 if __name__ == "__main__":
     build_dir = pathlib.Path(__file__).parent
-    cdef = parse_header(build_dir / "include/mpk_ffi.h")
+    cdef = parse_header(build_dir / "mpk_ffi.h")
     print(cdef)
     compile(init_ffi(cdef), build_dir, True)

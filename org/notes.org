@@ -1,0 +1,219 @@
+* Background
+Over the years I've seen many popular creative tools implement
+subscription-based/freemium payment models, web-based/always-online
+tech, non-features/bloat, incompatible APIs, and colorful marketing. I
+don't care for any of these things and I don't like the direction
+these tools are taking us. The philosophy always seems to be that the
+computer impedes our ability to be creative -- but don't worry, this
+product will hide all the tricky bits from you so that you can focus
+on what matters - making things!
+
+In reality such tools do indeed hide the tricky bits. You can launch
+these applications with a pretty GUI, plug in your hardware and
+start working immediately. No need to pop the hood and look inside,
+because things Just Work. This is quite valuable, especially for the
+average user who doesn't want to dive head first into the endless pit
+that is modern-day multimedia programming and configuration. There are
+some significant drawbacks to this methodology though.
+
+First, when you run into unexpected behavior such as your Audio
+Interface not being recognized by your tools, you need to pray that
+someone more knowledgeable than you has encountered the same issue and
+that there is a fix available that is compatible with your tools. In
+the worst case you might not even know how to describe your issue and
+spend a night or two furiously googling for answers. In most cases you
+can probably find a solution, but you don't actually learn anything
+meaningful from this experience. You're just putting a bandaid on and
+not reasoning about why you're bleeding in the first place.
+
+Another thing I've noticed with these types of tools is that we become
+very committed to them. This is not specific to creative tools, and
+the best example that comes to mind is Emacs vs Vim which are two code
+editors that serve virtually the same purpose as far in as they edit
+text. The two communites, separated by a line in the sand are very
+committed to their tool of choice, and the friendly competition
+between them helps drive feature development for both
+projects. However, this type of commitment can be /dangerous/ for
+purely creative pursuits. In today's digital world, the tools we
+choose define the work we are capable of more than ever before. If we
+commit to a specific creative tool and decide that this is how we will
+use the computer to create things, we will only ever be capable of
+what our tools can do. Never commit.
+
+My final objection to modern creative tools has to do with those
+tricky bits I previously mentioned. That's where the magic is. 
+* lilypond
+#+begin_src lilypond :file /tmp/lp1.png
+  \relative c' {
+    g a b c
+    d e f g
+    f e d c
+    b a g a
+    b c d e
+    f g f e
+    d c b a
+    g1
+  }
+#+end_src
+
+* thoughts
+- studio management, organization, support, storage, indexing
+  - database
+- mediums & medias
+- Software
+  - Patchers
+    - [[https://cycling74.com/products/max][Max]]
+    - [[https://puredata.info/][Pure Data]]
+    - [[https://www.native-instruments.com/en/products/komplete/synths/reaktor-6/][Reaktor]]
+  - DAWs
+    - [[https://www.ableton.com][Ableton Live]]
+    - [[https://www.bitwig.com/][Bitwig Studio]]
+    - [[https://www.reasonstudios.com/][Reason]]
+    - [[https://www.image-line.com/][FL Studio]]
+- Hardware
+  - [[https://www.elektron.se/products/octatrack-mkii/][Octatrack]]
+  - [[https://teenage.engineering/products/op-z][OP-Z]]
+  - [[https://buchla.com/][Buchla]]
+- Music
+  - [[https://www.youtube.com/watch?v=DWuAn6C8Mfc][Radiohead]]
+  - [[https://www.youtube.com/watch?v=PGwPSPIhohk][Pink Floyd]]
+  - [[https://www.youtube.com/watch?v=6ZwItYjqXR0][FJAAK]]
+  - [[https://www.youtube.com/watch?v=mjlOw6dNeS0][Bassnectar]]
+  - [[https://www.youtube.com/watch?v=3cSqRMioRik][Partibio69]]
+  - [[https://www.youtube.com/watch?v=J8sS5NkADBE][VURRO]]
+  - [[https://www.youtube.com/watch?v=PoJKpE165_w][Ajax Spearman of the Sun]]
+  - [[https://www.youtube.com/watch?v=tbLt0S0W5jE][Venetian Snares]]
+  - [[https://www.youtube.com/watch?v=961uG4Ixg_Y][Aphex Twin]]
+  - [[https://www.youtube.com/watch?v=6ZwItYjqXR0&list=RDMM][Meng Qi]]
+  - [[https://disasterpeace.com][Disasterpeace]]
+* tech
+- notation
+- patchers
+- plugins
+- data
+- ui
+- net
+- tracker??
+- io
+* sql notes
+Indexes should not be used in −
+- Small tables.
+- Tables that have frequent, large batch update or insert operations.
+- Columns that contain a high number of NULL values.
+- Columns that are frequently manipulated.
+
+#+begin_src sql
+attach database 'db' as 'alias'
+
+detach database 'alias'
+
+.tables
+.schema 
+
+create table db.table_name(
+  id int primary key not null,
+  name text not null,
+  rms real
+)
+
+drop table db.table_name
+
+insert into table_name ([c1,c2,c3]) values (v1,v2,v3)
+
+select c1,c2,c3 from table_name
+
+select * from table_name
+
+select tbl_name from sqlite_master where type = 'table'
+
+select c1,c2,c3 from table_name where c1 > c2
+
+select count(*) as 'count' from table
+
+select current_timestamp
+
+select c1 from table where exists (select c1 from table where c3 > 65)
+
+update table set c1 = 'val' where c1 = 'noval'
+
+delete from table where COND
+
+select distinct c3 from table limit 3 offset 2 group by c1 having count(c1) > 2 order by c2 asc
+
+pragma pragma_name
+pragma pname = 2
+
+select name from sqlite_master where type = 'trigger'
+
+drop trigger 'trigger_name'
+#+end_src
+
+- UUID conversion
+  #+begin_src sql
+select hex (artistid) from track_tags_musicbrainz
+
+SELECT substr(hex(artistid), 1, 8)
+|| '-' || substr(hex(artistid), 9, 4)
+|| '-' || substr(hex(artistid), 13, 4)
+|| '-' || substr(hex(artistid), 17, 4)
+|| '-' || substr(hex(artistid), 21, 12)
+FROM [track_tags_musicbrainz]
+  #+end_src
+
+* db sync
+#+begin_src sql
+  select case when path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.fla' and checksum = '9fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'found'
+  when path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.fla' and checksum != '9fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'modified'
+  when path != '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.fla' and checksum = '9fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03' then 'moved'
+  end result
+  from tracks
+  where path = '/Users/ellis/mpk/tracks/Nick Waterhouse/Some Place/02 That Place.fla'
+  or checksum = '9fc9c8107d9f011196c1aeb64d8ad4501a83262e69e0b7ef7df6168f19a5d03';
+#+end_src
+
+* IPC
+We have quite a bit of functionality now. It's time to think about how
+to interact with them efficiently.
+
+The primary goal is to daemonize our services (HTTP, OSC, SESH) and
+interact with them remotely, via REPL. The REPL is a Client which
+interacts with the Daemon Proxy Server. Messages are passed from REPL
+to Proxy to external Endpoints and then sends status back to Client.
+
+- Modes of Operation:
+  - Detached :: client and daemon run in separate processes
+    - considerations
+      - run over network? or local only?
+      - configuration
+      - protocols
+      - shutdown/startup/connection behavior
+  - Attached :: client and daemon run in the same unified process
+  - Oneshot :: client and daemon run in same process temporarily, for short-lived one-off commands
+
+- Interface:
+  - UDP or UDS
+
+- encoding/decoding:
+  - raw or bincode
+* DSL
+[[https://github.com/cloudflare/wirefilter][GitHub - cloudflare/wirefilter: An execution engine for Wireshark-like filters]]
+[[https://blog.cloudflare.com/building-fast-interpreters-in-rust/][Cloudflare - Building Fast Interpreters in Rust]]
+[[https://rust-hosted-langs.github.io/book/][Introduction - Writing Interpreters in Rust: a Guide]]
+[[http://craftinginterpreters.com/][Crafting Interpreters]]
+#+begin_example
+fs == freesound
+
+db == database
+
+se == sesh
+
+au == audio
+
+jk == jack
+
+cfg == config
+
+= == assign
+
+() == expr
+#+end_example

@@ -57,7 +57,5 @@ async fn main() -> Result<()> {
 
   if args.sesh {}
 
-  loop {
-    engine.recv().await;
-  }
+  Ok(engine.run().await)
 }
