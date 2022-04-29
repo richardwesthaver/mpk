@@ -1,0 +1,24 @@
+[package]
+name = "benches"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+mpk_db = { path = "../../src/mpk_db" }
+mpk_hash = { path = "../../src/mpk_hash" }
+rand = "0.8"
+
+[[bench]]
+name = "node_factory"
+path = "node_factory.rs"
+
+[[bench]]
+name = "edge_factory"
+path = "edge_factory.rs"
+
+[[bench]]
+name = "database"
+path = "database.rs"

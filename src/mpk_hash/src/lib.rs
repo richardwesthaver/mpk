@@ -70,15 +70,6 @@ impl Hasher for Djb2 {
   }
 }
 
-/// djb2 % 65521 as string
-///
-/// equivalent to NSM's simple_hash function in src/file.cpp
-pub fn simple_hash(input: &str) -> String {
-  let mut hash = Djb2::default();
-  hash.write(input.as_bytes());
-  (hash.finish() % 65521).to_string()
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -122,7 +113,6 @@ mod tests {
   fn djb2() {
     let mut djb2 = Djb2::default();
     djb2.write(b"bazinga");
-    assert_eq!(djb2.finish(), 229460350232353);
-    assert_eq!("57787".to_string(), simple_hash("bazinga"));
+    assert_eq!(57787, djb2.finish() % 65521);
   }
 }

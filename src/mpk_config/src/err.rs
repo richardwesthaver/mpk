@@ -4,7 +4,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
   Toml(toml::de::Error),
   Io(std::io::Error),
-  BadFlag(String),
+  BadDbMode(String),
   NotFound(String),
 }
 
@@ -13,7 +13,7 @@ impl std::error::Error for Error {
     match *self {
       Error::Toml(ref err) => Some(err),
       Error::Io(ref err) => Some(err),
-      Error::BadFlag(_) => None,
+      Error::BadDbMode(_) => None,
       Error::NotFound(_) => None,
     }
   }
@@ -24,8 +24,8 @@ impl std::fmt::Display for Error {
     match *self {
       Error::Toml(ref err) => err.fmt(f),
       Error::Io(ref err) => err.fmt(f),
-      Error::BadFlag(ref s) => f.write_str(&format!("Invalid Flag: {}", s)),
-      Error::NotFound(ref s) => f.write_str(&format!("Path not found: {}", s)),
+      Error::BadDbMode(ref s) => f.write_str(&format!("invalid DB mode: {}", s)),
+      Error::NotFound(ref s) => f.write_str(&format!("path not found: {}", s)),
     }
   }
 }

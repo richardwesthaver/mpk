@@ -3,6 +3,8 @@ pub mod nsm;
 pub use indicatif::{ProgressBar, ProgressStyle};
 
 use std::path::{Path, PathBuf};
+use std::fs;
+use std::io;
 
 /// utility function to expand `~` in PATH.
 pub fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
@@ -55,4 +57,28 @@ pub fn timestamp() -> u64 {
     .duration_since(std::time::SystemTime::UNIX_EPOCH)
     .expect("SystemTime is before UNIX_EPOCH?")
     .as_secs()
+}
+
+/// Walk a directory PATH, applying function WALKER to each file and
+/// collecting results in a vec.
+pub fn walk_dir<P: AsRef<Path>, T: Clone>(path: P, walker: fn(PathBuf) -> Option<T>, coll: &mut Vec<(PathBuf, T)>) -> Result<(), io::Error> {
+  let path = path.as_ref();
+  if path.is_dir() {
+    for elt in fs::read_dir(path)? {
+      let elt = elt?;
+      let p = elt.path();
+      if p.is_dir() {
+        walk_dir(p, walker, coll)?;
+      } else if p.is_file() {
+	if let Some(t) = walker(p.to_path_buf()) {
+	  coll.push((path.to_path_buf(), t))
+	}
+      }
+    }
+  } else if path.is_file() {
+    if let Some(t) = walker(path.to_path_buf()) {
+      coll.push((path.to_path_buf(), t))
+    }
+  }
+  Ok(())
 }

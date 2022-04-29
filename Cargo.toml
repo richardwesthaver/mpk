@@ -11,6 +11,7 @@ members = [
   "src/mpk_gear",
   "src/mpk_codec",
   "src/mpk_engine",
+  "src/mpk_analysis",
   "src/mpk_db",
   "src/mpk_plot",
   "src/mpk_sesh",
@@ -19,6 +20,8 @@ members = [
   "src/mpk_http",
   "src/mpk_osc",
   "src/mpk_parser",
+  # dev
+  "tests/benches",
 ]
 
 exclude = [ "vendor/" ]

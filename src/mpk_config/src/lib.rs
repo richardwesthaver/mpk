@@ -2,7 +2,6 @@
 //!
 //! Configuration types
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 use std::str::FromStr;
@@ -193,90 +192,19 @@ impl From<Config> for FsConfig {
   }
 }
 
-#[allow(non_snake_case, non_camel_case_types)]
-#[allow(clippy::upper_case_acronyms)]
-#[repr(C)]
-pub enum Flags {
-  READ_ONLY = 0x00000001,
-  READ_WRITE = 0x00000002,
-  CREATE = 0x00000004,
-  DELETE_ON_CLOSE = 0x00000008,
-  EXCLUSIVE = 0x00000010,
-  AUTOPROXY = 0x00000020,
-  URI = 0x00000040,
-  MEMORY = 0x00000080,
-  MAIN_DB = 0x00000100,
-  TEMP_DB = 0x00000200,
-  TRANSIENT_DB = 0x00000400,
-  MAIN_JOURNAL = 0x00000800,
-  TEMP_JOURNAL = 0x00001000,
-  SUBJOURNAL = 0x00002000,
-  SUPER_JOURNAL = 0x00004000,
-  NOMUTEX = 0x00008000,
-  FULLMUTEX = 0x00010000,
-  SHAREDCACHE = 0x00020000,
-  PRIVATECACHE = 0x00040000,
-  WAL = 0x00080000,
-  NOFOLLOW = 0x01000000,
-  EXRESCODE = 0x02000000,
+#[derive(Serialize, Deserialize, Clone)]
+pub enum DbMode {
+  Small,
+  Fast,
 }
 
-impl Flags {
-  pub fn to_int(&self) -> std::os::raw::c_int {
-    match &self {
-      Flags::READ_ONLY => 0x00000001,
-      Flags::READ_WRITE => 0x00000002,
-      Flags::CREATE => 0x00000004,
-      Flags::DELETE_ON_CLOSE => 0x00000008,
-      Flags::EXCLUSIVE => 0x00000010,
-      Flags::AUTOPROXY => 0x00000020,
-      Flags::URI => 0x00000040,
-      Flags::MEMORY => 0x00000080,
-      Flags::MAIN_DB => 0x00000100,
-      Flags::TEMP_DB => 0x00000200,
-      Flags::TRANSIENT_DB => 0x00000400,
-      Flags::MAIN_JOURNAL => 0x00000800,
-      Flags::TEMP_JOURNAL => 0x00001000,
-      Flags::SUBJOURNAL => 0x00002000,
-      Flags::SUPER_JOURNAL => 0x00004000,
-      Flags::NOMUTEX => 0x00008000,
-      Flags::FULLMUTEX => 0x00010000,
-      Flags::SHAREDCACHE => 0x00020000,
-      Flags::PRIVATECACHE => 0x00040000,
-      Flags::WAL => 0x00080000,
-      Flags::NOFOLLOW => 0x01000000,
-      Flags::EXRESCODE => 0x02000000,
-    }
-  }
-}
-impl FromStr for Flags {
+impl FromStr for DbMode {
   type Err = Error;
-
-  fn from_str(input: &str) -> Result<Flags> {
-    match input {
-      "readonly" => Ok(Flags::READ_ONLY),
-      "readwrite" => Ok(Flags::READ_WRITE),
-      "create" => Ok(Flags::CREATE),
-      "deleteonclose" => Ok(Flags::DELETE_ON_CLOSE),
-      "exclusive" => Ok(Flags::EXCLUSIVE),
-      "autoproxy" => Ok(Flags::AUTOPROXY),
-      "uri" => Ok(Flags::URI),
-      "memory" => Ok(Flags::MEMORY),
-      "maindb" => Ok(Flags::MAIN_DB),
-      "tempdb" => Ok(Flags::TEMP_DB),
-      "transientdb" => Ok(Flags::TRANSIENT_DB),
-      "mainjournal" => Ok(Flags::MAIN_JOURNAL),
-      "tempjournal" => Ok(Flags::TEMP_JOURNAL),
-      "subjournal" => Ok(Flags::SUBJOURNAL),
-      "superjournal" => Ok(Flags::SUPER_JOURNAL),
-      "nomutex" => Ok(Flags::NOMUTEX),
-      "fullmutex" => Ok(Flags::FULLMUTEX),
-      "sharedcache" => Ok(Flags::SHAREDCACHE),
-      "privatecache" => Ok(Flags::PRIVATECACHE),
-      "wal" => Ok(Flags::WAL),
-      "nofollow" => Ok(Flags::NOFOLLOW),
-      "exrescode" => Ok(Flags::EXRESCODE),
-      e => Err(Error::BadFlag(e.to_string())),
+  fn from_str(mode: &str) -> Result<DbMode> {
+    match mode {
+      "small" => Ok(DbMode::Small),
+      "fast" => Ok(DbMode::Fast),
+      e => Err(Error::BadDbMode(e.to_string()))
     }
   }
 }
@@ -285,49 +213,23 @@ impl FromStr for Flags {
 /// Allow configuration of the MPK DB.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DbConfig {
-  pub path: Option<String>,
-  pub flags: Option<Vec<String>>,
-  pub limits: Option<HashMap<String, usize>>,
-  pub trace: bool,
-  pub profile: bool,
-  /// Custom views which can be queried via CLI
-  pub views: Option<HashMap<String, String>>,
-}
-
-impl DbConfig {
-  pub fn flags(&self) -> Option<std::os::raw::c_int> {
-    match &self.flags {
-      Some(fs) => Some(
-        fs.into_iter()
-          .map(|f| Flags::from_str(&f).expect("invalid flag").to_int())
-          .sum(),
-      ),
-      None => None,
-    }
-  }
-
-  pub fn path(&self) -> Option<PathBuf> {
-    match &self.path {
-      Some(p) => expand_tilde(p),
-      None => None,
-    }
-  }
+  pub path: PathBuf,
+  pub mode: DbMode,
+  pub cache_capacity: u64,
+  pub print_on_drop: bool,
+  pub use_compression: bool,
+  pub compression_factor: i32,
 }
 
 impl Default for DbConfig {
   fn default() -> Self {
     DbConfig {
-      path: Some([DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), DB_FILE].concat()),
-      flags: Some(
-        vec!["readwrite", "create", "nomutex", "uri"]
-          .iter()
-          .map(|x| x.to_string())
-          .collect(),
-      ),
-      limits: None,
-      trace: false,
-      profile: false,
-      views: None,
+      path: PathBuf::from([DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), DB_FILE].concat()),
+      mode: DbMode::Fast,
+      cache_capacity: 1024 * 1024 * 1024, // 1gb
+      print_on_drop: false,
+      use_compression: false,
+      compression_factor: 5,
     }
   }
 }

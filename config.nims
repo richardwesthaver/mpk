@@ -89,8 +89,8 @@ proc rustTest() =
   var args: seq[string]
   when defined(p):
     args.add(" -p " & p)
-  when v:
-    args.add(" -- --nocapture")
+  when defined(v):
+    args.add(" -- --show-output")
   exec "cargo test" & args.join
   
 proc ffiTest() =
@@ -200,8 +200,9 @@ task mirror, "push code to github mirror":
     exec "git init mpk"
     withDir "mpk":
       exec "git config core.ignoreCase false"
+      exec "git config push.followTags true"
       exec fastexport & " -r " & getVcRoot() & " -M default"
       exec "git checkout HEAD"
       exec "git remote add gh git@github.com:richardwesthaver/mpk.git"
-      exec "git push gh"
+      exec "git push gh --all"
     rmDir("mpk")
