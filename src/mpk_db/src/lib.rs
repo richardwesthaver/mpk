@@ -1,14 +1,16 @@
 //! MPK_DB
+#![feature(generic_associated_types)]
 mod node;
 mod edge;
+mod id;
 mod ser;
 mod factory;
 mod tree;
-mod graph;
 mod db;
 
 pub use node::{Node, NodeKind, NodeVec};
 pub use edge::{Edge, EdgeKind, EdgeVec};
+pub use id::Id;
 pub use ser::{NodeSerializer, EdgeSerializer};
 pub use factory::{Factory, NodeFactory, EdgeFactory};
 pub use tree::TREE_NAMES;
@@ -55,12 +57,12 @@ mod tests {
     node.serialize(&mut ser).unwrap();
     let node_val = ser.into_inner().into_serializer().into_inner();
     let node_key = node.key();
-    db.inner().insert(node_key.to_le_bytes(), node_val.as_slice()).unwrap();
-    let node_val = db.inner().get(node_key.to_le_bytes()).unwrap();
+    db.inner().insert(node_key, node_val.as_slice()).unwrap();
+    let node_val = db.inner().get(node_key).unwrap();
     assert!(node_val.is_some());
     let unwrapped = node_val.unwrap();
     let node = unsafe {archived_root::<NodeKind>(&unwrapped)};
-    println!("{node_key}: {node:?}");
+    println!("{node_key:?}: {node:?}");
   }
 
   #[test]
@@ -75,7 +77,7 @@ mod tests {
     let bytes = factory.serialize_vec(nodes);
     for i in 0..bytes.0.len() {
       unsafe { archived_root::<NodeKind>(&bytes.1[i]) };
-      u64::from_be_bytes(bytes.0[i]);
+      dbg!(u64::from_be_bytes(bytes.0[i]));
     }
   }
 

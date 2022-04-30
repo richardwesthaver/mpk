@@ -58,7 +58,7 @@ impl<const N: usize,H: Hasher + Default> Factory for NodeFactory<N,H> {
       let mut ser = self.serializer();
       let n = self.create(n);
       self.serialize_val(&n, &mut ser).unwrap();
-      let key = n.key().to_be_bytes();
+      let key = n.key();
       let val = self.flush_bytes(ser);
       keys.push(key);
       vals.push(val);
@@ -96,7 +96,7 @@ impl<const N: usize> Factory for EdgeFactory<N> {
       let mut ser = self.serializer();
       let n = self.create(n);
       self.serialize_val(&n, &mut ser).unwrap();
-      let key = n.key().to_be_bytes();
+      let key = n.key();
       let val = self.flush_bytes(ser);
       keys.push(key);
       vals.push(val);

@@ -2,7 +2,7 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 use rkyv::with::AsString;
-use super::{NodeError, Serialize, Deserialize, Archive};
+use super::{NodeError, Serialize, Deserialize, Archive, NodeSerializer, Serializer, SerializerError};
 
 /// B3 hash checksum - 256-bit value. We could adjust the OUTPUT_LEN
 /// parameter if needed.
@@ -37,6 +37,10 @@ impl NodeKind {
       NodeKind::Midi(p,_) => p.to_str().unwrap(),
       NodeKind::Patch(p,_) => p.to_str().unwrap(),
     }
+  }
+  
+  pub fn serialize<S: Serializer>(&self, ser: &mut NodeSerializer<S>) -> Result<usize, SerializerError<S::Error>> {
+    ser.serialize_value(self)
   }
 }
 

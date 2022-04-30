@@ -21,7 +21,7 @@ impl Edge {
   pub fn serialize<S: Serializer>(&self, ser: &mut EdgeSerializer<S>) -> Result<usize, SerializerError<S::Error>> {
     ser.serialize_value(&self.kind.outbound())
   }
-  pub fn key(&self) -> u64 {
-    self.kind.inbound()
+  pub fn key(&self) -> [u8;8] {
+    self.kind.inbound().to_be_bytes()
   }
 }

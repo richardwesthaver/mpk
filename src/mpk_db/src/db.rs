@@ -2,9 +2,11 @@
 use sled::{Db as SledDb, Error, IVec, CompareAndSwapError, Tree};
 use std::path::Path;
 use mpk_config::{DbConfig, DbMode};
+use std::sync::Arc;
 
-pub type DbRef<'a> = &'a SledDb;
+pub type DbRef= Arc<SledDb>;
 
+/// according to discord these options are noop in current sled version
 fn into_db_mode(mode: DbMode) -> sled::Mode {
   match mode {
     DbMode::Small => sled::Mode::LowSpace,
@@ -14,7 +16,7 @@ fn into_db_mode(mode: DbMode) -> sled::Mode {
 
 #[derive(Debug)]
 pub struct Db {
-  db: SledDb,
+  db: Arc<SledDb>,
 }
 
 impl Db {
@@ -26,7 +28,7 @@ impl Db {
     } else {
       sled::Config::new().temporary(true).open()?
     };
-    Ok(Db { db })
+    Ok(Db { db: Arc::new(db) })
   }
 
   /// Open a database with DbConfig CFG.
@@ -38,12 +40,12 @@ impl Db {
       .compression_factor(cfg.compression_factor)
       .open()?;
 
-      Ok(Db { db })
+      Ok(Db { db: Arc::new(db) })
   }
 
   /// Return a ref to the inner Database.
-  pub fn inner<'a>(&'a self) -> DbRef<'a> {
-    &self.db
+  pub fn inner(&self) -> DbRef {
+    self.db.clone()
   }
 
   /// Flush the database to disk.

@@ -5,6 +5,7 @@ pub use kind::NodeKind;
 use std::hash::Hasher;
 use rkyv::{Archive, Serialize, Deserialize, ser::Serializer};
 use crate::ser::{SerializerError, NodeSerializer};
+use mpk_util::timestamp_nanos;
 
 pub type NodeVec = Vec<NodeKind>;
 
@@ -31,7 +32,7 @@ impl Node {
   pub fn serialize<S: Serializer>(&self, ser: &mut NodeSerializer<S>) -> Result<usize, SerializerError<S::Error>> {
     ser.serialize_value(&self.val)
   }
-  pub fn key(&self) -> u64 {
-    self.key
+  pub fn key(&self) -> [u8;8] {
+    self.key.to_be_bytes()
   }
 }

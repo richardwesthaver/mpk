@@ -59,6 +59,13 @@ pub fn timestamp() -> u64 {
     .as_secs()
 }
 
+pub fn timestamp_nanos() -> u128 {
+  std::time::SystemTime::now()
+    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+    .expect("SystemTime is before UNIX_EPOCH?")
+    .as_nanos()
+}
+
 /// Walk a directory PATH, applying function WALKER to each file and
 /// collecting results in a vec.
 pub fn walk_dir<P: AsRef<Path>, T: Clone>(path: P, walker: fn(PathBuf) -> Option<T>, coll: &mut Vec<(PathBuf, T)>) -> Result<(), io::Error> {
