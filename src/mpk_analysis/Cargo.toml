@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-id3 = "1.0.2"
-mpk_util = { path = "../mpk_util"}
+mpk_util = { path = "../mpk_util" }
+mpk_codec = { path = "../mpk_codec", features = ["snd"] }

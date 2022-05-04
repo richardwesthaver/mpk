@@ -22,3 +22,7 @@ path = "edge_factory.rs"
 [[bench]]
 name = "database"
 path = "database.rs"
+
+[[bench]]
+name = "hashers"
+path = "hashers.rs"

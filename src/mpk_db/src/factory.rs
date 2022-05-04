@@ -1,109 +1,123 @@
 //! MPK_DB -- FACTORY
-use std::hash::Hasher;
-use rkyv::ser::{Serializer, serializers::AllocSerializer};
-use rkyv::Archive;
-use mpk_hash::Djb2;
-use crate::{NodeSerializer, Node, NodeKind, NodeVec,
-	    EdgeSerializer, Edge, EdgeKind, EdgeVec};
+use crate::{
+  Edge, EdgeKind, EdgeProp, Key, Meta, MetaKind, Node, NodeKind, NodeProp, Prop, Val,
+};
+use bincode::{deserialize, serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy)]
 pub enum FactoryError {
   SerializationFailed,
+  DeserializationFailed,
 }
 
 pub trait Factory {
-  type Ser: Serializer;
   type Kind;
-  type Val: Archive;
-  fn serializer(&self) -> Self::Ser;
-  fn create(&mut self, kind: Self::Kind) -> Self::Val;
-  fn serialize_val(&mut self, val: &Self::Val, ser: &mut Self::Ser) -> Result<usize, FactoryError>;
-  fn serialize_vec(&mut self, kinds: Vec<Self::Kind>) -> (Vec<[u8; 8]>, Vec<Vec<u8>>);
-  fn flush_bytes(&self, ser: Self::Ser) -> Vec<u8>;
-}
-
-#[derive(Debug)]
-pub struct NodeFactory<const N: usize, H: Hasher + Default> {
-  hasher: H,
-}
-
-impl<const N: usize , H: Hasher + Default> NodeFactory<N,H> {
-  pub fn new() -> NodeFactory<N, Djb2> {
-    NodeFactory {
-      hasher: Djb2::default(),
+  type Ty: Key + Val + Serialize;
+  fn serialize_key(&self, ty: &Self::Ty) -> Result<Vec<u8>, FactoryError>
+  where
+    <<Self as Factory>::Ty as Key>::Key: Serialize,
+  {
+    match serialize(&ty.key()) {
+      Ok(n) => Ok(n),
+      Err(_) => Err(FactoryError::SerializationFailed),
     }
+  }
+  fn serialize_val(&self, ty: &Self::Ty) -> Result<Vec<u8>, FactoryError>
+  where
+    <<Self as Factory>::Ty as Val>::Val: Serialize,
+  {
+    match serialize(&ty.val()) {
+      Ok(n) => Ok(n),
+      Err(_) => Err(FactoryError::SerializationFailed),
+    }
+  }
+  fn serialize(&self, ty: &Self::Ty) -> Result<(Vec<u8>, Vec<u8>), FactoryError>
+  where
+    <<Self as Factory>::Ty as Key>::Key: Serialize,
+    <<Self as Factory>::Ty as Val>::Val: Serialize,
+  {
+    let key = self.serialize_key(ty)?;
+    let val = self.serialize_val(ty)?;
+    Ok((key, val))
+  }
+  fn serialize_vec(
+    &self,
+    vec: Vec<Self::Ty>,
+  ) -> Result<(Vec<Vec<u8>>, Vec<Vec<u8>>), FactoryError>
+  where
+    <<Self as Factory>::Ty as Key>::Key: Serialize,
+    <<Self as Factory>::Ty as Val>::Val: Serialize,
+  {
+    let mut keys = Vec::new();
+    let mut vals = Vec::new();
+    for n in vec {
+      let key = self.serialize_key(&n)?;
+      let val = self.serialize_val(&n)?;
+      keys.push(key);
+      vals.push(val);
+    }
+    Ok((keys, vals))
+  }
+  fn deserialize_key<'de, K: Key + Deserialize<'de>>(
+    &self,
+    bytes: &'de [u8],
+  ) -> Result<K, FactoryError> {
+    deserialize(bytes).map_err(|_| FactoryError::DeserializationFailed)
+  }
+  fn deserialize_val<'de, V: Val + Deserialize<'de>>(
+    &self,
+    bytes: &'de [u8],
+  ) -> Result<V, FactoryError> {
+    deserialize(bytes).map_err(|_| FactoryError::DeserializationFailed)
+  }
+  fn deserialize<'de, K: Key + Deserialize<'de>, V: Val + Deserialize<'de>>(
+    &self,
+    key: &'de [u8],
+    val: &'de [u8],
+  ) -> Result<(K, V), FactoryError> {
+    let key = self.deserialize_key(key)?;
+    let val = self.deserialize_val(val)?;
+    Ok((key, val))
   }
 }
 
-impl<const N: usize,H: Hasher + Default> Factory for NodeFactory<N,H> {
-  type Ser = NodeSerializer<AllocSerializer<N>>;
+#[derive(Debug)]
+pub struct NodeFactory;
+
+impl Factory for NodeFactory {
   type Kind = NodeKind;
-  type Val = Node;
-  fn serializer(&self) -> NodeSerializer<AllocSerializer<N>> {
-    NodeSerializer::<AllocSerializer<N>>::default()
-  }
-  fn create(&mut self, kind: Self::Kind) -> Self::Val {
-    Node::new(kind, &mut self.hasher)
-  }
-  fn serialize_val(&mut self, val: &Self::Val, ser: &mut Self::Ser) -> Result<usize, FactoryError> {
-    match val.serialize(ser) {
-      Ok(n) => Ok(n),
-      Err(_) => Err(FactoryError::SerializationFailed)
-    }
-  }
-  fn serialize_vec(&mut self, kinds: NodeVec) -> (Vec<[u8; 8]>, Vec<Vec<u8>>) {
-    let mut keys = Vec::<[u8; 8]>::new();
-    let mut vals = Vec::new();
-    for n in kinds {
-      let mut ser = self.serializer();
-      let n = self.create(n);
-      self.serialize_val(&n, &mut ser).unwrap();
-      let key = n.key();
-      let val = self.flush_bytes(ser);
-      keys.push(key);
-      vals.push(val);
-    }
-    (keys, vals)
-  }
-  fn flush_bytes(&self, ser: Self::Ser) -> Vec<u8> {
-    ser.into_inner().into_serializer().into_inner().to_vec()
-  }
+  type Ty = Node;
 }
 
 #[derive(Debug)]
-pub struct EdgeFactory<const N: usize>;
+pub struct EdgeFactory;
 
-impl<const N: usize> Factory for EdgeFactory<N> {
-  type Ser = EdgeSerializer<AllocSerializer<N>>;
+impl Factory for EdgeFactory {
   type Kind = EdgeKind;
-  type Val = Edge;
-  fn serializer(&self) -> EdgeSerializer<AllocSerializer<N>> {
-    EdgeSerializer::<AllocSerializer<N>>::default()
-  }
-  fn create(&mut self, kind: Self::Kind) -> Self::Val {
-    Edge::new(kind)
-  }
-  fn serialize_val(&mut self, val: &Self::Val, ser: &mut Self::Ser) -> Result<usize, FactoryError> {
-    match val.serialize(ser) {
-      Ok(n) => Ok(n),
-      Err(_) => Err(FactoryError::SerializationFailed)
-    }
-  }
-  fn serialize_vec(&mut self, kinds: EdgeVec) -> (Vec<[u8; 8]>, Vec<Vec<u8>>) {
-    let mut keys = Vec::<[u8; 8]>::new();
-    let mut vals = Vec::new();
-    for n in kinds {
-      let mut ser = self.serializer();
-      let n = self.create(n);
-      self.serialize_val(&n, &mut ser).unwrap();
-      let key = n.key();
-      let val = self.flush_bytes(ser);
-      keys.push(key);
-      vals.push(val);
-    }
-    (keys, vals)
-  }
-  fn flush_bytes(&self, ser: Self::Ser) -> Vec<u8> {
-    ser.into_inner().into_serializer().into_inner().to_vec()
-  }
+  type Ty = Edge;
+}
+
+#[derive(Debug)]
+pub struct MetaFactory;
+
+impl Factory for MetaFactory {
+  type Kind = MetaKind;
+  type Ty = Meta;
+}
+
+#[derive(Debug)]
+pub struct EdgePropFactory;
+
+impl Factory for EdgePropFactory {
+  type Kind = Prop;
+  type Ty = EdgeProp;
+}
+
+#[derive(Debug)]
+pub struct NodePropFactory;
+
+impl Factory for NodePropFactory {
+  type Kind = Prop;
+  type Ty = NodeProp;
 }

@@ -2,9 +2,9 @@
 pub mod nsm;
 pub use indicatif::{ProgressBar, ProgressStyle};
 
-use std::path::{Path, PathBuf};
 use std::fs;
 use std::io;
+use std::path::{Path, PathBuf};
 
 /// utility function to expand `~` in PATH.
 pub fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
@@ -68,7 +68,11 @@ pub fn timestamp_nanos() -> u128 {
 
 /// Walk a directory PATH, applying function WALKER to each file and
 /// collecting results in a vec.
-pub fn walk_dir<P: AsRef<Path>, T: Clone>(path: P, walker: fn(PathBuf) -> Option<T>, coll: &mut Vec<(PathBuf, T)>) -> Result<(), io::Error> {
+pub fn walk_dir<P: AsRef<Path>, T: Clone>(
+  path: P,
+  walker: fn(PathBuf) -> Option<T>,
+  coll: &mut Vec<(PathBuf, T)>,
+) -> Result<(), io::Error> {
   let path = path.as_ref();
   if path.is_dir() {
     for elt in fs::read_dir(path)? {
@@ -77,9 +81,9 @@ pub fn walk_dir<P: AsRef<Path>, T: Clone>(path: P, walker: fn(PathBuf) -> Option
       if p.is_dir() {
         walk_dir(p, walker, coll)?;
       } else if p.is_file() {
-	if let Some(t) = walker(p.to_path_buf()) {
-	  coll.push((path.to_path_buf(), t))
-	}
+        if let Some(t) = walker(p.to_path_buf()) {
+          coll.push((path.to_path_buf(), t))
+        }
       }
     }
   } else if path.is_file() {

@@ -1,32 +1,34 @@
 //! MPK_ANALYSIS
-use std::path::{Path, PathBuf};
-use std::collections::HashMap;
-use id3::{Tag, Error};
+use mpk_codec::snd::decode;
 use mpk_util::walk_dir;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Id3 {
+#[derive(Debug, PartialEq, Clone)]
+pub struct Tags {
   pub path: PathBuf,
   pub tags: Option<HashMap<String, String>>,
+  pub sr: usize,
+  pub channels: usize,
+  pub duration: f64,
 }
 
-impl Id3 {
-  pub fn new<P: AsRef<Path>>(path: P) -> Result<Id3, Error> {
-    let tags = match Tag::read_from_path(&path) {
-      Ok(t) => {
-        let mut map = HashMap::new();
-        for f in t.frames().into_iter() {
-          map.insert(f.id().to_string(), f.content().to_string());
-        }
-        Some(map)
-      }
-      Err(_) => None,
-    };
-
-    let path = path.as_ref().to_path_buf();
-    Ok(Id3 { path, tags })
+impl Tags {
+  pub fn new<P: AsRef<Path>>(
+    path: P,
+    tags: Option<HashMap<String, String>>,
+    sr: usize,
+    channels: usize,
+    duration: f64,
+  ) -> Tags {
+    Tags {
+      path: path.as_ref().to_path_buf(),
+      tags,
+      sr,
+      channels,
+      duration,
+    }
   }
-
   pub fn get_tag(&self, tag: &str) -> Option<String> {
     match &self.tags {
       Some(tags) => {
@@ -41,23 +43,30 @@ impl Id3 {
   }
 }
 
-pub fn id3_walker<P: AsRef<Path>>(path: P) -> Option<HashMap<String, String>> {
-  println!("parsing {:?}", path.as_ref());
-  if let Ok(t) = Tag::read_from_path(&path) {
-        let mut map = HashMap::new();
-        for f in t.frames().into_iter() {
-          map.insert(f.id().to_string(), f.content().to_string());
-        }
-    Some(map)
+pub fn tag_walker<P: AsRef<Path>>(path: P) -> Option<Tags> {
+  let path = path.as_ref();
+  println!("parsing {:?}", path);
+  if let Ok(mut snd) = decode(path) {
+    let sr = snd.get_samplerate();
+    println!("{}", sr);
+    let n_frame = snd.len().unwrap();
+    let channels = snd.get_channels();
+    Some(Tags::new(
+      &path,
+      None,
+      sr,
+      channels,
+      n_frame as f64 / sr as f64,
+    ))
   } else {
-    println!("no tags for {:?}", path.as_ref());
+    println!("failed to get tags for {:?}", path);
     None
   }
 }
 
-pub fn id3_walk<P: AsRef<Path>>(path: P) -> Vec<(PathBuf, HashMap<String, String>)> {
+pub fn tag_walk<P: AsRef<Path>>(path: P) -> Vec<(PathBuf, Tags)> {
   let mut coll = Vec::new();
-  walk_dir(path, id3_walker, &mut coll).unwrap();
+  walk_dir(path, tag_walker, &mut coll).unwrap();
   coll
 }
 
@@ -66,8 +75,8 @@ mod tests {
   use super::*;
 
   #[test]
-  fn id3_walk_test() {
-    let tags = id3_walk("/Users/ellis/mpk/tracks/mp3");
+  fn tag_walk_test() {
+    let tags = tag_walk("/Users/ellis/mpk/tracks/mp3");
     dbg!(&tags);
     dbg!(tags.len());
   }

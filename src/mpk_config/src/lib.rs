@@ -204,7 +204,7 @@ impl FromStr for DbMode {
     match mode {
       "small" => Ok(DbMode::Small),
       "fast" => Ok(DbMode::Fast),
-      e => Err(Error::BadDbMode(e.to_string()))
+      e => Err(Error::BadDbMode(e.to_string())),
     }
   }
 }
@@ -224,7 +224,9 @@ pub struct DbConfig {
 impl Default for DbConfig {
   fn default() -> Self {
     DbConfig {
-      path: PathBuf::from([DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), DB_FILE].concat()),
+      path: PathBuf::from(
+        [DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), DB_FILE].concat(),
+      ),
       mode: DbMode::Fast,
       cache_capacity: 1024 * 1024 * 1024, // 1gb
       print_on_drop: false,

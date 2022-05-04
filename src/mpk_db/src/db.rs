@@ -1,10 +1,10 @@
 //! MPK_DB -- DB
-use sled::{Db as SledDb, Error, IVec, CompareAndSwapError, Tree};
-use std::path::Path;
 use mpk_config::{DbConfig, DbMode};
+use sled::{CompareAndSwapError, Db as SledDb, Error, IVec, Tree};
+use std::path::Path;
 use std::sync::Arc;
 
-pub type DbRef= Arc<SledDb>;
+pub type DbRef = Arc<SledDb>;
 
 /// according to discord these options are noop in current sled version
 fn into_db_mode(mode: DbMode) -> sled::Mode {
@@ -40,7 +40,7 @@ impl Db {
       .compression_factor(cfg.compression_factor)
       .open()?;
 
-      Ok(Db { db: Arc::new(db) })
+    Ok(Db { db: Arc::new(db) })
   }
 
   /// Return a ref to the inner Database.
@@ -76,7 +76,11 @@ impl Db {
     self.db.drop_tree(name)
   }
 
-  pub fn insert<K: AsRef<[u8]>, V: Into<IVec>>(&self, key: K, val: V) -> Result<Option<IVec>, Error> {
+  pub fn insert<K: AsRef<[u8]>, V: Into<IVec>>(
+    &self,
+    key: K,
+    val: V,
+  ) -> Result<Option<IVec>, Error> {
     self.db.insert(key, val)
   }
 
@@ -88,7 +92,12 @@ impl Db {
     self.db.remove(key)
   }
 
-  pub fn swap<A: AsRef<[u8]>, B: Into<IVec>>(&self, key: A, old: Option<A>, new: Option<B>) -> Result<Result<(), CompareAndSwapError>, Error> {
+  pub fn swap<A: AsRef<[u8]>, B: Into<IVec>>(
+    &self,
+    key: A,
+    old: Option<A>,
+    new: Option<B>,
+  ) -> Result<Result<(), CompareAndSwapError>, Error> {
     self.db.compare_and_swap(key, old, new)
   }
 }

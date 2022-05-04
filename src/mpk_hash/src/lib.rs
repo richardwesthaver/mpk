@@ -1,6 +1,8 @@
 pub use blake3::{
   derive_key, hash, keyed_hash, Hash as B3Hash, Hasher as B3Hasher, OutputReader,
 };
+pub use rustc_hash::FxHasher;
+
 use rand::Rng;
 use std::fs::File;
 use std::hash::Hasher;
@@ -43,6 +45,12 @@ impl Checksum {
   pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
     let file = File::open(path).unwrap();
     Checksum::from_file(file)
+  }
+}
+
+impl From<[u8; 32]> for Checksum {
+  fn from(b: [u8; 32]) -> Checksum {
+    Checksum(B3Hash::from(b))
   }
 }
 
