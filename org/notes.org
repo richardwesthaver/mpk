@@ -217,3 +217,8 @@ cfg == config
 
 () == expr
 #+end_example
+
+* tasks
+** TODO refactor FFI
+** TODO bootstrap DB
+** TODO freesound analysis I/O with python

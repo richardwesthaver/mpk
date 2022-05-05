@@ -1,0 +1,10 @@
+[package]
+name = "mpk_audio"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mpk_config = { path = "../mpk_config" }
+rodio = { version = "0.15", features = ["symphonia-all"] }
+hound = "3.4"
+claxon = "0.4"

@@ -1,8 +1,0 @@
-[package]
-name = "mpk_util"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-dirs = "4.0"
-indicatif = "0.16"

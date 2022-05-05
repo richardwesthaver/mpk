@@ -1,0 +1,19 @@
+[package]
+name = "mpk"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mpk_util = { path = "../crates/mpk_util" }
+mpk_config = { path = "../crates/mpk_config" }
+mpk_audio = { path = "../crates/mpk_audio" }
+mpk_jack = { path = "../crates/mpk_jack" }
+mpk_midi = { path = "../crates/mpk_midi" }
+mpk_db = { path = "../crates/mpk_db" }
+mpk_osc = { path = "../crates/mpk_osc" }
+mpk_engine = { path = "../crates/mpk_engine" }
+mpk_sesh = { path = "../crates/mpk_sesh" }
+mpk_flate = { path = "../crates/mpk_flate" }
+mpk_gear = { path = "../crates/mpk_gear" }
+mpk_http = { path = "../crates/mpk_http" }
+mpk_repl = { path = "../crates/mpk_repl" }

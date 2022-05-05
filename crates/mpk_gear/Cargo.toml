@@ -1,0 +1,7 @@
+[package]
+name = "mpk_gear"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mpk_audio = { path = "../mpk_audio" }

@@ -7,8 +7,8 @@ edition = "2021"
 path = "lib.rs"
 
 [dependencies]
-mpk_db = { path = "../../src/mpk_db" }
-mpk_hash = { path = "../../src/mpk_hash" }
+mpk_db = { path = "../../crates/mpk_db" }
+mpk_hash = { path = "../../crates/mpk_hash" }
 rand = "0.8"
 
 [[bench]]

@@ -1,9 +1,0 @@
-[package]
-name = "mpk_plot"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-plotters = "0.3.1"
-mpk_db = { path = "../mpk_db" }
-csv = "1.1"

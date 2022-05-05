@@ -1,0 +1,9 @@
+[package]
+name = "mpk_config"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+toml = "0.5.8"
+serde = { version = "1.0.136", features = ["derive"] }
+mpk_util = { path = "../mpk_util" }

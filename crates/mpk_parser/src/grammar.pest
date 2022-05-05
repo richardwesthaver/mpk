@@ -1,0 +1,52 @@
+program = _{ SOI ~ "\n"* ~ (stmt ~ "\n"+) * ~ stmt? ~ EOI }
+
+stmt = _{ expr }
+
+expr = {
+  nouns
+  | sysExpr
+  | assgmtExpr
+  | monadicExpr
+  | dyadicExpr
+}
+
+monadicExpr = { verb ~ adverb* ~ expr }
+
+dyadicExpr = { (monadicExpr | nouns) ~ verb ~ adverb* ~ expr }
+
+sysExpr = { sysverb ~ expr* }
+
+assgmtExpr = { name ~ ":" ~ expr }
+
+nouns = { noun+ }
+
+noun = _{ decimal | int | name | string | symbol | "(" ~ expr ~ ")" }
+
+verb = {
+  "+" | "-" | "*" | "%" | "!" | "&"
+| "|" | "<" | ">" | "=" | "~" | ","
+| "^" | "#" | "_" | "$" | "?" | "@"
+| "."
+}
+
+adverb = {
+  "':" | "/:" | "\\:" | "'" | "/" | "\\"
+}
+
+sysverb = {
+  "0:sesh" | "0:http" | "0:osc" | "0:db"
+}
+
+int = @{ "-"* ~ ASCII_DIGIT+ }
+
+decimal = @{ "-"* ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+
+name = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+
+string = @{ "\"" ~ ( "\"\"" | (!"\"" ~ ANY) )* ~ "\"" }
+
+symbol = @{ "`" ~ (ASCII_ALPHA | string)* }
+
+WHITESPACE = _{ " " | "\t" }
+
+COMMENT = _{ "/ " ~ (!"\n" ~ ANY)* }

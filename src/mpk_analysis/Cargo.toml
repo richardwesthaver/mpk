@@ -1,8 +1,0 @@
-[package]
-name = "mpk_analysis"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-mpk_util = { path = "../mpk_util" }
-mpk_codec = { path = "../mpk_codec", features = ["snd"] }

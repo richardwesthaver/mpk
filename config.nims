@@ -18,7 +18,7 @@ const
   rs {.booldefine.} = true
   py {.booldefine.} = false
   f {.booldefine.} = false
-  MPK_BIN = "src/mpk"
+  MPK_BIN = "bin"
 
 proc getVcRoot(): string =
   ## Try to get the path to the current VC root directory.
@@ -114,8 +114,6 @@ task build, "build MPK":
     cpFile(target_dir / ffi_lib, build_dir / ffi_lib)
     if fileExists(build_dir / mpk_py):
       exec "cd " & build_dir & " && " & "python3 " & mpk_py
-    when not release:
-      exec "cp build/_mpk* build/libmpk_ffi* src/mpk_py/mpk/"
 
 task run, "run MPK binary":
   withDir getVcRoot():
@@ -204,5 +202,9 @@ task mirror, "push code to github mirror":
       exec fastexport & " -r " & getVcRoot() & " -M default"
       exec "git checkout HEAD"
       exec "git remote add gh git@github.com:richardwesthaver/mpk.git"
-      exec "git push gh --all"
+      var args: seq[string]
+      when defined(f):
+        args.add("--force")
+      exec "git push gh --all --force " & args.join
+        
     rmDir("mpk")
