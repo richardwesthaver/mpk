@@ -16,7 +16,6 @@ const
   fastexport {.strdefine.}: string = expandTilde("~/stash/fast-export/hg-fast-export.sh")
   stash {.strdefine.}: string = expandTilde("~/stash")
   rs {.booldefine.} = true
-  py {.booldefine.} = false
   f {.booldefine.} = false
   MPK_BIN = "bin"
 
@@ -129,20 +128,13 @@ task run, "run MPK binary":
 task install, "install MPK":
   withDir getVcRoot():
     when rs:
-      exec "cargo install --path " & MPK_BIN
-    when py:
-      exec "poetry build"
-      if f:
-        exec "pip install dist/*.whl --force-reinstall"
-      else:
-        exec "pip install dist/*.whl"
+      exec "cargo install --path " & MPK_BIN & " --bins"
 
 task clean, "clean build artifacts":
   withDir getVcRoot():
     exec "cargo clean"
     rmDir(build_dir)
     rmFile("Cargo.lock")
-    rmFile("poetry.lock")
     echo "root cleaned"
 
 task test, "run MPK tests":
