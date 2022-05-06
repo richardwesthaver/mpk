@@ -54,8 +54,8 @@ fn insert_node_1k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..1_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
+      db.flush().unwrap();
     }
-    db.flush().unwrap();
   });
 }
 
@@ -67,8 +67,8 @@ fn insert_node_10k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..10_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
+      db.flush().unwrap();
     }
-    db.flush().unwrap();
   });
 }
 
