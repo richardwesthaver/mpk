@@ -127,8 +127,12 @@ task run, "run MPK binary":
 
 task install, "install MPK":
   withDir getVcRoot():
+    var args: seq[string]
+    when defined(f):
+      args.insert(" --force")
     when rs:
-      exec "cargo install --path " & MPK_BIN & " --bins"
+      args.insert(" --bins")
+      exec "cargo install " & args.join " --path " & MPK_BIN
 
 task clean, "clean build artifacts":
   withDir getVcRoot():

@@ -1,8 +1,10 @@
 //! MPK_DB -- DB
 use mpk_config::{DbConfig, DbMode};
-use sled::{CompareAndSwapError, Db as SledDb, Error, IVec, Tree};
+use sled::{CompareAndSwapError, Db as SledDb, IVec, Tree};
 use std::path::Path;
 use std::sync::Arc;
+
+use crate::Error;
 
 pub type DbRef = Arc<SledDb>;
 
@@ -22,7 +24,7 @@ pub struct Db {
 impl Db {
   /// Open a database. If path is Some, open or create database at
   /// that path else create a temporary database.
-  pub fn open(path: Option<&Path>) -> Result<Db, Error> {
+  pub fn open<P: AsRef<Path>>(path: Option<P>) -> Result<Db, Error> {
     let db = if let Some(p) = path {
       sled::open(p)?
     } else {
@@ -50,11 +52,11 @@ impl Db {
 
   /// Flush the database to disk.
   pub fn flush(&self) -> Result<usize, Error> {
-    self.db.flush()
+    self.db.flush().map_err(|e| e.into())
   }
 
   pub async fn flush_async(&self) -> Result<usize, Error> {
-    self.db.flush_async().await
+    self.db.flush_async().await.map_err(|e| e.into())
   }
 
   /// Print info about the current database.
@@ -69,11 +71,11 @@ impl Db {
   }
 
   pub fn open_tree<N: AsRef<[u8]>>(&self, name: N) -> Result<Tree, Error> {
-    self.db.open_tree(name)
+    self.db.open_tree(name).map_err(|e| e.into())
   }
 
   pub fn drop_tree<N: AsRef<[u8]>>(&self, name: N) -> Result<bool, Error> {
-    self.db.drop_tree(name)
+    self.db.drop_tree(name).map_err(|e| e.into())
   }
 
   pub fn insert<K: AsRef<[u8]>, V: Into<IVec>>(
@@ -81,15 +83,15 @@ impl Db {
     key: K,
     val: V,
   ) -> Result<Option<IVec>, Error> {
-    self.db.insert(key, val)
+    self.db.insert(key, val).map_err(|e| e.into())
   }
 
   pub fn get<K: AsRef<[u8]>>(&self, key: K) -> Result<Option<IVec>, Error> {
-    self.db.get(key)
+    self.db.get(key).map_err(|e| e.into())
   }
 
   pub fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<Option<IVec>, Error> {
-    self.db.remove(key)
+    self.db.remove(key).map_err(|e| e.into())
   }
 
   pub fn swap<A: AsRef<[u8]>, B: Into<IVec>>(
@@ -98,6 +100,6 @@ impl Db {
     old: Option<A>,
     new: Option<B>,
   ) -> Result<Result<(), CompareAndSwapError>, Error> {
-    self.db.compare_and_swap(key, old, new)
+    self.db.compare_and_swap(key, old, new).map_err(|e| e.into())
   }
 }

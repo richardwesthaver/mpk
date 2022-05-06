@@ -8,7 +8,8 @@ use rand::prelude::*;
 use std::hash::Hasher;
 
 pub fn db_init() -> Db {
-  Db::open(None).unwrap()
+//  Db::open(None::<std::path::PathBuf>).unwrap()
+  Db::open(Some("test.db")).unwrap()
 }
 
 pub fn gen_keys(n: usize) -> Vec<[u8; 8]> {

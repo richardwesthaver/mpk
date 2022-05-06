@@ -1,24 +1,20 @@
 //! MPK FFI
-//!
+
 //! This crate provides FFI-safe bindings for MPK. The cdylib
 //! generated from this crate can be used from other C-compatible
 //! languages as you see fit.
-//!
+
 //! Cbindgen is used in the build.rs script to generate a C header
 //! file ('mpk_ffi.h') which is also compatible with C++. This header
 //! is in turn utilized by the Python package cffi in build.py to
 //! generate Python-compatible bindings (_mpk.c, _mpk.o, and
 //! _mpk.cpython-*.so). All of these files can be found in the build
 //! directory at the project root after executing 'nim build'.
-//!
-//! The Python bindings are required by MPK_EXTRACTOR so if you plan
-//! to work with the files mpk_analysis/{mpk_extract.py,
-//! mpk_essentia/{extract.py lib.py}} directly, be sure to build the
-//! project first. When the `dev` flag is defined (default) the Python
-//! bindings will be automatically copied to the appropriate
-//! directory.
+
 #![allow(clippy::missing_safety_doc)]
 use libc::{c_char, size_t};
+// we must import individual crates instead of the mpk library to
+// ensure cbindgen will generate bindings.
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 use mpk_hash::Checksum;
 use std::ffi::{CStr, CString, OsStr};

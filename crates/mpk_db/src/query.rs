@@ -1,5 +1,5 @@
 //! MPK_DB -- QUERY
-use crate::{EdgeKey, Id, Prop, ValidationError};
+use crate::{EdgeKey, Id, Prop, Error};
 use std::str::FromStr;
 
 macro_rules! impl_node_query {
@@ -35,12 +35,12 @@ pub enum EdgeDirection {
 }
 
 impl FromStr for EdgeDirection {
-  type Err = ValidationError;
+  type Err = Error;
   fn from_str(s: &str) -> Result<EdgeDirection, Self::Err> {
     match s {
       "out" => Ok(EdgeDirection::Outbound),
       "in" => Ok(EdgeDirection::Inbound),
-      e => Err(ValidationError::BadValue(e.to_string())),
+      e => Err(Error::BadValue(e.to_string())),
     }
   }
 }

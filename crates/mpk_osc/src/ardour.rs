@@ -1,16 +1,17 @@
 //! MPK_OSC ARDOUR API
 //!
 //! REF: https://manual.ardour.org/using-control-surfaces/controlling-ardour-with-osc/
-use crate::{decoder, encoder, Error, OscPacket, OscType, Result, ToOsc};
-use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
+use crate::{ // decoder, encoder,
+	    Error, OscPacket, OscType, Result, ToOsc};
+// use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
 
 /// A Client for Ardour.
 ///
 /// This struct communicates with the Ardour OSC control surface API over a UDP Socket.
-#[derive(Debug)]
-pub struct ArdourClient<'client> {
-  name: &'client str,
-}
+// #[derive(Debug)]
+// pub struct ArdourClient<'client> {
+//   name: &'client str,
+// }
 
 #[derive(Debug)]
 pub enum ClientMessage<'a> {

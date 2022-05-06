@@ -22,7 +22,7 @@ pub trait ToOsc {
 
 #[cfg(test)]
 mod tests {
-  use super::nsm::*;
+  use super::{nsm::*, ToOsc};
   use rosc::encoder;
   use rosc::{OscMessage, OscPacket, OscType};
   use std::net::UdpSocket;
@@ -62,6 +62,7 @@ mod tests {
     }
   }
 
+  #[cfg(linux)]
   #[test]
   fn test_nsm() {
     spawn_nsmd();
@@ -74,6 +75,7 @@ mod tests {
     client.abort().unwrap()
   }
 
+  #[cfg(linux)]
   #[test]
   fn test_nsm_replies() {
     let mut client = test_nsm_client(None);

@@ -8,7 +8,7 @@ mod tree;
 mod types;
 
 pub use db::{Db, DbRef};
-pub use err::ValidationError;
+pub use err::Error;
 pub use factory::{
   EdgeFactory, EdgePropFactory, Factory, MetaFactory, NodeFactory, NodePropFactory,
 };

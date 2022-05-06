@@ -23,7 +23,6 @@ pub struct Config {
   pub db: DbConfig,
   pub jack: JackConfig,
   pub metro: MetroConfig,
-  pub extractor: ExtractorConfig,
   pub sesh: SeshConfig,
   pub net: NetworkConfig,
   pub engine: EngineConfig,
@@ -38,7 +37,6 @@ impl Config {
       sesh: SeshConfig::default(),
       jack,
       metro: MetroConfig::default(),
-      extractor: ExtractorConfig::default(),
       net: NetworkConfig::default(),
     })
   }
@@ -74,7 +72,7 @@ impl Config {
       fs::create_dir(&root)?;
     }
     for i in
-      ["samples", "projects", "plugins", "patches", "tracks"].map(|x| root.join(x))
+      ["analysis", "samples", "sesh", "plugins", "patches", "tracks"].map(|x| root.join(x))
     {
       if !i.exists() {
         fs::create_dir(root.join(i))?;
@@ -125,14 +123,17 @@ impl FsConfig {
   pub fn get_path(&self, path: &str) -> Result<PathBuf> {
     match path {
       "root" => Ok(expand_tilde(PathBuf::from(&self.root)).unwrap()),
+      "analysis" => {
+        Ok(expand_tilde([&self.root, "analysis"].iter().collect::<PathBuf>()).unwrap())
+      }
       "samples" => {
         Ok(expand_tilde([&self.root, "samples"].iter().collect::<PathBuf>()).unwrap())
       }
       "tracks" => {
         Ok(expand_tilde([&self.root, "tracks"].iter().collect::<PathBuf>()).unwrap())
       }
-      "projects" => {
-        Ok(expand_tilde([&self.root, "projects"].iter().collect::<PathBuf>()).unwrap())
+      "sesh" => {
+        Ok(expand_tilde([&self.root, "sesh"].iter().collect::<PathBuf>()).unwrap())
       }
       "plugins" => {
         Ok(expand_tilde([&self.root, "plugins"].iter().collect::<PathBuf>()).unwrap())
@@ -336,54 +337,6 @@ impl Default for MetroConfig {
 impl From<Config> for MetroConfig {
   fn from(cfg: Config) -> MetroConfig {
     cfg.metro
-  }
-}
-
-/// MPK Extractor Config. Note that you should use the same settings
-/// for all samples/tracks in a DB, but 'descriptors' can be changed
-/// in between sync runs.
-#[derive(Serialize, Deserialize, Clone)]
-pub struct ExtractorConfig {
-  pub path: Option<PathBuf>,
-  pub descriptors: Vec<String>,
-  pub mono: bool,
-  pub sample_rate: u32,
-  pub windowing: String,
-  pub frame_size: u32,
-  pub hop_size: u32,
-  pub mel_bands: u16,
-  pub lf_bound: u32,
-  pub hf_bound: u32,
-}
-
-impl Default for ExtractorConfig {
-  fn default() -> Self {
-    ExtractorConfig {
-      path: if let Ok(p) = std::env::var("MPK_EXTRACTOR") {
-        Some(p.into())
-      } else {
-        None
-      },
-      descriptors: vec![
-        "mel_spec".to_string(),
-        "info".to_string(),
-        "tags".to_string(),
-      ],
-      mono: true,
-      sample_rate: 44100,
-      windowing: "hann".to_string(),
-      frame_size: 2048,
-      hop_size: 1024,
-      mel_bands: 96,
-      lf_bound: 0,
-      hf_bound: 11000,
-    }
-  }
-}
-
-impl From<Config> for ExtractorConfig {
-  fn from(cfg: Config) -> ExtractorConfig {
-    cfg.extractor
   }
 }
 

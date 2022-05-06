@@ -60,6 +60,6 @@ mod tests {
 
   #[test]
   fn fs_extract_test() {
-    assert!(freesound_extract("../../tests/luke_vibert-funkyacidstuff.mp3", "../../tests/luke_vibert-funkyacidstuff.json").is_ok())
+    assert!(freesound_extract("../../tests/luke_vibert-funkyacidstuff.mp3", "../../tests/luke_vibert-funkyacidstuff.json", None).is_ok())
   }
 }

@@ -1,8 +1,9 @@
+use mpk::{Error,
+	  config::Config,
+	  engine::Engine,
+	  util::expand_tilde};
+
 use clap::Parser;
-use mpk::Result;
-use mpk_config::Config;
-use mpk_engine::Engine;
-use mpk_util::expand_tilde;
 
 #[derive(Parser)]
 #[clap(name = "mpkd")]
@@ -28,10 +29,10 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Error> {
   let mut args = Args::parse();
   let cfg_path = expand_tilde(&args.cfg).unwrap();
-  let mut cfg = if cfg_path.exists() {
+  let cfg = if cfg_path.exists() {
     Config::load(&cfg_path)?
   } else {
     Config::default()

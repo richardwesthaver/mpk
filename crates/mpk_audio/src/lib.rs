@@ -144,7 +144,7 @@ fn sample_chain() {
 fn metro() {
   use gen::metro::MetroMsg::Stop;
   use gen::Metro;
-  let metro = Metro::new(128, 4, 4).start("ch1.wav", "ch2.wav");
+  let metro = Metro::new(128, 4, 4).start("../../tests/ch1.wav", "../../tests/ch2.wav");
   std::thread::sleep(std::time::Duration::from_secs(1));
   metro.send(Stop).unwrap();
 }

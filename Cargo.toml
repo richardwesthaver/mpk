@@ -2,6 +2,7 @@
 members = [
   "lib",
   "bin",
+  "ffi",
   "crates/mpk_config",
   "crates/mpk_util",
   "crates/mpk_audio",
@@ -16,7 +17,6 @@ members = [
   "crates/mpk_db",
   "crates/mpk_sesh",
   "crates/mpk_repl",
-  "crates/mpk_ffi",
   "crates/mpk_http",
   "crates/mpk_osc",
   "crates/mpk_parser",

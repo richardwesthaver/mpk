@@ -55,7 +55,8 @@ fn insert_node_1k(b: &mut Bencher) {
     for i in 0..1_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
     }
-  })
+    db.flush().unwrap();
+  });
 }
 
 #[bench]
@@ -67,7 +68,8 @@ fn insert_node_10k(b: &mut Bencher) {
     for i in 0..10_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
     }
-  })
+    db.flush().unwrap();
+  });
 }
 
 #[bench]
@@ -78,8 +80,9 @@ fn insert_node_100k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..100_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
+      db.flush().unwrap();
     }
-  })
+  });
 }
 
 #[bench]
@@ -90,8 +93,9 @@ fn insert_edge_1k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..1_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
+      db.flush().unwrap();
     }
-  })
+  });
 }
 
 #[bench]
@@ -102,8 +106,9 @@ fn insert_edge_10k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..10_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
+      db.flush().unwrap();
     }
-  })
+  });
 }
 
 #[bench]
@@ -114,6 +119,7 @@ fn insert_edge_100k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..100_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
+      db.flush().unwrap();
     }
-  })
+  });
 }
