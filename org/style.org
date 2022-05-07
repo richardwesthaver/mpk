@@ -1,0 +1,13 @@
+#+TITLE: style
+#+DATE: 2022-05-06
+#+AUTHOR: ellis
+#+EMAIL: ellis@rwest.io
+#+DESCRIPTION: MPK Style Guide
+- 2 spaces everywhere (expect for python code which is formatted with black)
+- line width = 88
+- core modules in =crates/=
+- Org-mode docs
+- derive =Debug= everywhere
+- err.rs is for crate-wide errors
+- all files should start with a comment - =//! $crate_name/$mod -- $submod=
+- foo/{bar1, bar2, bar3} == foo/bar1, foo/bar2, foo/bar3

@@ -1,0 +1,19 @@
+[package]
+name = "mpk_bin"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "mpk"
+path = "src/main.rs"
+
+[[bin]]
+name = "mpkd"
+path = "src/daemon.rs"
+
+[dependencies]
+mpk = { path = "../lib", features = ["full"] }
+clap = { version = "3.0.13", features = ["derive"] }
+tokio = { version = "1.17", default-features = false, features=["rt-multi-thread"] }
+log = "0.4"
+

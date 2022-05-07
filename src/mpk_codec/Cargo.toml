@@ -1,7 +1,0 @@
-[package]
-name = "mpk_codec"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-symphonia = { version = "0.5", features = ["aac", "alac", "isomp4", "mp3"] }

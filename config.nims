@@ -16,9 +16,8 @@ const
   fastexport {.strdefine.}: string = expandTilde("~/stash/fast-export/hg-fast-export.sh")
   stash {.strdefine.}: string = expandTilde("~/stash")
   rs {.booldefine.} = true
-  py {.booldefine.} = false
   f {.booldefine.} = false
-  MPK_BIN = "src/mpk"
+  MPK_BIN = "bin"
 
 proc getVcRoot(): string =
   ## Try to get the path to the current VC root directory.
@@ -89,8 +88,8 @@ proc rustTest() =
   var args: seq[string]
   when defined(p):
     args.add(" -p " & p)
-  when v:
-    args.add(" -- --nocapture")
+  when defined(v):
+    args.add(" -- --show-output")
   exec "cargo test" & args.join
   
 proc ffiTest() =
@@ -114,8 +113,6 @@ task build, "build MPK":
     cpFile(target_dir / ffi_lib, build_dir / ffi_lib)
     if fileExists(build_dir / mpk_py):
       exec "cd " & build_dir & " && " & "python3 " & mpk_py
-    when not release:
-      exec "cp build/_mpk* build/libmpk_ffi* src/mpk_py/mpk/"
 
 task run, "run MPK binary":
   withDir getVcRoot():
@@ -130,21 +127,18 @@ task run, "run MPK binary":
 
 task install, "install MPK":
   withDir getVcRoot():
+    var args: seq[string]
+    when defined(f):
+      args.insert(" --force")
     when rs:
-      exec "cargo install --path " & MPK_BIN
-    when py:
-      exec "poetry build"
-      if f:
-        exec "pip install dist/*.whl --force-reinstall"
-      else:
-        exec "pip install dist/*.whl"
+      args.insert(" --bins")
+      exec "cargo install " & args.join " --path " & MPK_BIN
 
 task clean, "clean build artifacts":
   withDir getVcRoot():
     exec "cargo clean"
     rmDir(build_dir)
     rmFile("Cargo.lock")
-    rmFile("poetry.lock")
     echo "root cleaned"
 
 task test, "run MPK tests":
@@ -158,6 +152,11 @@ task test, "run MPK tests":
       ffiTest()
     else:
       rustTest()
+
+task bench, "run MPK benchmarks":
+  withDir getVcRoot():
+    withDir "tests/benches":
+      exec "cargo bench"
 
 task info, "print system, dependency, and project info":
   hostInfo()
@@ -200,8 +199,13 @@ task mirror, "push code to github mirror":
     exec "git init mpk"
     withDir "mpk":
       exec "git config core.ignoreCase false"
+      exec "git config push.followTags true"
       exec fastexport & " -r " & getVcRoot() & " -M default"
       exec "git checkout HEAD"
       exec "git remote add gh git@github.com:richardwesthaver/mpk.git"
-      exec "git push gh"
+      var args: seq[string]
+      when defined(f):
+        args.add("--force")
+      exec "git push gh --all --force " & args.join
+        
     rmDir("mpk")

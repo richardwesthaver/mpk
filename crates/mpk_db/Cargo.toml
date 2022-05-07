@@ -1,0 +1,13 @@
+[package]
+name = "mpk_db"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mpk_config = { path = "../mpk_config" }
+mpk_util = { path = "../mpk_util" }
+mpk_hash = { path = "../mpk_hash" }
+sled = { version = "0.34", features = ["compression"] }
+ulid = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+bincode = "1.3"

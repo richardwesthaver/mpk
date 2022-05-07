@@ -1,0 +1,16 @@
+[package]
+name = "mpk_engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.0", features = ["net"] }
+mpk_config = { path = "../mpk_config" }
+mpk_parser = { path = "../mpk_parser" }
+mpk_db = { path = "../mpk_db" }
+mpk_osc = { path = "../mpk_osc" }
+mpk_http = { path = "../mpk_http" }
+mpk_audio = { path = "../mpk_audio" }
+mpk_jack = { path = "../mpk_jack" }
+mpk_midi = { path = "../mpk_midi" }
+mpk_sesh = { path = "../mpk_sesh" }
