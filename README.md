@@ -1,15 +1,3 @@
-- [On Digital Audio Workstations](#orgb69c6e7)
-  - [DAW Workflows](#org091f04e)
-  - [DAWs as Instruments](#org70d85a5)
-    - [Trackers](#org1e80cf0)
-    - [Patchers](#org1787c07)
-  - [A new paradigm](#orgcbf5dcc)
-- [Usage](#org2faf799)
-  - [Installation](#org981536c)
-  - [Initialization](#org8ce1f55)
-  - [Configuration](#orgc93a5f4)
-- [Dev Dependencies](#org8fdd6b4)
-
 `mpk` is a *Media Programming Kit* &#x2013; a development kit for digital media, taking lessons learned from software engineering and applying them to creative pursuits. It is a flexible ecosystem designed to organize my workflow involving hardware, software, and data.
 
 This application is intended for artists, hackers, and composers. Batteries are not included.
@@ -17,7 +5,20 @@ This application is intended for artists, hackers, and composers. Batteries are 
 -   **Status:** `ALPHA` This project is in alpha and will only deal with audio for quite some time since that's the medium I'm most interested in. There are future plans for image/video/text support.
 
 
-<a id="orgb69c6e7"></a>
+# Table of Contents
+
+1.  [On Digital Audio Workstations](#orgca1583e)
+    1.  [DAW Workflows](#org048fdb0)
+    2.  [DAWs as Instruments](#org7820d3e)
+    3.  [A new paradigm](#org7ca3d6a)
+2.  [Usage](#orgf0ad266)
+    1.  [Installation](#org77cd8c8)
+    2.  [Initialization](#org16c77cd)
+    3.  [Configuration](#org43ac4e4)
+3.  [Dev Dependencies](#orgc4f77a9)
+
+
+<a id="orgca1583e"></a>
 
 # TODO On Digital Audio Workstations
 
@@ -35,7 +36,7 @@ Indeed, the DAW has been an important evolution in the ways we make music. For a
 -   [CCRMA - Music 192B: Week 2, Digital Audio Workstations](https://ccrma.stanford.edu/courses/192b/ProTools-Logic%20Lec.pdf)
 
 
-<a id="org091f04e"></a>
+<a id="org048fdb0"></a>
 
 ## DAW Workflows
 
@@ -52,19 +53,15 @@ Let’s take a moment to consider an elementary DAW workflow. For this example, 
 There is a healthy level of variation in how these steps are performed, but the structure is relatively the same.
 
 
-<a id="org70d85a5"></a>
+<a id="org7820d3e"></a>
 
 ## DAWs as Instruments
 
-
-<a id="org1e80cf0"></a>
 
 ### Trackers
 
 -   [Mod love | Salon.com](https://www.salon.com/1999/04/29/mod_trackers/)
 
-
-<a id="org1787c07"></a>
 
 ### Patchers
 
@@ -72,7 +69,7 @@ There is a healthy level of variation in how these steps are performed, but the 
 -   [Miller Puckette, IRCAM - The Patcher](http://msp.ucsd.edu/Publications/icmc88.pdf)
 
 
-<a id="orgcbf5dcc"></a>
+<a id="org7ca3d6a"></a>
 
 ## A new paradigm
 
@@ -83,7 +80,7 @@ There is a healthy level of variation in how these steps are performed, but the 
 -   [OpenSoundControl.org](https://ccrma.stanford.edu/groups/osc/index.html)
 
 
-<a id="org2faf799"></a>
+<a id="orgf0ad266"></a>
 
 # Usage
 
@@ -92,7 +89,7 @@ MPK is meant to be used on a Linux box. In this example we'll be using Arch Linu
 MPK also runs on MacOS but some of the project management functionality isn't available. Most notably, you can't run the [NSM](https://new-session-manager.jackaudio.org) server on MacOS, but you can still interact with one remotely. All other features are supported on both platforms.
 
 
-<a id="org981536c"></a>
+<a id="org77cd8c8"></a>
 
 ## Installation
 
@@ -114,12 +111,12 @@ sudo pacman -S nim alsa-lib jack2 ffmpeg new-session-manager
 
 It is recommended to install [Nim](https://nim-lang.org/) so that you can run the build scripts in `config.nims`.
 
-Simply run `nim install -d:py` in the project root to install the mpk binaries in `~/.cargo`.
+Simply run `nim install` in the project root to install the mpk binaries in `~/.cargo`.
 
 Run `nim help` to see the other commands and flags available.
 
 
-<a id="org8ce1f55"></a>
+<a id="org16c77cd"></a>
 
 ## Initialization
 
@@ -138,7 +135,7 @@ tracks
 ```
 
 
-<a id="orgc93a5f4"></a>
+<a id="org43ac4e4"></a>
 
 ## Configuration
 
@@ -195,7 +192,7 @@ Much of the configuration can be overridden by CLI flags but you may want to cha
 -   net.{`freesound`, `musicbrainz`, `youtube`, `spotify`}
 
 
-<a id="org8fdd6b4"></a>
+<a id="orgc4f77a9"></a>
 
 # Dev Dependencies
 
