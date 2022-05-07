@@ -1,40 +1,21 @@
 //! MPK_DB -- TREE
-use crate::{
-  DbRef, Edge, EdgeFactory, EdgeKey, EdgeProp, EdgePropFactory, Factory, Id, IdVec,
-  Key, Meta, MetaFactory, MetaKind, Node, NodeFactory, NodeKind, NodeProp,
-  NodePropFactory, Prop, Val,
-};
+use std::ops::Deref;
+
 use bincode::{deserialize, serialize};
 use serde::Serialize;
 use sled::{
-  transaction::TransactionResult, Batch, CompareAndSwapError, Error, MergeOperator,
+  transaction::TransactionResult, Batch, CompareAndSwapError, MergeOperator,
   Subscriber, Tree,
 };
 
-use std::ops::Deref;
+use crate::{
+  DbRef, Edge, EdgeFactory, EdgeKey, EdgeProp, EdgePropFactory, Error, Factory, Id,
+  IdVec, Key, Meta, MetaFactory, MetaKind, Node, NodeFactory, NodeKind, NodeProp,
+  NodePropFactory, Prop, Val,
+};
 
-pub const TREE_NAMES: [&str; 20] = [
-  "tracks",
-  "samples",
-  "midi",
-  "patches",
-  "track_meta",
-  "sample_meta",
-  "midi_meta",
-  "patch_meta",
-  "seq",
-  "coll",
-  "crate",
-  "seq_edge",
-  "seq_edge_rev",
-  "coll_edge",
-  "coll_edge_rev",
-  "crate_edge",
-  "crate_edge_rev",
-  "sesh",
-  "sesh_edge",
-  "sesh_edge_rev",
-];
+pub const TREE_NAMES: [&str; 5] =
+  ["media", "media_props", "meta", "edge", "edge_props"];
 
 pub trait TreeHandle<'de>: Sized {
   type Ty: Key + Val;
@@ -84,7 +65,10 @@ macro_rules! impl_tree {
       type Factory = $f;
       fn open(handle: DbRef, name: &str) -> Result<$i, Error> {
         let factory = $f;
-        handle.open_tree(name).map(|tree| $i { tree, factory })
+        handle
+          .open_tree(name)
+          .map_err(|e| e.into())
+          .map(|tree| $i { tree, factory })
       }
       fn insert(&mut self, ty: &$t) -> Result<Option<$v>, Error> {
         let key = self.factory.serialize_key(&ty).unwrap();
@@ -97,7 +81,7 @@ macro_rules! impl_tree {
               Ok(None)
             }
           }
-          Err(e) => Err(e),
+          Err(e) => Err(e.into()),
         }
       }
       fn get<K: Serialize + Into<$k>>(&mut self, key: &K) -> Result<Option<$v>, Error> {
@@ -111,12 +95,12 @@ macro_rules! impl_tree {
               Ok(None)
             }
           }
-          Err(e) => Err(e),
+          Err(e) => Err(e.into()),
         }
       }
       fn exists<K: Serialize + Into<$k>>(&self, key: &K) -> Result<bool, Error> {
         let key: Vec<u8> = serialize(key).unwrap();
-        self.tree.contains_key(key)
+        self.tree.contains_key(key).map_err(|e| e.into())
       }
       fn remove<K: Serialize + Into<$k>>(
         &mut self,
@@ -132,7 +116,7 @@ macro_rules! impl_tree {
               Ok(None)
             }
           }
-          Err(e) => Err(e),
+          Err(e) => Err(e.into()),
         }
       }
       fn swap(
@@ -152,10 +136,13 @@ macro_rules! impl_tree {
         } else {
           None
         };
-        self.tree.compare_and_swap(key, old, new)
+        self
+          .tree
+          .compare_and_swap(key, old, new)
+          .map_err(|e| e.into())
       }
       fn batch(&mut self, batch: Batch) -> Result<(), Error> {
-        self.tree.apply_batch(batch)
+        self.tree.apply_batch(batch).map_err(|e| e.into())
       }
       fn transaction(&mut self, vals: &[$t]) -> TransactionResult<()> {
         let (keys, vals) = self.factory.serialize_vec(vals.to_vec()).unwrap();

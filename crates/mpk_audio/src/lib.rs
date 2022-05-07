@@ -1,11 +1,14 @@
-pub use rodio::cpal::traits::{DeviceTrait, HostTrait};
-use rodio::cpal::{available_hosts, host_from_id, ALL_HOSTS};
-pub use rodio::cpal::{Device, Devices};
+use std::fs::File;
 use std::io;
-use std::io::BufReader;
+use std::io::{BufReader, BufWriter};
 use std::path::Path;
 use std::sync::mpsc::{channel, Receiver};
+use std::sync::{Arc, Mutex};
 use std::thread;
+
+pub use rodio::cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+pub use rodio::cpal::{self, Device, Devices};
+use rodio::cpal::{available_hosts, host_from_id, ALL_HOSTS};
 
 mod err;
 pub mod gen;
@@ -114,6 +117,99 @@ pub fn pause_controller_cli() -> Receiver<bool> {
   rx
 }
 
+pub fn sample_format(format: cpal::SampleFormat) -> hound::SampleFormat {
+  match format {
+    cpal::SampleFormat::U16 => hound::SampleFormat::Int,
+    cpal::SampleFormat::I16 => hound::SampleFormat::Int,
+    cpal::SampleFormat::F32 => hound::SampleFormat::Float,
+  }
+}
+
+pub fn wav_spec_from_config(config: &cpal::SupportedStreamConfig) -> hound::WavSpec {
+  hound::WavSpec {
+    channels: config.channels() as _,
+    sample_rate: config.sample_rate().0 as _,
+    bits_per_sample: (config.sample_format().sample_size() * 8) as _,
+    sample_format: sample_format(config.sample_format()),
+  }
+}
+
+type WavWriterHandle = Arc<Mutex<Option<hound::WavWriter<BufWriter<File>>>>>;
+
+fn write_input_data<T, U>(input: &[T], writer: &WavWriterHandle)
+where
+  T: cpal::Sample,
+  U: cpal::Sample + hound::Sample,
+{
+  if let Ok(mut guard) = writer.try_lock() {
+    if let Some(writer) = guard.as_mut() {
+      for &sample in input.iter() {
+        let sample: U = cpal::Sample::from(&sample);
+        writer.write_sample(sample).ok();
+      }
+    }
+  }
+}
+
+pub fn record<P: AsRef<Path>>(
+  device: Option<Device>,
+  output: P,
+  stop: Receiver<bool>,
+) -> Result<()> {
+  let dev = if let Some(d) = device {
+    d
+  } else {
+    cpal::default_host().default_input_device().unwrap()
+  };
+  let cfg = dev.default_input_config().unwrap();
+
+  let spec = wav_spec_from_config(&cfg);
+  let writer = hound::WavWriter::create(output, spec).unwrap();
+  let writer = Arc::new(Mutex::new(Some(writer)));
+
+  let writer_2 = writer.clone();
+
+  let err_fn = move |err| {
+    eprintln!("an error occurred on stream: {}", err);
+  };
+  let stream = match cfg.sample_format() {
+    cpal::SampleFormat::F32 => dev
+      .build_input_stream(
+        &cfg.into(),
+        move |data, _: &_| write_input_data::<f32, f32>(data, &writer_2),
+        err_fn,
+      )
+      .unwrap(),
+    cpal::SampleFormat::I16 => dev
+      .build_input_stream(
+        &cfg.into(),
+        move |data, _: &_| write_input_data::<i16, i16>(data, &writer_2),
+        err_fn,
+      )
+      .unwrap(),
+    cpal::SampleFormat::U16 => dev
+      .build_input_stream(
+        &cfg.into(),
+        move |data, _: &_| write_input_data::<u16, i16>(data, &writer_2),
+        err_fn,
+      )
+      .unwrap(),
+  };
+
+  stream.play().unwrap();
+  loop {
+    if stop
+      .recv_timeout(std::time::Duration::from_millis(500))
+      .is_ok()
+    {
+      drop(&stream);
+      writer.lock().unwrap().take().unwrap().finalize().unwrap();
+    } else {
+      continue;
+    }
+  }
+}
+
 #[test]
 fn all_hosts() {
   info()
@@ -134,6 +230,7 @@ fn beep() {
 fn sample_chain() {
   use gen::SampleChain;
   let mut chain = SampleChain::default();
+  chain.output_file = "../../tests/ch1.wav".into();
   chain.add_file("../../tests/ch1.wav").unwrap();
   chain.add_file("../../tests/ch2.wav").unwrap();
   chain.process_file("../../tests/ch1.wav", false).unwrap();

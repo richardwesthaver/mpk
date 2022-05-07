@@ -1,9 +1,11 @@
 //! MPK_DB/TYPES -- EDGE
-use super::Id;
-use super::{Key, Val};
+use std::fmt;
+
 use mpk_util::timestamp_nanos;
 use serde::{Deserialize, Serialize};
-use std::fmt;
+
+use super::Id;
+use super::{Key, Val};
 
 pub type EdgeVec = Vec<Edge>;
 

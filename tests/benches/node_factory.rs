@@ -1,9 +1,8 @@
 #![feature(test)]
 #![cfg(test)]
 extern crate test;
-use test::Bencher;
-
 use benches::{init_node_factory, serialize_node, serialize_nodevec};
+use test::Bencher;
 
 #[bench]
 fn node_serialize_val(b: &mut Bencher) {

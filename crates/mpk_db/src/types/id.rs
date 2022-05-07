@@ -1,9 +1,11 @@
 //! MPK_DB/TYPES -- ID
-use super::{Key, Val};
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 use sled::IVec;
-use std::fmt;
 use ulid::Ulid;
+
+use super::{Key, Val};
 
 pub type IdVec = Vec<Id>;
 

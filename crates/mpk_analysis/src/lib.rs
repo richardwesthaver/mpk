@@ -1,9 +1,10 @@
 //! MPK_ANALYSIS
-use mpk_codec::AudioMetadata;
-use mpk_util::walk_dir;
+use std::io;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
-use std::io;
+
+use mpk_codec::AudioMetadata;
+use mpk_util::walk_dir;
 
 pub fn tag_walker<P: AsRef<Path>>(path: P) -> Option<AudioMetadata> {
   let path = path.as_ref();
@@ -29,7 +30,11 @@ pub fn tag_walk<P: AsRef<Path>>(path: P) -> Vec<AudioMetadata> {
   coll
 }
 
-pub fn freesound_extract<P: AsRef<Path>>(input: P, output: P, exe: Option<P>) -> Result<ExitStatus, io::Error> {
+pub fn freesound_extract<P: AsRef<Path>>(
+  input: P,
+  output: P,
+  exe: Option<P>,
+) -> Result<ExitStatus, io::Error> {
   let mut cmd = if let Some(x) = exe {
     Command::new(x.as_ref())
   } else {
@@ -60,6 +65,11 @@ mod tests {
 
   #[test]
   fn fs_extract_test() {
-    assert!(freesound_extract("../../tests/luke_vibert-funkyacidstuff.mp3", "../../tests/luke_vibert-funkyacidstuff.json", None).is_ok())
+    assert!(freesound_extract(
+      "../../tests/luke_vibert-funkyacidstuff.mp3",
+      "../../tests/luke_vibert-funkyacidstuff.json",
+      None
+    )
+    .is_ok())
   }
 }

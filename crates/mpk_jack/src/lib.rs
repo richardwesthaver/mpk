@@ -1,8 +1,9 @@
 //! MPK_JACK
 //!
 //! JACK Audio Connection Kit wrappers for MPK.
-pub use jack::Client;
 use std::sync::mpsc;
+
+pub use jack::Client;
 
 pub fn internal_client(name: &str, stop: mpsc::Receiver<()>) {
   // Create client

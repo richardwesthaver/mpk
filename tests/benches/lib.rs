@@ -1,15 +1,16 @@
 #![feature(test)]
+use std::hash::Hasher;
+
 use mpk_db::{
   Db, Edge, EdgeFactory, EdgeKey, EdgeKind, EdgeVec, Factory, Node, NodeFactory,
   NodeKind, NodeVec,
 };
 use mpk_hash::{B3Hasher, Djb2, FxHasher};
 use rand::prelude::*;
-use std::hash::Hasher;
 
 pub fn db_init() -> Db {
-//  Db::open(None::<std::path::PathBuf>).unwrap()
-  Db::open(Some("test.db")).unwrap()
+  Db::open(None::<String>).unwrap()
+  //  Db::open(Some("test.db")).unwrap()
 }
 
 pub fn gen_keys(n: usize) -> Vec<[u8; 8]> {

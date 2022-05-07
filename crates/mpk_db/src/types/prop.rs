@@ -1,6 +1,7 @@
 //! MPK_DB/TYPES -- PROP
-use super::{Checksum, Edge, EdgeKey, Id, Key, Node, Uri, Val};
 use serde::{Deserialize, Serialize};
+
+use super::{Checksum, Edge, EdgeKey, Id, Key, Node, Uri, Val};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum Prop {

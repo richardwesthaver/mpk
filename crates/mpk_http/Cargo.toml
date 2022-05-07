@@ -12,8 +12,8 @@ mpk_util = { path = "../mpk_util" }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1.17", features = ["full"] }
 futures-util = "0.3"
-reqwest = { version = "0.11", features = ["json", "stream"] }
-oauth2 = { version = "4.1", optional = true }
+reqwest = { version = "0.11", features = ["json", "stream", "rustls-tls"] }
+oauth2 = { version = "4.1", features = ["rustls-tls"], optional = true }
 jsonwebtoken = { version = "8", default_features = false }
 google-youtube3 = "3.0"
-rspotify = "0.11"
+rspotify = { version = "0.11", features = ["reqwest-rustls-tls"] }

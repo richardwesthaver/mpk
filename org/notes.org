@@ -1,3 +1,4 @@
+#+TITLE: notes
 * Background
 Over the years I've seen many popular creative tools implement
 subscription-based/freemium payment models, web-based/always-online
@@ -218,7 +219,473 @@ cfg == config
 () == expr
 #+end_example
 
+* Crates
+** =mpk=
+The MPK binary providing CLI access to the library features.
+#+begin_example
+mpk 0.1.0
+ellis <ellis@rwest.io>
+media programming kit
+
+USAGE:
+    mpk [OPTIONS] <SUBCOMMAND>
+
+OPTIONS:
+    -c, --cfg <CFG>     [default: ~/mpk/mpk.toml]
+        --db-trace      enable DB tracing
+        --db-profile    enable DB profiling
+    -h, --help          Print help information
+    -V, --version       Print version information
+
+SUBCOMMANDS:
+    init      Initialize MPK
+    play      Play an audio file
+    run       Run a service
+    save      Save a session
+    db        Interact with the database
+    info      Print info
+    pack      Package resources [.tar.zst]
+    unpack    Unpackage resources [.tar.zst]
+    quit      Shutdown services
+    help      Print this message or the help of the given subcommand(s)
+#+end_example
+** =mpk_config=
+User configuration with read/write support for TOML (typically from
+=mpk.toml=). Used to initialize other modules at runtime (for example
+=DbConfig= for =Mdb::new_with_config=).
+** =mpk_db=
+The =Mdb= struct provides an API to the underlying SQLite database
+which works with the custom structs defined in [[file:src/mpk_db/src/types.rs][types.rs]]. 
+- *Tables*
+  - tracks
+    #+begin_example
+id integer,
+path text,
+filesize integer,
+duration integer,
+channels integer,
+bitrate integer,
+samplerate integer,
+checksum text,
+updated datetime
+    #+end_example
+  - track_tags
+    #+begin_example
+track_id integer,
+artist text,
+title text,
+album text,
+genre text,
+date text,
+tracknumber text,
+format text,
+language text,
+country text,
+label text,
+producer text,
+engineer text,
+mixer text,
+    #+end_example
+  - track_tags_musicbrainz
+    #+begin_example
+track_id integer,
+albumartistid text,
+albumid text,
+albumstatus text,
+albumtype text,
+artistid text,
+releasegroupid text,
+releasetrackid text,
+trackid text,
+asin text,
+musicip_puid text
+    #+end_example
+  - track_features_lowlevel
+    #+begin_example
+track_id integer,
+average_loudness real,
+barkbands_kurtosis blob,
+barkbands_skewness blob,
+barkbands_spread blob,
+barkbands_frame_size integer,
+barkbands blob,
+dissonance blob,
+hfc blob,
+pitch blob,
+pitch_instantaneous_confidence blob,
+pitch_salience blob,
+silence_rate_20db blob,
+silence_rate_30db blob,
+silence_rate_60db blob,
+spectral_centroid blob,
+spectral_complexity blob,
+spectral_crest blob,
+spectral_decrease blob,
+spectral_energy blob,
+spectral_energyband_high blob,
+spectral_energyband_low blob,
+spectral_energyband_middle_high blob,
+spectral_energyband_middle_low blob,
+spectral_flatness_db blob,
+spectral_flux blob,
+spectral_kurtosis blob,
+spectral_rms blob,
+spectral_rolloff blob,
+spectral_skewness blob,
+spectral_spread blob,
+spectral_strongpeak blob,
+zerocrossingrate blob,
+mfcc_frame_size integer,
+mfcc blob,
+sccoeffs_frame_size integer,
+sccoeffs blob,
+scvalleys_frame_size integer,
+scvalleys blob,
+    #+end_example
+  - track_features_rhythm
+    #+begin_example
+track_id integer,
+bpm real,
+confidence real,
+onset_rate real,
+beats_loudness blob,
+first_peak_bpm integer,
+first_peak_spread real,
+first_peak_weight real,
+second_peak_bpm integer,
+second_peak_spread real,
+second_peak_weight real,
+beats_position blob,
+bpm_estimates blob,
+bpm_intervals blob,
+onset_times blob,
+beats_loudness_band_ratio_frame_size integer,
+beats_loudness_band_ratio blob,
+histogram blob
+    #+end_example
+  - track_features_sfx
+    #+begin_example
+track_id integer,
+pitch_after_max_to_before_max_energy_ratio real,
+pitch_centroid real,
+pitch_max_to_total real,
+pitch_min_to_total real,
+inharmonicity blob,
+oddtoevenharmonicenergyratio blob,
+tristimulus blob
+    #+end_example
+  - track_features_tonal
+    #+begin_example
+track_id integer,
+chords_changes_rate real,
+chords_number_rate real,
+key_strength real,
+tuning_diatonic_strength real,
+tuning_equal_tempered_deviation real,
+tuning_frequency real,
+tuning_nontempered_energy_ratio real,
+chords_strength blob,
+chords_histogram blob,
+thpcp blob,
+hpcp_frame_size integer,
+hpcp blob,
+chords_key text,
+chords_scale text,
+key_key text,
+key_scale text,
+chords_progression blob,
+    #+end_example
+  - track_images
+    #+begin_example
+track_id integer,
+mel_frame_size integer,
+mel_spec blob,
+log_frame_size integer,
+log_spec blob,
+freq_frame_size integer,
+freq_spec blob
+    #+end_example
+  - track_user_data
+    #+begin_example
+track_id integer,
+user_tags text,
+notes text,
+    #+end_example
+  - samples
+    #+begin_example
+id integer,
+path text,
+filesize integer,
+duration integer,
+channels integer,
+bitrate integer,
+samplerate integer,
+checksum text
+    #+end_example
+  - sample_features_lowlevel
+    #+begin_example
+sample_id integer,
+average_loudness real,
+barkbands_kurtosis blob,
+barkbands_skewness blob,
+barkbands_spread blob,
+barkbands_frame_size integer,
+barkbands blob,
+dissonance blob,
+hfc blob,
+pitch blob,
+pitch_instantaneous_confidence blob,
+pitch_salience blob,
+silence_rate_20db blob,
+silence_rate_30db blob,
+silence_rate_60db blob,
+spectral_centroid blob,
+spectral_complexity blob,
+spectral_crest blob,
+spectral_decrease blob,
+spectral_energy blob,
+spectral_energyband_high blob,
+spectral_energyband_low blob,
+spectral_energyband_middle_high blob,
+spectral_energyband_middle_low blob,
+spectral_flatness_db blob,
+spectral_flux blob,
+spectral_kurtosis blob,
+spectral_rms blob,
+spectral_rolloff blob,
+spectral_skewness blob,
+spectral_spread blob,
+spectral_strongpeak blob,
+zerocrossingrate blob,
+mfcc_frame_size integer,
+mfcc blob,
+sccoeffs_frame_size integer,
+sccoeffs blob,
+scvalleys_frame_size integer,
+scvalleys blob
+    #+end_example
+  - sample_features_rhythm
+    #+begin_example
+sample_id integer,
+bpm real,
+confidence real,
+onset_rate real,
+beats_loudness blob,
+first_peak_bpm integer,
+first_peak_spread real,
+first_peak_weight real,
+second_peak_bpm integer,
+second_peak_spread real,
+second_peak_weight real,
+beats_position blob,
+bpm_estimates blob,
+bpm_intervals blob,
+onset_times blob,
+beats_loudness_band_ratio_frame_size integer,
+beats_loudness_band_ratio blob,
+histogram blob
+    #+end_example
+  - sample_features_sfx
+    #+begin_example
+sample_id integer,
+pitch_after_max_to_before_max_energy_ratio real,
+pitch_centroid real,
+pitch_max_to_total real,
+pitch_min_to_total real,
+inharmonicity blob,
+oddtoevenharmonicenergyratio blob,
+tristimulus blob
+    #+end_example
+  - sample_features_tonal
+    #+begin_example
+sample_id integer,
+chords_changes_rate real,
+chords_number_rate real,
+key_strength real,
+tuning_diatonic_strength real,
+tuning_equal_tempered_deviation real,
+tuning_frequency real,
+tuning_nontempered_energy_ratio real,
+chords_strength blob,
+chords_histogram blob,
+thpcp blob,
+hpcp_frame_size integer,
+hpcp blob,
+chords_key text,
+chords_scale text,
+key_key text,
+key_scale text,
+chords_progression blob
+    #+end_example
+  - sample_images
+    #+begin_example
+sample_id integer,
+mel_frame_size integer,
+mel_spec blob,
+log_frame_size integer,
+log_spec blob,
+freq_frame_size integer,
+freq_spec blob
+    #+end_example
+  - sample_user_data
+    #+begin_example
+sample_id integer,
+user_tags text,
+notes text,
+    #+end_example
+  - projects
+    #+begin_example
+id integer,
+name text,
+path text,
+type text
+    #+end_example
+  - project_user_data
+    #+begin_example
+project_id integer,
+user_tags text,
+notes text
+    #+end_example
+** =mpk_py=
+The MIR[fn:3] tool (=mpk_extract.py=) uses Python as a bridge between
+Essentia[fn:4] for feature extraction and the MPK database. There are
+a huge amount of features stored in the database (/97/ at time of
+writing), but the feature set will be reduced in future iterations as
+I find the features which are most useful to me. As for the extraction
+algorithms, My plan is to RWiR[fn:5] and reduce DB size by applying
+zstd[fn:6] compression.
+
+#+begin_src artist
+           +------------------+                             
+           |  mpk_extract.py  |                            _____________        
+           +--------+---------+                           /             \       +--------+  +-----------------+
+                    |                                 +-}| Extract(f[0]) |----->| POOL[0]|  |       DB        |
+                    |                                /    \____________ /       |  -  -  |  | -  -  -  -  -  -|
+                    |              +---------+      /      _____________    |   | POOL[1]|  |        |        |
+            +---------------+      |         |     /      /             \       |  -  -  |  |                 |
+            |collect_files()|{---->| [files] |----X-----}| Extract(f[1]) |----->|        |  | tracks | samples|
+            +---------------+      |         |     \      \____________ /       |[ .... ]|  |                 |
+                 /    \            +---------+      \      _____________    |   |        |  |        |        |
+                /      \                             \    /             \       |  -  -  |  |                 |
+               /        \                             +-}| Extract(f[N]) |----->| POOL[N]|  |        |        |
+              o          o                                \____________ /       +--------+  +-----------------+
+  +-----------------+-----------------+                                             |                ^
+  |                 |                 |                                             v                |
+  |     tracks      |     samples     |                                       +------------+         |
+  |                 |                 |                                       | insert_*() |---------+
+  +-----------------+-----------------+                                       +------------+  
+
+#+end_src
+
+[fn:3]  [[https://en.wikipedia.org/wiki/Music_information_retrieval][Music information retrieval - Wikipedia]]
+
+[fn:4] [[https://essentia.upf.edu/][Essentia - Music Technology Group - Universitat Pompeu Fabra]]
+
+[fn:5] [[https://transitiontech.ca/random/RIIR][ansuz - /random/RIIR]]
+
+[fn:6] [[http://facebook.github.io/zstd/][Zstandard - Real-time data compression algorithm]]
+
+** =mpk_ffi=
+C-compatible MPK FFI with C-header and python binding generators.
+** =mpk_audio=
+The audio module leverages [[https://github.com/RustAudio/cpal][cpal]] and [[https://github.com/RustAudio/rodio][rodio]] for audio playback and
+recording. It provides high-level standalone tools with simple use
+cases such as playing an audio file on disk and isn't designed for
+low-level DSP.
+- *Modules*
+  - metro :: a convenient metronome
+  - chain :: sample chainer[fn:7]
+
+[fn:7] [[https://github.com/KaiDrange/OctaChainer][GitHub - KaiDrange/OctaChainer]] 
+** =mpk_flate=
+Zstd compression and Tar archival utilities.
+** =mpk_codec=
+Audio file encoding and decoding.
+** =mpk_gear=
+MPK interface for hardware devices connected via USB.
+- Elektron Octatrack MKII
+- Elektron Analog Rytm MKII
+- DSI Prophet Rev2
+- Korg SV-1
+** =mpk_jack=
+MPK interface for JACK.
+** =mpk_sesh=
+MPK session management. Inspired by NSM
+** =mpk_midi=
+MPK MIDI interface supporting real-time processing, encoding/decoding,
+and Sysex patching.
+** =mpk_http=
+HTTP client APIs for MPK. Currently includes [[https://freesound.org/][freesound.org]],
+[[https://musicbrainz.org/][musicbrainz.org]], and [[https://coverartarchive.org/][coverartarchive.org]].
+** =mpk_osc=
+OSC (Open Sound Control) APIs for MPK. Includes an API client for [[https://new-session-manager.jackaudio.org/][NSM]] (New/Non-Session
+Manager).
+** =mpk_hash=
+[[https://github.com/BLAKE3-team/BLAKE3][BLAKE3]] hashing utilities (for file checksums)
 * tasks
-** TODO refactor FFI
-** TODO bootstrap DB
-** TODO freesound analysis I/O with python
+** TODO readme v2
+** TODO mpk_config updates [3/4]
+*** DONE add support for external paths
+add external track/sample locations
+*** TODO add support for Elektron USB mode                             :gear:
+add external drive locations
+
+*** DONE env variables
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:12]
+- =MPK_CONFIG=
+- =MPK_SAMPLES=
+- =MPK_TRACKS=
+- =MPK_LOG= ?
+- use enum?
+- macros only return value at compile-time. need to use std::env functions directly
+*** DONE metro and chain config
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:12]
+- both subsections in audio section - [audio.chain] and [audio.metro]?
+  - audio.chain default output
+  - audio.metro default bpm/sig tic/toc
+** TODO docstrings [0/5]
+*** TODO DB
+*** TODO config
+*** TODO audio
+*** TODO FFI
+** DONE finish mpk_extract [8/8]
+*** DONE debug CStrings                                                 :ffi:
+some strings fields are broken when inserting to db - UUIDs, VecText, and VecReal
+- test DB blob insert with floats. if these are ok then they can be ignored
+- check CStrings and make sure they're handled correctly
+*** DONE upserts                                                         :db:
+add update functionality with =WHERE= clauses
+*** DONE retrieve sample_id correctly
+should never insert id of 0 when duplicate found, update or noop instead
+*** DONE account for missing values in essentia
+essentia will miss fields if sample is too short
+*** DONE get paths from config                                       :config:
+- Note taken on [2022-03-29 Tue 17:10] \\
+  using cli args input with std::Process from Rust instead
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:10]
+input else tracks/samples from config else current path
+
+*** DONE incremental batch extractor
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:11]
+- this will likely require a threadpool
+- extractor segfaults when working with large directories, need to
+  insert into db after each extraction
+*** DONE populate all columns in tracks table
+- State "DONE"       from "TODO"       [2022-03-18 Fri 22:36]
+Currently only inserting path
+*** DONE fix MatrixReal segfault
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:11]
+- probably best to switch to ndarray instead of vec<vec<>>
+- likely a dereference issue
+** DONE mpk_midi init [1/1]
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:12]
+just need enough to make emacs integration - =mpk-midi.el=
+can start with terminal process then move to C dynamic module
+check [[https://github.com/jnykopp/emaccordion][jnykopp/emaccordion]]
+*** DONE MIDI config                                                 :config:
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:12]
+** DONE refactor FFI
+** DONE bootstrap DB
+** DONE freesound analysis I/O with python
+
+

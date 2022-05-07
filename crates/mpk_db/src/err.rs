@@ -5,7 +5,6 @@ use std::fmt;
 pub enum Error {
   BadValue(String),
   Db(sled::Error),
-  
 }
 
 impl fmt::Display for Error {

@@ -4,12 +4,14 @@
 //! remote processes. The Dispatcher takes ownership of an
 //! ExternalPrinter which is used to asynchronously print status and
 //! response messages back to the client.
-use crate::parser::ast::{AstNode, SysVerb};
-use crate::ExternalPrinter;
-use mpk_osc::{decoder, encoder, OscMessage, OscPacket, OscType};
 use std::net::{SocketAddr, ToSocketAddrs};
+
+use mpk_osc::{decoder, encoder, OscMessage, OscPacket, OscType};
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::{error::TryRecvError, Receiver};
+
+use crate::parser::ast::{AstNode, SysVerb};
+use crate::ExternalPrinter;
 
 pub const MTU: usize = 1536;
 

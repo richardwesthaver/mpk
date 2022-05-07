@@ -1,7 +1,8 @@
 //! MPK_DB/TYPES -- META
-use super::{IdVec, Key, Uri, Val};
 use bincode::{deserialize, serialize};
 use serde::{Deserialize, Serialize};
+
+use super::{IdVec, Key, Uri, Val};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum MetaKind {
@@ -46,8 +47,8 @@ impl From<MetaKind> for Vec<u8> {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct Meta {
-  id: MetaKind,
-  nodes: IdVec,
+  pub id: MetaKind,
+  pub nodes: IdVec,
 }
 
 impl Key for Meta {

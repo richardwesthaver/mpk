@@ -153,6 +153,11 @@ task test, "run MPK tests":
     else:
       rustTest()
 
+task bench, "run MPK benchmarks":
+  withDir getVcRoot():
+    withDir "tests/benches":
+      exec "cargo bench"
+
 task info, "print system, dependency, and project info":
   hostInfo()
   echo ""

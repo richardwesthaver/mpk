@@ -1,6 +1,7 @@
 //! MPK_DB -- QUERY
-use crate::{EdgeKey, Id, Prop, Error};
 use std::str::FromStr;
+
+use crate::{EdgeKey, Error, Id, Prop};
 
 macro_rules! impl_node_query {
   ($i:ident, $v:ident) => {

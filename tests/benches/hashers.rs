@@ -1,9 +1,8 @@
 #![feature(test)]
 #![cfg(test)]
 extern crate test;
-use test::Bencher;
-
 use benches::{b3_range, djb2_range, fx_range};
+use test::Bencher;
 
 #[bench]
 fn b3_hash_1k(b: &mut Bencher) {

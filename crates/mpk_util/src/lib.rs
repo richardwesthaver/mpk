@@ -1,10 +1,10 @@
 //! MPK_UTIL
 pub mod nsm;
-pub use indicatif::{ProgressBar, ProgressStyle};
-
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+
+pub use indicatif::{ProgressBar, ProgressStyle};
 
 /// utility function to expand `~` in PATH.
 pub fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {
@@ -64,6 +64,21 @@ pub fn timestamp_nanos() -> u128 {
     .duration_since(std::time::SystemTime::UNIX_EPOCH)
     .expect("SystemTime is before UNIX_EPOCH?")
     .as_nanos()
+}
+
+/// format a size in bytes to a human-readable format.
+pub fn format_byte_size(b: u64) -> String {
+  let b: f32 = b as f32;
+  let i: f32 = 1024_f32;
+  if b < i {
+    format!("{}", b)
+  } else if b < i * i {
+    format!("{}{}", b / i, "kb")
+  } else if b < i * i * i {
+    format!("{}{}", b / (i * i), "mb")
+  } else {
+    format!("{}{}", b / (i * i * i), "gb")
+  }
 }
 
 /// Walk a directory PATH, applying function WALKER to each file and

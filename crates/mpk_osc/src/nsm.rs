@@ -14,12 +14,14 @@
 //! so for full session support you need a Linux box available.
 //!
 //! REF: https://new-session-manager.jackaudio.org
-use crate::{decoder, encoder, Error, OscPacket, OscType, Result, ToOsc};
-use mpk_util::nsm::*;
 use std::fmt;
 use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
 use std::path::PathBuf;
 use std::str::FromStr;
+
+use mpk_util::nsm::*;
+
+use crate::{decoder, encoder, Error, OscPacket, OscType, Result, ToOsc};
 
 pub const NSM_API_VERSION_MAJOR: u8 = 1;
 pub const NSM_API_VERSION_MINOR: u8 = 1;

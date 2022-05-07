@@ -1,12 +1,11 @@
 //! MPK_REPL
+pub use mpk_parser as parser;
 use rustyline::ExternalPrinter;
 use rustyline::{
   completion::FilenameCompleter, highlight::MatchingBracketHighlighter,
   hint::HistoryHinter, validate::MatchingBracketValidator, CompletionType, Config,
   EditMode, Editor,
 };
-
-pub use mpk_parser as parser;
 
 mod err;
 pub use err::{Error, Result};

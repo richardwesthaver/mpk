@@ -22,10 +22,12 @@ pub trait ToOsc {
 
 #[cfg(test)]
 mod tests {
-  use super::{nsm::*, ToOsc};
+  use std::net::UdpSocket;
+
   use rosc::encoder;
   use rosc::{OscMessage, OscPacket, OscType};
-  use std::net::UdpSocket;
+
+  use super::{nsm::*, ToOsc};
 
   fn spawn_nsmd() {
     std::process::Command::new("nohup")

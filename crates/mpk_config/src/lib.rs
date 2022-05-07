@@ -1,20 +1,20 @@
 //! MPK CONFIG
 //!
 //! Configuration types
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 use std::str::FromStr;
 use std::time::{Duration, SystemTime};
 
 use mpk_util::expand_tilde;
+use serde::{Deserialize, Serialize};
 
 mod err;
 pub use err::{Error, Result};
 
 pub const DEFAULT_PATH: &str = "~/mpk";
 pub const CONFIG_FILE: &str = "mpk.toml";
-pub const DB_FILE: &str = "mpk.db";
+pub const DB_PATH: &str = "db";
 
 /// MPK Configuration
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -71,8 +71,10 @@ impl Config {
     if !root.exists() {
       fs::create_dir(&root)?;
     }
-    for i in
-      ["analysis", "samples", "sesh", "plugins", "patches", "tracks"].map(|x| root.join(x))
+    for i in [
+      "analysis", "samples", "sesh", "plugins", "patches", "tracks",
+    ]
+    .map(|x| root.join(x))
     {
       if !i.exists() {
         fs::create_dir(root.join(i))?;
@@ -89,7 +91,7 @@ pub struct FsConfig {
   pub root: String,
   pub ext_samples: Option<Vec<String>>,
   pub ext_tracks: Option<Vec<String>>,
-  pub ext_projects: Option<Vec<String>>,
+  pub ext_sesh: Option<Vec<String>>,
   pub ext_plugins: Option<Vec<String>>,
   pub ext_patches: Option<Vec<String>>,
 }
@@ -100,7 +102,7 @@ impl Default for FsConfig {
       root: DEFAULT_PATH.into(),
       ext_samples: None,
       ext_tracks: None,
-      ext_projects: None,
+      ext_sesh: None,
       ext_plugins: None,
       ext_patches: None,
     }
@@ -161,8 +163,8 @@ impl FsConfig {
           None
         }
       }
-      "projects" => {
-        if let Some(ps) = &self.ext_projects {
+      "sesh" => {
+        if let Some(ps) = &self.ext_sesh {
           Some(ps.iter().map(|p| PathBuf::from(p)).collect::<Vec<_>>())
         } else {
           None
@@ -226,7 +228,7 @@ impl Default for DbConfig {
   fn default() -> Self {
     DbConfig {
       path: PathBuf::from(
-        [DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), DB_FILE].concat(),
+        [DEFAULT_PATH, &MAIN_SEPARATOR.to_string(), DB_PATH].concat(),
       ),
       mode: DbMode::Fast,
       cache_capacity: 1024 * 1024 * 1024, // 1gb

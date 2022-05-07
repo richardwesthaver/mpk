@@ -12,7 +12,11 @@
 //!
 //! REF: https://freesound.org/docs/api/
 //! ENDPOINT: https://freesound.org/apiv2/
-use crate::{Client, Error, Result};
+use std::cmp::min;
+use std::fmt;
+use std::path::Path;
+use std::time::SystemTime;
+
 use futures_util::StreamExt;
 use mpk_config::{ClientConfig, Config};
 use mpk_util::{open_browser, ProgressBar, ProgressStyle};
@@ -23,13 +27,11 @@ use oauth2::{
 };
 use reqwest::{IntoUrl, RequestBuilder, Response, Url};
 use serde::Deserialize;
-use std::cmp::min;
-use std::fmt;
-use std::path::Path;
-use std::time::SystemTime;
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
+
+use crate::{Client, Error, Result};
 pub const FREESOUND_ENDPOINT: &str = "https://freesound.org/apiv2";
 
 pub async fn write_sound<P: AsRef<Path>>(
@@ -222,7 +224,7 @@ impl FreeSoundClient {
     if let Some(d) = self.cfg.expires {
       let exp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("SystemTime is befoer UNIX_EPOCH!?")
+        .expect("SystemTime is before UNIX_EPOCH!?")
         .as_secs();
       if exp < d {
         let client = self.auth_client();
@@ -271,7 +273,7 @@ impl FreeSoundClient {
 pub enum FreeSoundRequest<'a> {
   SearchText {
     query: &'a str,
-    filter: &'a str,
+    filter: Option<&'a str>,
     sort: &'a str,
     group_by_pack: bool,
     weights: &'a str,
@@ -369,9 +371,8 @@ impl<'a> FreeSoundRequest<'a> {
       } => {
         let gbp = if *group_by_pack { "1" } else { "0" }.to_string();
         let normalized = if *normalized { "1" } else { "0" }.to_string();
-        vec![
+        let mut params = vec![
           ("query".to_string(), query.to_string()),
-          ("filter".to_string(), filter.to_string()),
           ("sort".to_string(), sort.to_string()),
           ("group_by_pack".to_string(), gbp),
           ("normalized".to_string(), normalized),
@@ -380,7 +381,11 @@ impl<'a> FreeSoundRequest<'a> {
           ("descriptors".to_string(), descriptors.join(",")),
           ("page".to_string(), page.to_string()),
           ("page_size".to_string(), page_size.to_string()),
-        ]
+        ];
+        if let Some(f) = filter {
+          params.push(("filter".to_string(), f.to_string()));
+        }
+        params
       }
       _ => {
         vec![]

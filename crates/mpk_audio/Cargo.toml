@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 mpk_config = { path = "../mpk_config" }
-rodio = { version = "0.15", features = ["symphonia-all"] }
+rodio = "0.15"
+ringbuf = "0.2.8"
 hound = "3.4"
 claxon = "0.4"

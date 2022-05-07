@@ -1,7 +1,8 @@
 //! MPK_DB/TYPES -- NODE
+use std::hash::{Hash, Hasher};
+
 use bincode::{deserialize, serialize};
 use serde::{Deserialize, Serialize};
-use std::hash::{Hash, Hasher};
 use ulid::Ulid;
 
 use super::{Id, Key, Val};

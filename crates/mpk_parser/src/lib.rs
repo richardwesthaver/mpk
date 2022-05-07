@@ -2,9 +2,10 @@
 #[macro_use]
 extern crate pest_derive;
 
+use std::ffi::CString;
+
 use pest::error::Error;
 use pest::Parser;
-use std::ffi::CString;
 
 pub mod ast;
 use ast::*;

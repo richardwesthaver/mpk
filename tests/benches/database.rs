@@ -1,14 +1,12 @@
 #![feature(test)]
 #![cfg(test)]
 extern crate test;
-use test::Bencher;
-
-use mpk_db::Factory;
-
 use benches::{
   db_init, gen_keys, gen_vals, init_edge_factory, init_node_factory, serialize_edge,
   serialize_edgevec, serialize_node, serialize_nodevec,
 };
+use mpk_db::Factory;
+use test::Bencher;
 
 #[bench]
 fn insert_8x64_1k(b: &mut Bencher) {
@@ -19,7 +17,8 @@ fn insert_8x64_1k(b: &mut Bencher) {
     for i in 0..keys.len() {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
     }
-  })
+  });
+  db.flush().unwrap();
 }
 
 #[bench]
@@ -31,7 +30,8 @@ fn insert_8x64_10k(b: &mut Bencher) {
     for i in 0..keys.len() {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
     }
-  })
+  });
+  db.flush().unwrap();
 }
 
 #[bench]
@@ -43,7 +43,8 @@ fn insert_8x64_100k(b: &mut Bencher) {
     for i in 0..keys.len() {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
     }
-  })
+  });
+  db.flush().unwrap();
 }
 
 #[bench]
@@ -57,6 +58,7 @@ fn insert_node_1k(b: &mut Bencher) {
       db.flush().unwrap();
     }
   });
+  db.flush().unwrap();
 }
 
 #[bench]
@@ -67,9 +69,9 @@ fn insert_node_10k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..10_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
-      db.flush().unwrap();
     }
   });
+  db.flush().unwrap();
 }
 
 #[bench]
@@ -80,9 +82,9 @@ fn insert_node_100k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..100_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
-      db.flush().unwrap();
     }
   });
+  db.flush().unwrap();
 }
 
 #[bench]
@@ -93,9 +95,9 @@ fn insert_edge_1k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..1_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
-      db.flush().unwrap();
     }
   });
+  db.flush().unwrap();
 }
 
 #[bench]
@@ -106,9 +108,9 @@ fn insert_edge_10k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..10_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
-      db.flush().unwrap();
     }
   });
+  db.flush().unwrap();
 }
 
 #[bench]
@@ -119,7 +121,7 @@ fn insert_edge_100k(b: &mut Bencher) {
   b.iter(|| {
     for i in 0..100_000 {
       db.insert(&keys[i], vals[i].as_slice()).unwrap();
-      db.flush().unwrap();
     }
   });
+  db.flush().unwrap();
 }

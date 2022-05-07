@@ -12,15 +12,16 @@
 //! directory at the project root after executing 'nim build'.
 
 #![allow(clippy::missing_safety_doc)]
+use std::ffi::{CStr, CString, OsStr};
+use std::os::unix::ffi::OsStrExt;
+use std::path::Path;
+use std::slice;
+
 use libc::{c_char, size_t};
 // we must import individual crates instead of the mpk library to
 // ensure cbindgen will generate bindings.
 use mpk_config::{Config, DbConfig, FsConfig, JackConfig};
 use mpk_hash::Checksum;
-use std::ffi::{CStr, CString, OsStr};
-use std::os::unix::ffi::OsStrExt;
-use std::slice;
-use std::path::Path;
 
 /// An array of bytes with a fixed length. Represents a BLAKE3 hash.
 #[repr(C)]

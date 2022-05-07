@@ -1,8 +1,11 @@
 //! MPK_DB/TYPES -- URI
-use super::Key;
-use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::path::PathBuf;
 use std::str::FromStr;
+
+use serde::{Deserialize, Serialize};
+
+use super::Key;
 
 pub enum UriError {
   BadScheme(String),
@@ -69,6 +72,14 @@ impl FromStr for Uri {
     let scheme = UriScheme::from_str(split.next().unwrap())?;
     let path = split.next().unwrap().to_string();
     Ok(Uri { scheme, path })
+  }
+}
+
+impl From<PathBuf> for Uri {
+  fn from(path: PathBuf) -> Uri {
+    let scheme = UriScheme::File;
+    let path = path.to_string_lossy().to_string();
+    Uri { scheme, path }
   }
 }
 

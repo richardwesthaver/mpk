@@ -46,7 +46,7 @@ pub fn parse_nsm_url(url: &str) -> Result<SocketAddr, Error> {
   }
 }
 
-/// Get the NSM_URL given the PID of a running nsmd server and return
+/// Return the NSM_URL given the PID of a running nsmd server and return
 /// a SocketAddr. The server needs to be started by the same user
 /// executing this function. The NSM_URL is parsed from the daemon
 /// state file at `/run/user/UID/nsm/d/PID`.

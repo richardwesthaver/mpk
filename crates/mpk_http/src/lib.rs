@@ -10,8 +10,9 @@ pub mod musicbrainz;
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use mpk_config::{Config, NetworkConfig};
+
+  use super::*;
   #[tokio::test]
   async fn async_simple_get() {
     Client::new()

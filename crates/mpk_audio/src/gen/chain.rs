@@ -1,8 +1,10 @@
-use crate::err::{Error, Result};
-use rodio::{source::UniformSourceIterator, Decoder};
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+
+use rodio::{source::UniformSourceIterator, Decoder};
+
+use crate::err::{Error, Result};
 
 #[derive(Debug)]
 pub enum ChainExt {

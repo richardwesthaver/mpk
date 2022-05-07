@@ -13,9 +13,8 @@ pub use id::{Id, IdVec};
 pub use meta::{Meta, MetaKind};
 pub use node::{Node, NodeKind, NodeVec};
 pub use prop::{EdgeProp, EdgeProps, NodeProp, NodeProps, Prop};
-pub use uri::Uri;
-
 use serde::Serialize;
+pub use uri::Uri;
 
 pub trait Key: Serialize {
   type Key;

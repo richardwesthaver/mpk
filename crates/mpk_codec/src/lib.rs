@@ -4,9 +4,9 @@ pub mod ffmpeg;
 #[cfg(feature = "snd")]
 pub mod snd;
 
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::fmt;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum Error {
@@ -51,36 +51,50 @@ impl AudioMetadata {
   pub fn from_ffmpeg<P: AsRef<Path>>(path: P) -> Result<AudioMetadata, Error> {
     match ffmpeg::decode(&path) {
       Ok(ctx) => {
-	let tags = ffmpeg::get_tags(&ctx);
-	if let Some(stream) = ctx.streams().best(ffmpeg::media::Type::Audio) {
+        let tags = ffmpeg::get_tags(&ctx);
+        if let Some(stream) = ctx.streams().best(ffmpeg::media::Type::Audio) {
           let duration = stream.duration() as f64 * f64::from(stream.time_base());
-	  let codec = ffmpeg::codec::context::Context::from_parameters(stream.parameters()).unwrap();
-	  match codec.decoder().audio() {
-	    Ok(audio) => {
-	      let sr = audio.rate();
-	      let channels = audio.channels();
-	      Ok(AudioMetadata { path: path.as_ref().to_path_buf(), duration, channels, sr, tags })
-	    },
-	    Err(e) => Err(e.into())
-	  }
-	} else {
-	  Err(ffmpeg::Error::InvalidData.into())
-	}
-      },
-      Err(e) => Err(e.into())
+          let codec =
+            ffmpeg::codec::context::Context::from_parameters(stream.parameters())
+              .unwrap();
+          match codec.decoder().audio() {
+            Ok(audio) => {
+              let sr = audio.rate();
+              let channels = audio.channels();
+              Ok(AudioMetadata {
+                path: path.as_ref().to_path_buf(),
+                duration,
+                channels,
+                sr,
+                tags,
+              })
+            }
+            Err(e) => Err(e.into()),
+          }
+        } else {
+          Err(ffmpeg::Error::InvalidData.into())
+        }
+      }
+      Err(e) => Err(e.into()),
     }
   }
   #[cfg(feature = "snd")]
   pub fn from_snd<P: AsRef<Path>>(path: P) -> Result<AudioMetadata, Error> {
     match snd::decode(&path) {
       Ok(mut ctx) => {
-	let sr = ctx.get_samplerate() as u32;
-	let channels = ctx.get_channels() as u16;
-	let duration = ctx.len().unwrap() as f64 / sr as f64;
-	let tags = snd::get_tags(&ctx);
-	Ok(AudioMetadata { path: path.as_ref().to_path_buf(), duration, channels, sr, tags })
-      },
-      Err(e) => Err(e.into())
+        let sr = ctx.get_samplerate() as u32;
+        let channels = ctx.get_channels() as u16;
+        let duration = ctx.len().unwrap() as f64 / sr as f64;
+        let tags = snd::get_tags(&ctx);
+        Ok(AudioMetadata {
+          path: path.as_ref().to_path_buf(),
+          duration,
+          channels,
+          sr,
+          tags,
+        })
+      }
+      Err(e) => Err(e.into()),
     }
   }
 }
@@ -98,7 +112,12 @@ mod tests {
   #[cfg(feature = "ffmpeg")]
   #[test]
   fn ffmpeg_get_tags_test() {
-    for (k, v) in ffmpeg::get_tags(&ffmpeg::decode("/Users/ellis/mpk/tracks/mp3/03. Fuck The Police.mp3").unwrap()).unwrap().iter() {
+    for (k, v) in ffmpeg::get_tags(
+      &ffmpeg::decode("/Users/ellis/mpk/tracks/mp3/03. Fuck The Police.mp3").unwrap(),
+    )
+    .unwrap()
+    .iter()
+    {
       dbg!(format!("{}: {}", k, v));
     }
   }
@@ -118,7 +137,15 @@ mod tests {
   #[cfg(feature = "snd")]
   #[test]
   fn snd_get_tags_test() {
-    for (k,v) in snd::get_tags(&snd::decode("/Users/ellis/mpk/tracks/Kanye West/808s & Heartbreak/03 Heartless.flac").unwrap()).unwrap().iter() {
+    for (k, v) in snd::get_tags(
+      &snd::decode(
+        "/Users/ellis/mpk/tracks/Kanye West/808s & Heartbreak/03 Heartless.flac",
+      )
+      .unwrap(),
+    )
+    .unwrap()
+    .iter()
+    {
       dbg!(format!("{}: {}", k, v));
     }
   }

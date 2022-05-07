@@ -1,7 +1,8 @@
-use crate::parser::ast::AstNode;
-use crate::parser::parse;
 use rustyline::{Editor, Helper};
 use tokio::sync::mpsc;
+
+use crate::parser::ast::AstNode;
+use crate::parser::parse;
 
 pub const CH_LEN: usize = 32;
 

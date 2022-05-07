@@ -1,9 +1,10 @@
 //! MPK_DB -- FACTORY
+use bincode::{deserialize, serialize};
+use serde::{Deserialize, Serialize};
+
 use crate::{
   Edge, EdgeKind, EdgeProp, Key, Meta, MetaKind, Node, NodeKind, NodeProp, Prop, Val,
 };
-use bincode::{deserialize, serialize};
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy)]
 pub enum FactoryError {

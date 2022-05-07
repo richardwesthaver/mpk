@@ -1,8 +1,14 @@
 //! MPK_OSC ARDOUR API
 //!
 //! REF: https://manual.ardour.org/using-control-surfaces/controlling-ardour-with-osc/
-use crate::{ // decoder, encoder,
-	    Error, OscPacket, OscType, Result, ToOsc};
+use crate::{
+  // decoder, encoder,
+  Error,
+  OscPacket,
+  OscType,
+  Result,
+  ToOsc,
+};
 // use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
 
 /// A Client for Ardour.

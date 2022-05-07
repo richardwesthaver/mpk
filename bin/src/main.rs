@@ -1,22 +1,22 @@
-use mpk::{Error,
-	  midi,
-	  osc,
-	  http,
-	  repl,
-	  flate,
-	  jack,
-	  gear,
-	  audio::{self, gen::SampleChain},
-	  config::Config,
-	  db::Db,
-	  http::freesound::{write_sound, FreeSoundRequest, FreeSoundResponse},
-	  util::expand_tilde};
-
-use clap::{AppSettings, Parser, Subcommand};
-
 use std::io;
 use std::path::PathBuf;
 use std::sync::mpsc::sync_channel;
+
+use clap::{AppSettings, Parser, Subcommand};
+use mpk::{
+  analysis,
+  audio::{self, gen::SampleChain},
+  config::Config,
+  db::{
+    Db, Edge, EdgeTree, Factory, Key, Meta, MetaKind, MetaTree, Node, NodeKind,
+    NodeTree, TreeHandle, Val, TREE_NAMES,
+  },
+  flate, gear, http,
+  http::freesound::{write_sound, FreeSoundRequest, FreeSoundResponse},
+  jack, midi, osc, repl,
+  util::{expand_tilde, walk_dir},
+  Error,
+};
 
 #[derive(Parser)]
 #[clap(name = "mpk")]
@@ -106,9 +106,7 @@ enum Command {
 #[derive(Subcommand)]
 enum Runner {
   /// start a JACK service
-  Jack {
-    name: String,
-  },
+  Jack { name: String },
   /// create a sample chain
   Chain {
     #[clap(parse(from_os_str))]
@@ -127,13 +125,25 @@ enum Runner {
     time_sig: Option<String>,
   },
   /// Monitor MIDI messages from input
-  Monitor {
-    input: Option<usize>,
-  },
+  Monitor { input: Option<usize> },
 }
 
 #[derive(Subcommand)]
 enum DbCmd {
+  Query {
+    source: Option<String>,
+    artist: Option<String>,
+    album: Option<String>,
+    playlist: Option<String>,
+    coll: Option<String>,
+    genre: Option<String>,
+  },
+  Sync {
+    #[clap(long, short)]
+    samples: bool,
+    #[clap(long, short)]
+    tracks: bool,
+  },
 }
 
 #[derive(Subcommand)]
@@ -194,7 +204,11 @@ async fn main() -> Result<(), Error> {
       cfg.build()?;
       cfg.write(cfg_path)?;
       let db_path = cfg.db.path;
-      Db::open(expand_tilde(db_path))?;
+      let db = Db::open(expand_tilde(db_path))?;
+      for i in TREE_NAMES {
+        db.open_tree(i)?;
+      }
+      db.flush()?;
       println!("\x1b[1;32mDONE\x1b[0m");
     }
     Command::Status {
@@ -218,7 +232,7 @@ async fn main() -> Result<(), Error> {
       if db {
         println!("\x1b[1mDB INFO\x1b[0m");
         let db = Db::with_config(cfg.db)?;
-	db.info()?;
+        db.info()?;
       }
     }
     Command::Play {
@@ -235,13 +249,14 @@ async fn main() -> Result<(), Error> {
       };
       let file: Result<String, Error> = if let Some(f) = file {
         Ok(f.to_str().unwrap().into())
-      } // else if let Some(q) = query {
-//        let db = Db::with_config(cfg.db)?;
-//        let path = db.query_track(q.parse().unwrap())?.path;
-//        let info = db.query_track_tags(q.parse().unwrap())?;
-//        println!("playing {} - {}", info.artist.unwrap(), info.title.unwrap());
-//        Ok(path)
-//    }
+      }
+      // else if let Some(q) = query {
+      //        let db = Db::with_config(cfg.db)?;
+      //        let path = db.query_track(q.parse().unwrap())?.path;
+      //        let info = db.query_track_tags(q.parse().unwrap())?;
+      //        println!("playing {} - {}", info.artist.unwrap(), info.title.unwrap());
+      //        Ok(path)
+      //    }
       else {
         Err(std::io::Error::from(std::io::ErrorKind::NotFound).into())
       };
@@ -249,11 +264,39 @@ async fn main() -> Result<(), Error> {
       audio::play(file.unwrap(), &device, volume, speed, rx)
     }
 
-    Command::Db {
-      cmd: _,
-    } => {
-      let _conn = Db::with_config(cfg.db)?;
-    }
+    Command::Db { cmd } => match cmd {
+      DbCmd::Sync { samples, tracks } => {
+        let db = Db::with_config(cfg.db)?;
+        let mut media = NodeTree::open(db.inner(), "media")?;
+        let mut meta = MetaTree::open(db.inner(), "meta")?;
+        if samples {
+          let tags = analysis::tag_walk(cfg.fs.get_path("samples")?);
+          for m in tags {
+            let node = Node::new(NodeKind::Sample);
+            let path = Meta {
+              id: MetaKind::Path(m.path.into()),
+              nodes: vec![node.key().clone()],
+            };
+            media.insert(&node)?;
+            meta.insert(&path.into())?;
+          }
+          db.flush()?;
+        };
+        if tracks {
+          let tags = analysis::tag_walk(cfg.fs.get_path("tracks")?);
+          for m in tags {
+            let node = Node::new(NodeKind::Track);
+            let path = Meta {
+              id: MetaKind::Path(m.path.into()),
+              nodes: vec![node.key().clone()],
+            };
+            media.insert(&node)?;
+            meta.insert(&path.into())?;
+          }
+        };
+      }
+      _ => todo!(),
+    },
     Command::Sesh { cmd } => {
       let mut client = osc::nsm::NsmClient::new(
         "mpk",
@@ -306,7 +349,7 @@ async fn main() -> Result<(), Error> {
           } else if cmd.eq("search") {
             let req = FreeSoundRequest::SearchText {
               query: &query.unwrap(),
-              filter: "tag:guitar",
+              filter: None,
               sort: "",
               group_by_pack: false,
               weights: "",
@@ -355,8 +398,7 @@ async fn main() -> Result<(), Error> {
       let (mut evaluator, rx) = repl::Evaluator::new(rl);
       let disp = tokio::spawn(async move {
         let mut dispatcher =
-          repl::Dispatcher::new(printer, "127.0.0.1:0", "127.0.0.1:57813", rx)
-            .await;
+          repl::Dispatcher::new(printer, "127.0.0.1:0", "127.0.0.1:57813", rx).await;
         dispatcher.run().await;
       });
       evaluator.parse(true).await;
@@ -441,7 +483,7 @@ async fn main() -> Result<(), Error> {
           tx.send(audio::gen::metro::MetroMsg::Stop).unwrap();
           std::process::exit(1);
         });
-      },
+      }
       Runner::Monitor { input } => midi::monitor(input)?,
     },
   }

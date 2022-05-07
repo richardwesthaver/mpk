@@ -1,5 +1,4 @@
 //! MPK_DB
-#![feature(generic_associated_types)]
 mod db;
 mod err;
 mod factory;
@@ -13,19 +12,21 @@ pub use factory::{
   EdgeFactory, EdgePropFactory, Factory, MetaFactory, NodeFactory, NodePropFactory,
 };
 pub use query::{EdgeQuery, EdgeQueryExt, NodeQuery, NodeQueryExt};
-pub use tree::{EdgeTree, NodeTree, TreeHandle, TREE_NAMES};
-pub use types::*;
-
 pub use sled::Batch;
+pub use tree::{
+  EdgePropTree, EdgeTree, MetaTree, NodePropTree, NodeTree, TreeHandle, TREE_NAMES,
+};
+pub use types::*;
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use mpk_config::DbConfig;
   use ulid::Ulid;
 
+  use super::*;
+
   fn db() -> Db {
-    Db::open(None).unwrap()
+    Db::open(None::<String>).unwrap()
   }
 
   #[test]

@@ -1,9 +1,10 @@
-use rodio::{Decoder, Source};
 use std::io::BufReader;
 use std::path::Path;
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
+
+use rodio::{Decoder, Source};
 
 pub fn calc_beat_delta(bpm: u16, lower: u8) -> Duration {
   let quarter_note_sec: f64 = 60f64 / bpm as f64;

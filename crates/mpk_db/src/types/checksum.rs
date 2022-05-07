@@ -1,7 +1,8 @@
 //! MPK_DB/TYPES -- CHECKSUM
-use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::Path;
+
+use serde::{Deserialize, Serialize};
 
 /// B3 hash checksum - 256-bit value. We could adjust the OUTPUT_LEN
 /// parameter if needed.

@@ -1,9 +1,8 @@
 #+TITLE: Gear
-#+DATE: 2022-03-02
+#+DATE: 2022-05-06
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: RTFM
-
 * Octatrack MKII
 [[https://www.elektron.se/support/?connection=octatrack-mkii#resources][Manufacturer Resources]]
 [[https://www.elektron.se/wp-content/uploads/2021/03/Octatrack-MKII-User-Manual_ENG_OS1.40A_210414.pdf][Manual]]
@@ -69,10 +68,3 @@ enum Stretch_t { NoStrech = 0, Normal = 2, Beat = 3 };
 * APC40 MKII
 
 * Volca Beats
-
-* COMMENT notes
-#+begin_comment
-Local variables:
-mode: org
-end:
-#+end_comment

@@ -1,9 +1,5 @@
-use mpk::{Error,
-	  config::Config,
-	  engine::Engine,
-	  util::expand_tilde};
-
 use clap::Parser;
+use mpk::{config::Config, engine::Engine, util::expand_tilde, Error};
 
 #[derive(Parser)]
 #[clap(name = "mpkd")]

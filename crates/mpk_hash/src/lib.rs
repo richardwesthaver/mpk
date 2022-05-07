@@ -1,13 +1,13 @@
-pub use blake3::{
-  derive_key, hash, keyed_hash, Hash as B3Hash, Hasher as B3Hasher, OutputReader,
-};
-pub use rustc_hash::FxHasher;
-
-use rand::Rng;
 use std::fs::File;
 use std::hash::Hasher;
 use std::io::{BufReader, Read};
 use std::path::Path;
+
+pub use blake3::{
+  derive_key, hash, keyed_hash, Hash as B3Hash, Hasher as B3Hasher, OutputReader,
+};
+use rand::Rng;
+pub use rustc_hash::FxHasher;
 pub const KEY_LEN: usize = 32;
 pub const OUT_LEN: usize = 32;
 pub const HEX_LEN: usize = KEY_LEN * 2;
@@ -80,9 +80,11 @@ impl Hasher for Djb2 {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use hex::decode;
   use std::convert::TryInto;
+
+  use hex::decode;
+
+  use super::*;
   #[test]
   fn rand_id() {
     let id = Checksum::rand();

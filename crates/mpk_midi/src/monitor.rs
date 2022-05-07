@@ -2,9 +2,11 @@
 //!
 //! A simple MIDI monitor which prints all incoming messages from a
 //! specified input to stdout.
-use crate::{Error, Result};
-use midir::{Ignore, MidiInput, MidiInputPort};
 use std::io::{stdin, stdout, Write};
+
+use midir::{Ignore, MidiInput, MidiInputPort};
+
+use crate::{Error, Result};
 
 pub fn get_midi_input_port(
   midi_in: &MidiInput,

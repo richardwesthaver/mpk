@@ -1,9 +1,8 @@
 #![feature(test)]
 #![cfg(test)]
 extern crate test;
-use test::Bencher;
-
 use benches::{init_edge_factory, serialize_edge, serialize_edgevec};
+use test::Bencher;
 
 #[bench]
 fn edge_serialize_val(b: &mut Bencher) {
