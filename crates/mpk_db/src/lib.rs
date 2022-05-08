@@ -1,4 +1,5 @@
 //! MPK_DB
+#![feature(generic_associated_types)]
 mod db;
 mod err;
 mod factory;

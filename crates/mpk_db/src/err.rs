@@ -5,6 +5,8 @@ use std::fmt;
 pub enum Error {
   BadValue(String),
   Db(sled::Error),
+  BadUriScheme(String),
+  BadUriPath(String),
 }
 
 impl fmt::Display for Error {
@@ -12,6 +14,8 @@ impl fmt::Display for Error {
     match self {
       Error::BadValue(s) => write!(f, "bad value: {}", s),
       Error::Db(ref e) => e.fmt(f),
+      Error::BadUriScheme(s) => write!(f, "bad URI scheme: {}", s),
+      Error::BadUriPath(s) => write!(f, "bad URI path: {}", s),
     }
   }
 }

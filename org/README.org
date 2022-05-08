@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-05-06
+#+DATE: 2022-05-07
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Programming Kit
@@ -220,16 +220,10 @@ settings aren't included in the default file:
 * Dev Dependencies
 =*= := /use your OS package manager (apt, brew, pacman, etc)/
 - [[https://www.rust-lang.org/tools/install][Rust]] :: install with [[https://rustup.rs/][rustup.rs]]
-- [[https://www.python.org/][Python]]3.9 :: use [[https://github.com/pyenv/pyenv][pyenv]] to switch Python version globally. Python 3.10 is not supported. *
 - C Compiler :: [[https://gcc.gnu.org/][GCC]] or [[https://llvm.org/][LLVM]] *
 - [[https://nim-lang.org/][Nim]] :: *
   - used as a build tool via [[https://nim-lang.org/docs/nims.html][NimScript]].
 - [[https://jackaudio.org/][JACK]] :: *
 - [[https://new-session-manager.jackaudio.org][NSM]] :: *
-- [[https://python-poetry.org/][poetry]] :: =pip= or *
-- [[https://black.readthedocs.io/en/stable/][black]] :: =pip= or *
-- [[https://essentia.upf.edu/][essentia]] :: try a =pip install= from the [[https://github.com/MTG/essentia][github repo]], if that
-  doesn't work you will need to [[https://essentia.upf.edu/installing.html][install from source]]. If you have
-  issues just contact me.
 - [[https://valgrind.org/][Valgrind]] :: *
   - used to detect issues with FFI memory management.

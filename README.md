@@ -7,18 +7,18 @@ This application is intended for artists, hackers, and composers. Batteries are 
 
 # Table of Contents
 
-1.  [On Digital Audio Workstations](#orgca1583e)
-    1.  [DAW Workflows](#org048fdb0)
-    2.  [DAWs as Instruments](#org7820d3e)
-    3.  [A new paradigm](#org7ca3d6a)
-2.  [Usage](#orgf0ad266)
-    1.  [Installation](#org77cd8c8)
-    2.  [Initialization](#org16c77cd)
-    3.  [Configuration](#org43ac4e4)
-3.  [Dev Dependencies](#orgc4f77a9)
+1.  [On Digital Audio Workstations](#orge55a03e)
+    1.  [DAW Workflows](#orge7fb161)
+    2.  [DAWs as Instruments](#orga28e89e)
+    3.  [A new paradigm](#orgf05c3fa)
+2.  [Usage](#orga0f8584)
+    1.  [Installation](#orgd57c302)
+    2.  [Initialization](#orgf28206c)
+    3.  [Configuration](#org085d4db)
+3.  [Dev Dependencies](#org55e2717)
 
 
-<a id="orgca1583e"></a>
+<a id="orge55a03e"></a>
 
 # TODO On Digital Audio Workstations
 
@@ -36,7 +36,7 @@ Indeed, the DAW has been an important evolution in the ways we make music. For a
 -   [CCRMA - Music 192B: Week 2, Digital Audio Workstations](https://ccrma.stanford.edu/courses/192b/ProTools-Logic%20Lec.pdf)
 
 
-<a id="org048fdb0"></a>
+<a id="orge7fb161"></a>
 
 ## DAW Workflows
 
@@ -53,7 +53,7 @@ Let’s take a moment to consider an elementary DAW workflow. For this example, 
 There is a healthy level of variation in how these steps are performed, but the structure is relatively the same.
 
 
-<a id="org7820d3e"></a>
+<a id="orga28e89e"></a>
 
 ## DAWs as Instruments
 
@@ -69,7 +69,7 @@ There is a healthy level of variation in how these steps are performed, but the 
 -   [Miller Puckette, IRCAM - The Patcher](http://msp.ucsd.edu/Publications/icmc88.pdf)
 
 
-<a id="org7ca3d6a"></a>
+<a id="orgf05c3fa"></a>
 
 ## A new paradigm
 
@@ -80,7 +80,7 @@ There is a healthy level of variation in how these steps are performed, but the 
 -   [OpenSoundControl.org](https://ccrma.stanford.edu/groups/osc/index.html)
 
 
-<a id="orgf0ad266"></a>
+<a id="orga0f8584"></a>
 
 # Usage
 
@@ -89,7 +89,7 @@ MPK is meant to be used on a Linux box. In this example we'll be using Arch Linu
 MPK also runs on MacOS but some of the project management functionality isn't available. Most notably, you can't run the [NSM](https://new-session-manager.jackaudio.org) server on MacOS, but you can still interact with one remotely. All other features are supported on both platforms.
 
 
-<a id="org77cd8c8"></a>
+<a id="orgd57c302"></a>
 
 ## Installation
 
@@ -116,7 +116,7 @@ Simply run `nim install` in the project root to install the mpk binaries in `~/.
 Run `nim help` to see the other commands and flags available.
 
 
-<a id="org16c77cd"></a>
+<a id="orgf28206c"></a>
 
 ## Initialization
 
@@ -135,7 +135,7 @@ tracks
 ```
 
 
-<a id="org43ac4e4"></a>
+<a id="org085d4db"></a>
 
 ## Configuration
 
@@ -192,22 +192,18 @@ Much of the configuration can be overridden by CLI flags but you may want to cha
 -   net.{`freesound`, `musicbrainz`, `youtube`, `spotify`}
 
 
-<a id="orgc4f77a9"></a>
+<a id="org55e2717"></a>
 
 # Dev Dependencies
 
 `*` := *use your OS package manager (apt, brew, pacman, etc)*
 
 -   **[Rust](https://www.rust-lang.org/tools/install):** install with [rustup.rs](https://rustup.rs/)
--   **[Python](https://www.python.org/)3.9:** use [pyenv](https://github.com/pyenv/pyenv) to switch Python version globally. Python 3.10 is not supported. \*
 -   **C Compiler:** [GCC](https://gcc.gnu.org/) or [LLVM](https://llvm.org/) \*
 -   **[Nim](https://nim-lang.org/):** \*
     -   used as a build tool via [NimScript](https://nim-lang.org/docs/nims.html).
 -   **[JACK](https://jackaudio.org/):** \*
 -   **[NSM](https://new-session-manager.jackaudio.org):** \*
--   **[poetry](https://python-poetry.org/):** `pip` or \*
--   **[black](https://black.readthedocs.io/en/stable/):** `pip` or \*
--   **[essentia](https://essentia.upf.edu/):** try a `pip install` from the [github repo](https://github.com/MTG/essentia), if that doesn't work you will need to [install from source](https://essentia.upf.edu/installing.html). If you have issues just contact me.
 -   **[Valgrind](https://valgrind.org/):** \*
     -   used to detect issues with FFI memory management.
 

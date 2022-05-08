@@ -1,4 +1,6 @@
 //! MPK_DB/TYPES -- META
+use std::path::PathBuf;
+
 use bincode::{deserialize, serialize};
 use serde::{Deserialize, Serialize};
 
@@ -7,10 +9,11 @@ use super::{IdVec, Key, Uri, Val};
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum MetaKind {
   Path(Uri),
+  Source(Uri),
   Artist(String),
   Album(String),
   Playlist(String),
-  Crate(String),
+  Coll(String),
   Genre(String),
 }
 
@@ -30,6 +33,13 @@ impl From<Vec<u8>> for MetaKind {
 impl From<&[u8]> for MetaKind {
   fn from(v: &[u8]) -> MetaKind {
     deserialize(v).unwrap()
+  }
+}
+
+impl From<PathBuf> for MetaKind {
+  fn from(p: PathBuf) -> MetaKind {
+    let uri: Uri = p.into();
+    MetaKind::Path(uri)
   }
 }
 

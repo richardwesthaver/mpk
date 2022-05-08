@@ -622,6 +622,13 @@ OSC (Open Sound Control) APIs for MPK. Includes an API client for [[https://new-
 Manager).
 ** =mpk_hash=
 [[https://github.com/BLAKE3-team/BLAKE3][BLAKE3]] hashing utilities (for file checksums)
+* generic arrays
+  - use std::array::from_fn for generic arrays
+    - #![feature(array_from_fn)]
+  - use GATs for graph design
+    - #![feature(generic_associated_types)]
+  - may also need associated type defaults
+    - #![feature(associated_type_defaults)]
 * tasks
 ** TODO readme v2
 ** TODO mpk_config updates [3/4]
@@ -687,5 +694,10 @@ check [[https://github.com/jnykopp/emaccordion][jnykopp/emaccordion]]
 ** DONE refactor FFI
 ** DONE bootstrap DB
 ** DONE freesound analysis I/O with python
-
-
+** TODO platform-specific default configs
+  jack.audio = 'alsa'
+  jack.media = 'seq'
+** TODO add resources
+** TODO finish On DAWs
+** TODO init osc/sc
+https://doc.sccode.org/Reference/Server-Architecture.html

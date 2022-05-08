@@ -1,6 +1,7 @@
 //! MPK_DB -- TREE
 use std::ops::Deref;
 
+// use std::ops::RangeBounds;
 use bincode::{deserialize, serialize};
 use serde::Serialize;
 use sled::{
@@ -14,10 +15,22 @@ use crate::{
   NodePropFactory, Prop, Val,
 };
 
-pub const TREE_NAMES: [&str; 5] =
-  ["media", "media_props", "meta", "edge", "edge_props"];
+pub const TREE_NAMES: [&str; 12] = [
+  "media",
+  "media_props",
+  "meta",
+  "path",
+  "artist",
+  "album",
+  "genre",
+  "coll",
+  "playlist",
+  "source",
+  "edge",
+  "edge_props",
+];
 
-pub trait TreeHandle<'de>: Sized {
+pub trait TreeHandle: Sized {
   type Ty: Key + Val;
   type Key: Key;
   type Val: Val;
@@ -28,6 +41,14 @@ pub trait TreeHandle<'de>: Sized {
     &mut self,
     key: &K,
   ) -> Result<Option<Self::Val>, Error>;
+  fn get_lt<K: Serialize + Into<Self::Key>>(
+    &mut self,
+    key: &K,
+  ) -> Result<Option<(Self::Key, Self::Val)>, Error>;
+  fn get_gt<K: Serialize + Into<Self::Key>>(
+    &mut self,
+    key: &K,
+  ) -> Result<Option<(Self::Key, Self::Val)>, Error>;
   fn exists<K: Serialize + Into<Self::Key>>(&self, key: &K) -> Result<bool, Error>;
   fn remove<K: Serialize + Into<Self::Key>>(
     &mut self,
@@ -39,6 +60,9 @@ pub trait TreeHandle<'de>: Sized {
     old: Option<Self::Val>,
     new: Option<Self::Val>,
   ) -> Result<Result<(), CompareAndSwapError>, Error>;
+  //  fn range<R: RangeBounds<Self::Key>>(&self, range: R) -> Iter;
+  //  fn iter(&self) -> Iter;
+  //  fn scan_prefix<P>(&self, prefix: P) -> Iter
   fn batch(&mut self, batch: Batch) -> Result<(), Error>;
   fn transaction(&mut self, vals: &[Self::Ty]) -> TransactionResult<()>;
   fn watch_prefix<P: AsRef<[u8]>>(&self, prefix: P) -> Subscriber;
@@ -58,7 +82,7 @@ macro_rules! impl_deref_tree {
 
 macro_rules! impl_tree {
   ($i:ident, $k:ident, $v:ident, $t:ident, $f:ident) => {
-    impl<'de> TreeHandle<'de> for $i {
+    impl TreeHandle for $i {
       type Key = $k;
       type Val = $v;
       type Ty = $t;
@@ -91,6 +115,42 @@ macro_rules! impl_tree {
             if let Some(v) = v {
               let val = deserialize(&v).unwrap();
               Ok(Some(val))
+            } else {
+              Ok(None)
+            }
+          }
+          Err(e) => Err(e.into()),
+        }
+      }
+      fn get_lt<K: Serialize + Into<$k>>(
+        &mut self,
+        key: &K,
+      ) -> Result<Option<($k, $v)>, Error> {
+        let key: Vec<u8> = serialize(key).unwrap();
+        match self.tree.get_lt(&key) {
+          Ok(v) => {
+            if let Some((k, v)) = v {
+              let key = deserialize(&k).unwrap();
+              let val = deserialize(&v).unwrap();
+              Ok(Some((key, val)))
+            } else {
+              Ok(None)
+            }
+          }
+          Err(e) => Err(e.into()),
+        }
+      }
+      fn get_gt<K: Serialize + Into<$k>>(
+        &mut self,
+        key: &K,
+      ) -> Result<Option<($k, $v)>, Error> {
+        let key: Vec<u8> = serialize(key).unwrap();
+        match self.tree.get_gt(&key) {
+          Ok(v) => {
+            if let Some((k, v)) = v {
+              let key = deserialize(&k).unwrap();
+              let val = deserialize(&v).unwrap();
+              Ok(Some((key, val)))
             } else {
               Ok(None)
             }

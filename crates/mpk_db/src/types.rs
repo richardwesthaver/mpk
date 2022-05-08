@@ -16,8 +16,8 @@ pub use prop::{EdgeProp, EdgeProps, NodeProp, NodeProps, Prop};
 use serde::Serialize;
 pub use uri::Uri;
 
-pub trait Key: Serialize {
-  type Key;
+pub trait Key {
+  type Key: Serialize;
   fn key(&self) -> &Self::Key;
 }
 

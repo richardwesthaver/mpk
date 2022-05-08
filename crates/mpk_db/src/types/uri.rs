@@ -6,11 +6,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 use super::Key;
-
-pub enum UriError {
-  BadScheme(String),
-  BadPath(String),
-}
+use crate::Error;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum UriScheme {
@@ -24,8 +20,8 @@ pub enum UriScheme {
 }
 
 impl FromStr for UriScheme {
-  type Err = UriError;
-  fn from_str(str: &str) -> Result<UriScheme, UriError> {
+  type Err = Error;
+  fn from_str(str: &str) -> Result<UriScheme, Error> {
     match str {
       "file" => Ok(UriScheme::File),
       "http" => Ok(UriScheme::Http),
@@ -34,7 +30,7 @@ impl FromStr for UriScheme {
       "yt" => Ok(UriScheme::Yt),
       "sp" => Ok(UriScheme::Sp),
       "fs" => Ok(UriScheme::Fs),
-      e => Err(UriError::BadScheme(e.to_string())),
+      e => Err(Error::BadUriScheme(e.to_string())),
     }
   }
 }
@@ -60,14 +56,14 @@ pub struct Uri {
 }
 
 impl Uri {
-  pub fn new(uri: &str) -> Result<Uri, UriError> {
+  pub fn new(uri: &str) -> Result<Uri, Error> {
     Uri::from_str(uri)
   }
 }
 
 impl FromStr for Uri {
-  type Err = UriError;
-  fn from_str(str: &str) -> Result<Uri, UriError> {
+  type Err = Error;
+  fn from_str(str: &str) -> Result<Uri, Error> {
     let mut split = str.splitn(2, ':');
     let scheme = UriScheme::from_str(split.next().unwrap())?;
     let path = split.next().unwrap().to_string();

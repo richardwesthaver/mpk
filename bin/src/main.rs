@@ -9,7 +9,7 @@ use mpk::{
   config::Config,
   db::{
     Db, Edge, EdgeTree, Factory, Key, Meta, MetaKind, MetaTree, Node, NodeKind,
-    NodeTree, TreeHandle, Val, TREE_NAMES,
+    NodeTree, TreeHandle, Uri, Val, TREE_NAMES,
   },
   flate, gear, http,
   http::freesound::{write_sound, FreeSoundRequest, FreeSoundResponse},
@@ -62,11 +62,28 @@ enum Command {
     #[clap(short)]
     device: Option<String>,
   },
-  /// Run services
-  Run {
+  Jack {
     #[clap(subcommand)]
-    runner: Runner,
+    cmd: JackCmd,
   },
+  Chain {
+    #[clap(parse(from_os_str))]
+    input: Vec<PathBuf>,
+    #[clap(short, long, parse(from_os_str))]
+    output: PathBuf,
+    #[clap(short, long)]
+    even: bool,
+    /// Generate an octatrack data file (.ot)
+    #[clap(long)]
+    ot: bool,
+  },
+  /// start the metronome
+  Metro {
+    bpm: Option<u16>,
+    time_sig: Option<String>,
+  },
+  /// Monitor MIDI messages from input
+  Monitor { input: Option<usize> },
   /// MPK DB
   Db {
     #[clap(subcommand)]
@@ -104,38 +121,26 @@ enum Command {
 }
 
 #[derive(Subcommand)]
-enum Runner {
-  /// start a JACK service
-  Jack { name: String },
-  /// create a sample chain
-  Chain {
-    #[clap(parse(from_os_str))]
-    input: Vec<PathBuf>,
-    #[clap(short, long, parse(from_os_str))]
-    output: PathBuf,
-    #[clap(short, long)]
-    even: bool,
-    /// Generate an octatrack data file (.ot)
-    #[clap(long)]
-    ot: bool,
-  },
-  /// start the metronome
-  Metro {
-    bpm: Option<u16>,
-    time_sig: Option<String>,
-  },
-  /// Monitor MIDI messages from input
-  Monitor { input: Option<usize> },
+enum JackCmd {
+  Show,
+  Start { name: Option<String> },
+  Stop,
 }
 
 #[derive(Subcommand)]
 enum DbCmd {
   Query {
-    source: Option<String>,
+    #[clap(long, short)]
+    path: Option<String>,
+    #[clap(long, short)]
     artist: Option<String>,
+    #[clap(long, short)]
     album: Option<String>,
+    #[clap(long, short)]
     playlist: Option<String>,
+    #[clap(long, short)]
     coll: Option<String>,
+    #[clap(long, short)]
     genre: Option<String>,
   },
   Sync {
@@ -264,39 +269,54 @@ async fn main() -> Result<(), Error> {
       audio::play(file.unwrap(), &device, volume, speed, rx)
     }
 
-    Command::Db { cmd } => match cmd {
-      DbCmd::Sync { samples, tracks } => {
-        let db = Db::with_config(cfg.db)?;
-        let mut media = NodeTree::open(db.inner(), "media")?;
-        let mut meta = MetaTree::open(db.inner(), "meta")?;
-        if samples {
-          let tags = analysis::tag_walk(cfg.fs.get_path("samples")?);
-          for m in tags {
-            let node = Node::new(NodeKind::Sample);
-            let path = Meta {
-              id: MetaKind::Path(m.path.into()),
-              nodes: vec![node.key().clone()],
-            };
-            media.insert(&node)?;
-            meta.insert(&path.into())?;
+    Command::Db { cmd } => {
+      let db = Db::with_config(cfg.db)?;
+      match cmd {
+        DbCmd::Sync { samples, tracks } => {
+          let mut media = NodeTree::open(db.inner(), "media")?;
+          let mut meta = MetaTree::open(db.inner(), "meta")?;
+          if samples {
+            let tags = analysis::tag_walk(cfg.fs.get_path("samples")?);
+            for m in tags {
+              let node = Node::new(NodeKind::Sample);
+              let path = Meta {
+                id: MetaKind::Path(m.path.into()),
+                nodes: vec![node.key().clone()],
+              };
+              media.insert(&node)?;
+              meta.insert(&path.into())?;
+            }
+            db.flush()?;
+          };
+          if tracks {
+            let tags = analysis::tag_walk(cfg.fs.get_path("tracks")?);
+            for m in tags {
+              let node = Node::new(NodeKind::Track);
+              let path = Meta {
+                id: MetaKind::Path(m.path.into()),
+                nodes: vec![node.key().clone()],
+              };
+              media.insert(&node)?;
+              meta.insert(&path.into())?;
+            }
+          };
+        }
+        DbCmd::Query {
+          path,
+          artist: _,
+          album: _,
+          playlist: _,
+          coll: _,
+          genre: _,
+        } => {
+          let mut meta = MetaTree::open(db.inner(), "meta")?;
+          if let Some(s) = path {
+            let res = meta.get::<MetaKind>(&PathBuf::from(s).into())?;
+            println!("{:?}", res);
           }
-          db.flush()?;
-        };
-        if tracks {
-          let tags = analysis::tag_walk(cfg.fs.get_path("tracks")?);
-          for m in tags {
-            let node = Node::new(NodeKind::Track);
-            let path = Meta {
-              id: MetaKind::Path(m.path.into()),
-              nodes: vec![node.key().clone()],
-            };
-            media.insert(&node)?;
-            meta.insert(&path.into())?;
-          }
-        };
+        }
       }
-      _ => todo!(),
-    },
+    }
     Command::Sesh { cmd } => {
       let mut client = osc::nsm::NsmClient::new(
         "mpk",
@@ -421,72 +441,77 @@ async fn main() -> Result<(), Error> {
         flate::unpack(input, output)
       }
     }
-    Command::Run { runner } => match runner {
-      Runner::Jack { name } => {
-        // Wait for user input to quit
-        let (tx, rx) = sync_channel(1);
-        println!("Press enter to quit...");
-        tokio::spawn(async move {
-          let mut input = String::new();
-          io::stdin().read_line(&mut input).ok();
-          tx.send(()).unwrap();
-        });
-        jack::internal_client(&name, rx);
+    Command::Jack { cmd } => {
+      match cmd {
+        JackCmd::Show => {
+          jack::show_transport();
+        }
+        JackCmd::Start { name } => {
+          // Wait for user input to quit
+          let (tx, rx) = sync_channel(1);
+          println!("Press enter to quit...");
+          tokio::spawn(async move {
+            let mut input = String::new();
+            io::stdin().read_line(&mut input).ok();
+            tx.send(()).unwrap();
+          });
+          jack::internal_client(&name.unwrap(), rx);
+        }
+        JackCmd::Stop => {}
       }
-      Runner::Chain {
-        input,
-        output,
-        even,
-        ot,
-      } => {
-        let mut chain = SampleChain {
-          output_file: output.with_extension(""),
-          output_ext: output
-            .extension()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .parse()
-            .unwrap(),
-          ..Default::default()
-        };
-        for i in &input {
-          chain.add_file(i)?;
-        }
-        for i in &input {
-          chain.process_file(i, even)?;
-        }
-        if ot {
-          gear::octatrack::generate_ot_file(&mut chain)?;
-        }
+    }
+    Command::Chain {
+      input,
+      output,
+      even,
+      ot,
+    } => {
+      let mut chain = SampleChain {
+        output_file: output.with_extension(""),
+        output_ext: output
+          .extension()
+          .unwrap()
+          .to_str()
+          .unwrap()
+          .parse()
+          .unwrap(),
+        ..Default::default()
+      };
+      for i in &input {
+        chain.add_file(i)?;
       }
-      Runner::Metro { bpm, time_sig } => {
-        let bpm = match bpm {
-          Some(b) => b,
-          None => cfg.metro.bpm,
-        };
-        let sig: (u8, u8) = match time_sig {
-          Some(t) => {
-            let tsig: Vec<u8> =
-              t.trim().split('/').map(|x| x.parse().unwrap()).collect();
-            (tsig[0], tsig[1])
-          }
-          None => cfg.metro.time_sig,
-        };
+      for i in &input {
+        chain.process_file(i, even)?;
+      }
+      if ot {
+        gear::octatrack::generate_ot_file(&mut chain)?;
+      }
+    }
+    Command::Metro { bpm, time_sig } => {
+      let bpm = match bpm {
+        Some(b) => b,
+        None => cfg.metro.bpm,
+      };
+      let sig: (u8, u8) = match time_sig {
+        Some(t) => {
+          let tsig: Vec<u8> = t.trim().split('/').map(|x| x.parse().unwrap()).collect();
+          (tsig[0], tsig[1])
+        }
+        None => cfg.metro.time_sig,
+      };
 
-        let metro = audio::gen::Metro::new(bpm, sig.0, sig.1);
-        let tx = metro.start(cfg.metro.tic.unwrap(), cfg.metro.toc.unwrap());
-        println!("Press enter to stop...");
-        tokio::spawn(async move {
-          let mut input = String::new();
-          io::stdin().read_line(&mut input).unwrap();
-          tx.send(audio::gen::metro::MetroMsg::Stop).unwrap();
-          std::process::exit(1);
-        });
-      }
-      Runner::Monitor { input } => midi::monitor(input)?,
-    },
-  }
+      let metro = audio::gen::Metro::new(bpm, sig.0, sig.1);
+      let tx = metro.start(cfg.metro.tic.unwrap(), cfg.metro.toc.unwrap());
+      println!("Press enter to stop...");
+      tokio::spawn(async move {
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        tx.send(audio::gen::metro::MetroMsg::Stop).unwrap();
+        std::process::exit(1);
+      });
+    }
+    Command::Monitor { input } => midi::monitor(input)?,
+  };
 
   Ok(())
 }
