@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-05-07
+#+DATE: 2022-05-09
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Programming Kit
@@ -137,8 +137,9 @@ First install the dependencies:
   tar -xf essentia-extractors.tar.gz essentia-extractors-v2.1_beta2/streaming_extractor_freesound
   mv essentia-extractors-v2.1_beta2/streaming_extractor_freesound /usr/bin/essentia_streaming_extractor_freesound && rm -r essentia-extractors-v2.1_beta2
 
-  sudo pacman -S nim alsa-lib jack2 ffmpeg new-session-manager
+  sudo pacman -S nim alsa-lib jack2 ffmpeg new-session-manager supercollider
 #+end_src
+
 
 It is recommended to install [[https://nim-lang.org/][Nim]] so that you can run the build scripts
 in =config.nims=.

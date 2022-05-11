@@ -3,11 +3,22 @@ use serde::{Deserialize, Serialize};
 
 use super::{Checksum, Edge, EdgeKey, Id, Key, Node, Uri, Val};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub type PropVec = Vec<Prop>;
+
+impl Val for PropVec {
+  type Val = PropVec;
+  fn val(&self) -> &PropVec {
+    self
+  }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum Prop {
   Checksum(Checksum),
   Source(Uri),
-  Genre(String),
+  Duration(f64),
+  Channels(u16),
+  Samplerate(u32),
   Tags(Vec<String>),
   Notes(Vec<String>),
 }
@@ -19,10 +30,10 @@ impl Val for Prop {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct NodeProp {
-  id: Id,
-  prop: Prop,
+  pub id: Id,
+  pub prop: Prop,
 }
 
 impl Key for NodeProp {
@@ -39,13 +50,27 @@ impl Val for NodeProp {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct NodeProps {
-  id: Node,
-  props: Vec<Prop>,
+  pub id: Id,
+  pub props: PropVec,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+impl Key for NodeProps {
+  type Key = Id;
+  fn key(&self) -> &Id {
+    &self.id
+  }
+}
+
+impl Val for NodeProps {
+  type Val = PropVec;
+  fn val(&self) -> &PropVec {
+    &self.props
+  }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EdgeProp {
   id: EdgeKey,
   prop: Prop,
@@ -65,8 +90,22 @@ impl Val for EdgeProp {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EdgeProps {
-  id: Edge,
-  props: Vec<Prop>,
+  pub id: EdgeKey,
+  pub props: PropVec,
+}
+
+impl Key for EdgeProps {
+  type Key = EdgeKey;
+  fn key(&self) -> &EdgeKey {
+    &self.id
+  }
+}
+
+impl Val for EdgeProps {
+  type Val = PropVec;
+  fn val(&self) -> &PropVec {
+    &self.props
+  }
 }

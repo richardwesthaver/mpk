@@ -15,7 +15,8 @@ pub use factory::{
 pub use query::{EdgeQuery, EdgeQueryExt, NodeQuery, NodeQueryExt};
 pub use sled::Batch;
 pub use tree::{
-  EdgePropTree, EdgeTree, MetaTree, NodePropTree, NodeTree, TreeHandle, TREE_NAMES,
+  meta_merge_op, prop_merge_op, EdgePropTree, EdgeTree, MetaTree, NodePropTree,
+  NodeTree, TreeHandle, TREE_NAMES,
 };
 pub use types::*;
 
@@ -124,5 +125,45 @@ mod tests {
     let (k, v) = tree.factory.serialize(&node).unwrap();
     batch.insert(k, v);
     assert!(tree.batch(batch).is_ok());
+  }
+  #[test]
+  fn meta_tree_test() {
+    use std::path::PathBuf;
+    let db = db();
+    let node = Node::new(NodeKind::Track);
+    let mut meta = MetaTree::open(db.inner(), "meta").unwrap();
+
+    let i1 = Meta {
+      id: MetaKind::Path(PathBuf::from("./").into()),
+      nodes: vec![node.key().clone()],
+    };
+    meta.insert(&i1).unwrap();
+    let i2 = Meta {
+      id: MetaKind::Artist("none".to_string()),
+      nodes: vec![node.key().clone()],
+    };
+    meta.insert(&i2).unwrap();
+    let i3 = Meta {
+      id: MetaKind::Album("none".to_string()),
+      nodes: vec![node.key().clone()],
+    };
+    meta.insert(&i3).unwrap();
+    let i4 = Meta {
+      id: MetaKind::Genre("none".to_string()),
+      nodes: vec![node.key().clone()],
+    };
+    meta.insert(&i4).unwrap();
+  }
+  #[test]
+  fn node_prop_tree_test() {
+    let db = db();
+    let node = Node::new(NodeKind::Track);
+    let mut props = NodePropTree::open(db.inner(), "props").unwrap();
+    let checksum = Checksum::new("../../tests/ch1.wav");
+    let i = NodeProp {
+      id: node.key().clone(),
+      prop: Prop::Checksum(checksum),
+    };
+    props.insert(&i).unwrap();
   }
 }

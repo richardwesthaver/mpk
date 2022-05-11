@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io;
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{channel, sync_channel, Receiver};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -45,13 +45,13 @@ pub fn info() {
 
 pub fn play<P: AsRef<Path>>(
   path: P,
-  device: &Option<Device>,
+  device: Option<Device>,
   vol: Option<f32>,
   speed: Option<f32>,
   pause: Receiver<bool>,
 ) {
   let (_stream, handle) = if let Some(d) = device {
-    rodio::OutputStream::try_from_device(d).unwrap()
+    rodio::OutputStream::try_from_device(&d).unwrap()
   } else {
     rodio::OutputStream::try_default().unwrap()
   };
@@ -117,6 +117,19 @@ pub fn pause_controller_cli() -> Receiver<bool> {
   rx
 }
 
+pub fn stop_controller_cli() -> Receiver<bool> {
+  let (tx, rx) = sync_channel(1);
+  println!("Press enter to stop, C-c to quit...");
+  thread::spawn(move || {
+    let mut input = String::new();
+    loop {
+      io::stdin().read_line(&mut input).ok();
+      tx.send(true).unwrap();
+    }
+  });
+  rx
+}
+
 pub fn sample_format(format: cpal::SampleFormat) -> hound::SampleFormat {
   match format {
     cpal::SampleFormat::U16 => hound::SampleFormat::Int,
@@ -162,7 +175,7 @@ pub fn record<P: AsRef<Path>>(
     cpal::default_host().default_input_device().unwrap()
   };
   let cfg = dev.default_input_config().unwrap();
-
+  let output = output.as_ref();
   let spec = wav_spec_from_config(&cfg);
   let writer = hound::WavWriter::create(output, spec).unwrap();
   let writer = Arc::new(Mutex::new(Some(writer)));
@@ -199,49 +212,56 @@ pub fn record<P: AsRef<Path>>(
   stream.play().unwrap();
   loop {
     if stop
-      .recv_timeout(std::time::Duration::from_millis(500))
+      .recv_timeout(std::time::Duration::from_millis(50))
       .is_ok()
     {
-      drop(&stream);
+      drop(stream);
       writer.lock().unwrap().take().unwrap().finalize().unwrap();
+      println!("recorded to {}", output.display());
+      return Ok(());
     } else {
       continue;
     }
   }
 }
 
-#[test]
-fn all_hosts() {
-  info()
-}
+#[cfg(test)]
+mod tests {
+  use super::*;
+  #[test]
+  fn all_hosts() {
+    info()
+  }
 
-#[test]
-fn beep() {
-  let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
-  let sink = rodio::Sink::try_new(&stream_handle).unwrap();
-  sink.set_volume(0.2);
-  let sin = rodio::source::SineWave::new(55.0);
-  sink.append(sin);
-  std::thread::sleep(std::time::Duration::from_secs(1));
-  sink.detach();
-}
+  #[test]
+  fn beep() {
+    let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+    let sink = rodio::Sink::try_new(&stream_handle).unwrap();
+    sink.set_volume(0.2);
+    let sin = rodio::source::SineWave::new(55.0);
+    sink.append(sin);
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    sink.detach();
+  }
 
-#[test]
-fn sample_chain() {
-  use gen::SampleChain;
-  let mut chain = SampleChain::default();
-  chain.output_file = "../../tests/ch1.wav".into();
-  chain.add_file("../../tests/ch1.wav").unwrap();
-  chain.add_file("../../tests/ch2.wav").unwrap();
-  chain.process_file("../../tests/ch1.wav", false).unwrap();
-  chain.process_file("../../tests/ch2.wav", false).unwrap();
-}
+  #[test]
+  fn sample_chain() {
+    use gen::SampleChain;
+    let mut chain = SampleChain::default();
+    chain.output_file = "../../tests/ch1.wav".into();
+    chain.add_file("../../tests/ch1.wav").unwrap();
+    chain.add_file("../../tests/ch2.wav").unwrap();
+    chain.process_file("../../tests/ch1.wav", false).unwrap();
+    chain.process_file("../../tests/ch2.wav", false).unwrap();
+  }
 
-#[test]
-fn metro() {
-  use gen::metro::MetroMsg::Stop;
-  use gen::Metro;
-  let metro = Metro::new(128, 4, 4).start("../../tests/ch1.wav", "../../tests/ch2.wav");
-  std::thread::sleep(std::time::Duration::from_secs(1));
-  metro.send(Stop).unwrap();
+  #[test]
+  fn metro() {
+    use gen::metro::MetroMsg::Stop;
+    use gen::Metro;
+    let metro =
+      Metro::new(128, 4, 4).start("../../tests/ch1.wav", "../../tests/ch2.wav");
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    metro.send(Stop).unwrap();
+  }
 }

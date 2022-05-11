@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 mpk_config = { path = "../mpk_config" }
+mpk_codec = { path = "../mpk_codec" }
 rodio = "0.15"
 ringbuf = "0.2.8"
 hound = "3.4"
-claxon = "0.4"

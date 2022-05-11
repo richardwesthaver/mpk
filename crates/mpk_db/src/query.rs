@@ -55,7 +55,7 @@ impl From<EdgeDirection> for String {
   }
 }
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum NodeQuery {
   Range(RangeNodeQuery),
   Specific(SpecificNodeQuery),
@@ -95,7 +95,7 @@ impl PropPresenceNodeQuery {
 }
 
 /// Gets vertices with a property equal to a given value.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct PropValueNodeQuery {
   /// The name of the property.
   pub id: Id,
@@ -121,7 +121,7 @@ impl PropValueNodeQuery {
 }
 
 /// Gets vertices with a property.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct PipePropPresenceNodeQuery {
   /// The query to filter.
   pub inner: Box<NodeQuery>,
@@ -150,7 +150,7 @@ impl PipePropPresenceNodeQuery {
 }
 
 /// Gets vertices with a property equal to a given value.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct PipePropValueNodeQuery {
   /// The query to filter.
   pub inner: Box<NodeQuery>,
@@ -288,7 +288,7 @@ impl SpecificNodeQuery {
 ///
 /// Generally, you shouldn't need to construct this directly, but rather call
 /// `.outbound()` or `.inbound()` on an edge query.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct PipeNodeQuery {
   /// The edge query to build off of.
   pub inner: Box<EdgeQuery>,
@@ -349,7 +349,7 @@ impl PipeNodeQuery {
 }
 
 /// Gets property values associated with vertices.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct NodePropQuery {
   /// The vertex query to build off of.
   pub inner: NodeQuery,
@@ -372,7 +372,7 @@ impl NodePropQuery {
   }
 }
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum EdgeQuery {
   Specific(SpecificEdgeQuery),
   Pipe(PipeEdgeQuery),
@@ -415,7 +415,7 @@ impl PropPresenceEdgeQuery {
 }
 
 /// Gets edges with a property equal to a given value.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct PropValueEdgeQuery {
   /// The id of the property.
   pub id: Id,
@@ -437,7 +437,7 @@ impl PropValueEdgeQuery {
 }
 
 /// Gets edges with a property.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct PipePropPresenceEdgeQuery {
   /// The query to filter.
   pub inner: Box<EdgeQuery>,
@@ -461,7 +461,7 @@ impl PipePropPresenceEdgeQuery {
 }
 
 /// Gets edges with a property equal to a given value.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct PipePropValueEdgeQuery {
   /// The query to filter.
   pub inner: Box<EdgeQuery>,
@@ -525,7 +525,7 @@ impl SpecificEdgeQuery {
 ///
 /// Generally, you shouldn't need to construct this directly, but rather call
 /// `.outbound()` or `.inbound()` on a vertex query.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct PipeEdgeQuery {
   /// The vertex query to build off of.
   pub inner: Box<NodeQuery>,
@@ -629,7 +629,7 @@ impl PipeEdgeQuery {
 }
 
 /// Gets property values associated with edges.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct EdgePropQuery {
   /// The edge query to build off of.
   pub inner: EdgeQuery,

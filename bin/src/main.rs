@@ -6,15 +6,17 @@ use clap::{AppSettings, Parser, Subcommand};
 use mpk::{
   analysis,
   audio::{self, gen::SampleChain},
+  codec,
   config::Config,
   db::{
-    Db, Edge, EdgeTree, Factory, Key, Meta, MetaKind, MetaTree, Node, NodeKind,
-    NodeTree, TreeHandle, Uri, Val, TREE_NAMES,
+    meta_merge_op, Checksum, Db, Edge, EdgeKey, EdgeKind, EdgeTree, Factory, Id, Key,
+    Meta, MetaKind, MetaTree, Node, NodeKind, NodePropTree, NodeProps, NodeTree, Prop,
+    TreeHandle, Uri, Val, TREE_NAMES,
   },
   flate, gear, http,
   http::freesound::{write_sound, FreeSoundRequest, FreeSoundResponse},
   jack, midi, osc, repl,
-  util::{expand_tilde, walk_dir},
+  util::expand_tilde,
   Error,
 };
 
@@ -62,6 +64,19 @@ enum Command {
     #[clap(short)]
     device: Option<String>,
   },
+  Record {
+    out: PathBuf,
+  },
+  Transcode {
+    input: PathBuf,
+    output: PathBuf,
+    filter: Option<String>,
+    seek: Option<i64>,
+  },
+  Analyze {
+    input: PathBuf,
+    output: PathBuf,
+  },
   Jack {
     #[clap(subcommand)]
     cmd: JackCmd,
@@ -83,7 +98,9 @@ enum Command {
     time_sig: Option<String>,
   },
   /// Monitor MIDI messages from input
-  Monitor { input: Option<usize> },
+  Monitor {
+    input: Option<usize>,
+  },
   /// MPK DB
   Db {
     #[clap(subcommand)]
@@ -148,6 +165,16 @@ enum DbCmd {
     samples: bool,
     #[clap(long, short)]
     tracks: bool,
+  },
+  Connect {
+    i: String,
+    o: String,
+  },
+  List {
+    #[clap(long, short)]
+    media: bool,
+    #[clap(long, short)]
+    edges: bool,
   },
 }
 
@@ -266,25 +293,56 @@ async fn main() -> Result<(), Error> {
         Err(std::io::Error::from(std::io::ErrorKind::NotFound).into())
       };
       let rx = audio::pause_controller_cli();
-      audio::play(file.unwrap(), &device, volume, speed, rx)
+      audio::play(file.unwrap(), device, volume, speed, rx)
     }
-
+    Command::Record { out } => {
+      let rx = audio::stop_controller_cli();
+      audio::record(None, out, rx)?
+    }
+    Command::Transcode {
+      input,
+      output,
+      filter,
+      seek,
+    } => {
+      codec::ffmpeg::transcode_audio(input, output, filter, seek);
+    }
+    Command::Analyze { input, output } => {
+      analysis::freesound_extract(input, output, None)?;
+    }
     Command::Db { cmd } => {
       let db = Db::with_config(cfg.db)?;
       match cmd {
         DbCmd::Sync { samples, tracks } => {
           let mut media = NodeTree::open(db.inner(), "media")?;
-          let mut meta = MetaTree::open(db.inner(), "meta")?;
+          let mut media_props = NodePropTree::open(db.inner(), "media_props")?;
+          let mut path_meta = MetaTree::open(db.inner(), "path")?;
+          let artist_meta = MetaTree::open(db.inner(), "artist")?;
+          artist_meta.set_merge_op(meta_merge_op);
+          let album_meta = MetaTree::open(db.inner(), "album")?;
+          album_meta.set_merge_op(meta_merge_op);
+          let genre_meta = MetaTree::open(db.inner(), "genre")?;
+          genre_meta.set_merge_op(meta_merge_op);
           if samples {
             let tags = analysis::tag_walk(cfg.fs.get_path("samples")?);
             for m in tags {
               let node = Node::new(NodeKind::Sample);
+              let id = *node.key();
+              let m_path = m.path.clone();
               let path = Meta {
-                id: MetaKind::Path(m.path.into()),
-                nodes: vec![node.key().clone()],
+                id: MetaKind::Path(m_path.into()),
+                nodes: vec![id],
               };
               media.insert(&node)?;
-              meta.insert(&path.into())?;
+              let checksum = Prop::Checksum(Checksum::new(&m.path));
+              let duration = Prop::Duration(m.duration);
+              let channels = Prop::Channels(m.channels);
+              let sr = Prop::Samplerate(m.sr);
+              media_props.insert(&NodeProps {
+                id,
+                props: vec![checksum, duration, channels, sr],
+              })?;
+              path_meta.insert(&path.into())?;
             }
             db.flush()?;
           };
@@ -292,26 +350,115 @@ async fn main() -> Result<(), Error> {
             let tags = analysis::tag_walk(cfg.fs.get_path("tracks")?);
             for m in tags {
               let node = Node::new(NodeKind::Track);
+              let id = *node.key();
+              let m_path = m.path.clone();
               let path = Meta {
-                id: MetaKind::Path(m.path.into()),
-                nodes: vec![node.key().clone()],
+                id: MetaKind::Path(m_path.into()),
+                nodes: vec![id],
               };
-              media.insert(&node)?;
-              meta.insert(&path.into())?;
+              match path_meta.insert(&path.clone().into())? {
+                Some(_) => log::warn!("{:?} already exists, skipping", path.id),
+                None => {
+                  media.insert(&node)?;
+                  let checksum = Prop::Checksum(Checksum::new(&m.path));
+                  let duration = Prop::Duration(m.duration);
+                  let channels = Prop::Channels(m.channels);
+                  let sr = Prop::Samplerate(m.sr);
+                  media_props.insert(&NodeProps {
+                    id,
+                    props: vec![checksum, duration, channels, sr],
+                  })?;
+
+                  if let Some(a) = m.get_tag("artist") {
+                    let artist = Meta {
+                      id: MetaKind::Artist(a.to_string()),
+                      nodes: vec![id],
+                    };
+                    artist_meta.merge(artist.id, artist.nodes)?;
+                  }
+                  if let Some(a) = m.get_tag("album") {
+                    let album = Meta {
+                      id: MetaKind::Album(a.to_string()),
+                      nodes: vec![id],
+                    };
+                    album_meta.merge(album.id, album.nodes)?;
+                  }
+                  if let Some(a) = m.get_tag("genre") {
+                    let genre = Meta {
+                      id: MetaKind::Genre(a.to_string()),
+                      nodes: vec![id],
+                    };
+                    genre_meta.merge(genre.id, genre.nodes)?;
+                  }
+                }
+              };
             }
+            db.flush()?;
           };
+        }
+        DbCmd::Connect { i, o } => {
+          let mut edges = EdgeTree::open(db.inner(), "edge")?;
+          let mut path_meta = MetaTree::open(db.inner(), "path")?;
+          let i = path_meta.get::<MetaKind>(&PathBuf::from(i).into())?;
+          let o = path_meta.get::<MetaKind>(&PathBuf::from(o).into())?;
+          if let Some(i) = i {
+            if let Some(o) = o {
+              let edge = Edge::new(EdgeKey::new(
+                EdgeKind::Next,
+                *i.first().unwrap(),
+                *o.first().unwrap(),
+              ));
+              edges.insert(&edge)?;
+              log::info!("inserted edge: {}", edge.key());
+            } else {
+              log::error!("output node not valid");
+            }
+          } else {
+            log::error!("input node not valid");
+          }
+        }
+        DbCmd::List { media, edges } => {
+          if media {
+            let media = NodeTree::open(db.inner(), "media")?;
+            let mut media_props = NodePropTree::open(db.inner(), "media_props")?;
+            let path_meta = MetaTree::open(db.inner(), "path")?;
+            let artist_meta = MetaTree::open(db.inner(), "artist")?;
+            let album_meta = MetaTree::open(db.inner(), "album")?;
+            let genre_meta = MetaTree::open(db.inner(), "genre")?;
+            for v in media.iter() {
+              let key = &v.as_ref().unwrap().0;
+              let val = &v.as_ref().unwrap().1;
+              let props = media_props.get::<Id>(&key.clone().into())?;
+              println!("{key:?}: {val:?} [{props:?}]");
+            }
+          }
         }
         DbCmd::Query {
           path,
-          artist: _,
-          album: _,
+          artist,
+          album,
           playlist: _,
           coll: _,
-          genre: _,
+          genre,
         } => {
-          let mut meta = MetaTree::open(db.inner(), "meta")?;
           if let Some(s) = path {
-            let res = meta.get::<MetaKind>(&PathBuf::from(s).into())?;
+            let mut path_meta = MetaTree::open(db.inner(), "path")?;
+            let res = path_meta.get::<MetaKind>(&PathBuf::from(s).into())?;
+            println!("{:?}", res);
+          }
+          if let Some(s) = artist {
+            let mut artist_meta = MetaTree::open(db.inner(), "artist")?;
+            let res = artist_meta.get::<MetaKind>(&MetaKind::Artist(s.into()))?;
+            println!("{:?}", res);
+          }
+          if let Some(s) = album {
+            let mut album_meta = MetaTree::open(db.inner(), "album")?;
+            let res = album_meta.get::<MetaKind>(&MetaKind::Album(s.into()))?;
+            println!("{:?}", res);
+          }
+          if let Some(s) = genre {
+            let mut genre_meta = MetaTree::open(db.inner(), "genre")?;
+            let res = genre_meta.get::<MetaKind>(&MetaKind::Genre(s.into()))?;
             println!("{:?}", res);
           }
         }

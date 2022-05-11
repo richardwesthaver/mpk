@@ -12,7 +12,7 @@ pub use edge::{Edge, EdgeKey, EdgeKind, EdgeVec};
 pub use id::{Id, IdVec};
 pub use meta::{Meta, MetaKind};
 pub use node::{Node, NodeKind, NodeVec};
-pub use prop::{EdgeProp, EdgeProps, NodeProp, NodeProps, Prop};
+pub use prop::{EdgeProp, EdgeProps, NodeProp, NodeProps, Prop, PropVec};
 use serde::Serialize;
 pub use uri::Uri;
 

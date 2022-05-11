@@ -97,6 +97,14 @@ impl AudioMetadata {
       Err(e) => Err(e.into()),
     }
   }
+
+  pub fn get_tag(&self, key: &str) -> Option<String> {
+    if let Some(tags) = &self.tags {
+      tags.get(key).map(|v| v.to_string())
+    } else {
+      None
+    }
+  }
 }
 
 #[cfg(test)]
@@ -113,7 +121,8 @@ mod tests {
   #[test]
   fn ffmpeg_get_tags_test() {
     for (k, v) in ffmpeg::get_tags(
-      &ffmpeg::decode("/Users/ellis/mpk/tracks/mp3/03. Fuck The Police.mp3").unwrap(),
+      &ffmpeg::decode("/Users/ellis/mpk_real/tracks/mp3/03. Fuck The Police.mp3")
+        .unwrap(),
     )
     .unwrap()
     .iter()
@@ -125,7 +134,24 @@ mod tests {
   #[cfg(feature = "ffmpeg")]
   #[test]
   fn ffmpeg_metadata_test() {
-    assert!(crate::AudioMetadata::from_ffmpeg("../../tests/ch1.wav").is_ok())
+    let meta = AudioMetadata::from_ffmpeg("../../tests/slayer-Flesh_Storm.mp3");
+    assert!(meta.is_ok());
+    let meta = meta.unwrap();
+    dbg!(&meta.get_tag("artist"));
+    dbg!(&meta.get_tag("album"));
+    dbg!(&meta.get_tag("genre"));
+    dbg!(&meta.get_tag("date"));
+  }
+
+  #[cfg(feature = "ffmpeg")]
+  #[test]
+  fn ffmpeg_transcode_audio_test() {
+    ffmpeg::transcode_audio(
+      "../../tests/slayer-Flesh_Storm.mp3",
+      "../../tests/slayer-Flesh_Storm.wav",
+      Some("atempo=2.0".into()),
+      Some(2),
+    );
   }
 
   #[cfg(feature = "snd")]
@@ -137,14 +163,10 @@ mod tests {
   #[cfg(feature = "snd")]
   #[test]
   fn snd_get_tags_test() {
-    for (k, v) in snd::get_tags(
-      &snd::decode(
-        "/Users/ellis/mpk/tracks/Kanye West/808s & Heartbreak/03 Heartless.flac",
-      )
-      .unwrap(),
-    )
-    .unwrap()
-    .iter()
+    for (k, v) in
+      snd::get_tags(&snd::decode("../../tests/aaaa-Sleepy_4_Life.flac").unwrap())
+        .unwrap()
+        .iter()
     {
       dbg!(format!("{}: {}", k, v));
     }

@@ -3,7 +3,8 @@ use bincode::{deserialize, serialize};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-  Edge, EdgeKind, EdgeProp, Key, Meta, MetaKind, Node, NodeKind, NodeProp, Prop, Val,
+  Edge, EdgeKind, EdgeProps, Key, Meta, MetaKind, Node, NodeKind, NodeProps, Prop,
+  PropVec, Val,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -111,14 +112,14 @@ impl Factory for MetaFactory {
 pub struct EdgePropFactory;
 
 impl Factory for EdgePropFactory {
-  type Kind = Prop;
-  type Ty = EdgeProp;
+  type Kind = PropVec;
+  type Ty = EdgeProps;
 }
 
 #[derive(Debug)]
 pub struct NodePropFactory;
 
 impl Factory for NodePropFactory {
-  type Kind = Prop;
-  type Ty = NodeProp;
+  type Kind = PropVec;
+  type Ty = NodeProps;
 }

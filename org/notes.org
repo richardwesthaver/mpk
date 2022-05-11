@@ -700,4 +700,3 @@ check [[https://github.com/jnykopp/emaccordion][jnykopp/emaccordion]]
 ** TODO add resources
 ** TODO finish On DAWs
 ** TODO init osc/sc
-https://doc.sccode.org/Reference/Server-Architecture.html

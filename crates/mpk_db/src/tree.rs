@@ -10,15 +10,14 @@ use sled::{
 };
 
 use crate::{
-  DbRef, Edge, EdgeFactory, EdgeKey, EdgeProp, EdgePropFactory, Error, Factory, Id,
-  IdVec, Key, Meta, MetaFactory, MetaKind, Node, NodeFactory, NodeKind, NodeProp,
-  NodePropFactory, Prop, Val,
+  DbRef, Edge, EdgeFactory, EdgeKey, EdgePropFactory, EdgeProps, Error, Factory, Id,
+  IdVec, Key, Meta, MetaFactory, MetaKind, Node, NodeFactory, NodeKind,
+  NodePropFactory, NodeProps, Prop, PropVec, Val,
 };
 
-pub const TREE_NAMES: [&str; 12] = [
+pub const TREE_NAMES: [&str; 11] = [
   "media",
   "media_props",
-  "meta",
   "path",
   "artist",
   "album",
@@ -54,6 +53,7 @@ pub trait TreeHandle: Sized {
     &mut self,
     key: &K,
   ) -> Result<Option<Self::Val>, Error>;
+  fn merge(&self, key: Self::Key, val: Self::Val) -> Result<Option<Self::Val>, Error>;
   fn swap(
     &mut self,
     key: Self::Key,
@@ -179,6 +179,21 @@ macro_rules! impl_tree {
           Err(e) => Err(e.into()),
         }
       }
+      fn merge(&self, key: $k, val: $v) -> Result<Option<Self::Val>, Error> {
+        let key: Vec<u8> = key.into();
+        let val = serialize(&val).unwrap();
+        match self.tree.merge(key, val) {
+          Ok(v) => {
+            if let Some(v) = v {
+              let val = deserialize(&v).ok();
+              Ok(val)
+            } else {
+              Ok(None)
+            }
+          }
+          Err(e) => Err(e.into()),
+        }
+      }
       fn swap(
         &mut self,
         key: Self::Key,
@@ -249,13 +264,29 @@ pub struct NodePropTree {
   pub factory: NodePropFactory,
 }
 
-impl_tree!(NodePropTree, Id, Prop, NodeProp, NodePropFactory);
+impl_tree!(NodePropTree, Id, PropVec, NodeProps, NodePropFactory);
 
 pub struct EdgePropTree {
   pub tree: Tree,
   pub factory: EdgePropFactory,
 }
 
-impl_tree!(EdgePropTree, EdgeKey, Prop, EdgeProp, EdgePropFactory);
+impl_tree!(EdgePropTree, EdgeKey, PropVec, EdgeProps, EdgePropFactory);
 
 impl_deref_tree!(EdgeTree, NodeTree, MetaTree, NodePropTree, EdgePropTree);
+
+pub fn meta_merge_op(_key: &[u8], old: Option<&[u8]>, new: &[u8]) -> Option<Vec<u8>> {
+  let mut ret = old
+    .map(|v| deserialize::<IdVec>(v).unwrap())
+    .unwrap_or_else(|| vec![]);
+  ret.push(deserialize::<Id>(new).unwrap());
+  Some(serialize::<IdVec>(&ret).unwrap())
+}
+
+pub fn prop_merge_op(_key: &[u8], old: Option<&[u8]>, new: &[u8]) -> Option<Vec<u8>> {
+  let mut ret = old
+    .map(|v| deserialize::<PropVec>(v).unwrap())
+    .unwrap_or_else(|| vec![]);
+  ret.push(deserialize::<Prop>(new).unwrap());
+  Some(serialize::<PropVec>(&ret).unwrap())
+}

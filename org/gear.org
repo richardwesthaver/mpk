@@ -1,9 +1,9 @@
-#+TITLE: Gear
-#+DATE: 2022-05-06
+#+TITLE: Resources
+#+DATE: 2022-05-08
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
-#+DESCRIPTION: RTFM
-* Octatrack MKII
+* Gear
+** Octatrack MKII
 [[https://www.elektron.se/support/?connection=octatrack-mkii#resources][Manufacturer Resources]]
 [[https://www.elektron.se/wp-content/uploads/2021/03/Octatrack-MKII-User-Manual_ENG_OS1.40A_210414.pdf][Manual]]
 
@@ -49,22 +49,19 @@ enum Loop_t { NoLoop = 0, Loop = 1, PIPO = 2 };
 enum Stretch_t { NoStrech = 0, Normal = 2, Beat = 3 };
 #+end_src
 
-* Analog Rytm MKII
+** Analog Rytm MKII
 [[https://www.elektron.se/support/?connection=analog-rytm-mkii#resources][Manufacturer Resources]]
-* OP-1
-
-* S-patch plus
-
-* Scarlett 18i20
-
-* MGP12X
-
-* SV-1
-
-* Prophet Rev2
-
-* Model D
-
-* APC40 MKII
-
-* Volca Beats
+** OP-1
+** S-patch plus
+** Scarlett 18i20
+** MGP12X
+** SV-1
+** Prophet Rev2
+** Model D
+** APC40 MKII
+** Volca Beats
+* Supercollider
+- [[https://doc.sccode.org/Reference/Server-Architecture.html][Server Architecture | SuperCollider 3.12.2 Help]]
+* JACK
+- [[https://jackaudio.org/api/][JACK API]]
+- [[https://github.com/RustAudio/rust-jack][GitHub - RustAudio/rust-jack: Decent jack bindings for rust]]
