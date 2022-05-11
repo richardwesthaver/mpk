@@ -3,7 +3,7 @@ use bincode::{deserialize, serialize};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-  Edge, EdgeKind, EdgeProps, Key, Meta, MetaKind, Node, NodeKind, NodeProps, Prop,
+  Edge, EdgeKind, EdgeProps, Key, Meta, MetaKind, Node, NodeKind, NodeProps,
   PropVec, Val,
 };
 

@@ -280,8 +280,8 @@ impl Default for JackConfig {
   fn default() -> Self {
     JackConfig {
       name: "mpk".into(),
-      audio: "alsa".into(),
-      midi: "seq".into(),
+      audio: if cfg!(target_os = "macos") { "coreaudio".into() } else { "alsa".into() },
+      midi: if cfg!(target_os = "macos") { "coremidi".into() } else { "seq".into() },
       device: "default".into(),
       realtime: true,
       auto: ' ',

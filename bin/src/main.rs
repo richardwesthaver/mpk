@@ -9,7 +9,7 @@ use mpk::{
   codec,
   config::Config,
   db::{
-    meta_merge_op, Checksum, Db, Edge, EdgeKey, EdgeKind, EdgeTree, Factory, Id, Key,
+    meta_merge_op, Checksum, Db, Edge, EdgeKey, EdgeKind, EdgeTree, EdgePropTree, Factory, Id, Key,
     Meta, MetaKind, MetaTree, Node, NodeKind, NodePropTree, NodeProps, NodeTree, Prop,
     TreeHandle, Uri, Val, TREE_NAMES,
   },
@@ -151,9 +151,9 @@ enum DbCmd {
     path: Option<String>,
     #[clap(long, short)]
     artist: Option<String>,
-    #[clap(long, short)]
+    #[clap(long, short = 'A')]
     album: Option<String>,
-    #[clap(long, short)]
+    #[clap(long, short = 'P')]
     playlist: Option<String>,
     #[clap(long, short)]
     coll: Option<String>,
@@ -368,7 +368,6 @@ async fn main() -> Result<(), Error> {
                     id,
                     props: vec![checksum, duration, channels, sr],
                   })?;
-
                   if let Some(a) = m.get_tag("artist") {
                     let artist = Meta {
                       id: MetaKind::Artist(a.to_string()),
@@ -426,12 +425,23 @@ async fn main() -> Result<(), Error> {
             let album_meta = MetaTree::open(db.inner(), "album")?;
             let genre_meta = MetaTree::open(db.inner(), "genre")?;
             for v in media.iter() {
-              let key = &v.as_ref().unwrap().0;
-              let val = &v.as_ref().unwrap().1;
-              let props = media_props.get::<Id>(&key.clone().into())?;
-              println!("{key:?}: {val:?} [{props:?}]");
+              let key: Id = v.as_ref().unwrap().0.to_vec().into();
+              let val: NodeKind = v.as_ref().unwrap().1.to_vec().into();
+              let props = media_props.get::<Id>(&key)?;
+              println!("{key}: {val:?} [{props:?}]");
             }
           }
+          if edges {
+            let edges = EdgeTree::open(db.inner(), "edge")?;
+	    let edge_props = EdgePropTree::open(db.inner(), "edge_props")?;
+            for v in edges.iter() {
+              let key: EdgeKey = v.as_ref().unwrap().0.to_vec().into();
+              let val: u128 = u128::from_be_bytes(v.as_ref().unwrap().1.to_vec().try_into().unwrap());
+              let props = edge_props.get(&key)?;
+              println!("{key}: {val:?} [{props:?}]");
+            }
+          }
+
         }
         DbCmd::Query {
           path,

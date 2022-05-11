@@ -37,15 +37,15 @@ pub trait TreeHandle: Sized {
   fn open(handle: DbRef, name: &str) -> Result<Self, Error>;
   fn insert(&mut self, val: &Self::Ty) -> Result<Option<Self::Val>, Error>;
   fn get<K: Serialize + Into<Self::Key>>(
-    &mut self,
+    &self,
     key: &K,
   ) -> Result<Option<Self::Val>, Error>;
   fn get_lt<K: Serialize + Into<Self::Key>>(
-    &mut self,
+    &self,
     key: &K,
   ) -> Result<Option<(Self::Key, Self::Val)>, Error>;
   fn get_gt<K: Serialize + Into<Self::Key>>(
-    &mut self,
+    &self,
     key: &K,
   ) -> Result<Option<(Self::Key, Self::Val)>, Error>;
   fn exists<K: Serialize + Into<Self::Key>>(&self, key: &K) -> Result<bool, Error>;
@@ -108,7 +108,7 @@ macro_rules! impl_tree {
           Err(e) => Err(e.into()),
         }
       }
-      fn get<K: Serialize + Into<$k>>(&mut self, key: &K) -> Result<Option<$v>, Error> {
+      fn get<K: Serialize + Into<$k>>(&self, key: &K) -> Result<Option<$v>, Error> {
         let key: Vec<u8> = serialize(key).unwrap();
         match self.tree.get(&key) {
           Ok(v) => {
@@ -123,7 +123,7 @@ macro_rules! impl_tree {
         }
       }
       fn get_lt<K: Serialize + Into<$k>>(
-        &mut self,
+        &self,
         key: &K,
       ) -> Result<Option<($k, $v)>, Error> {
         let key: Vec<u8> = serialize(key).unwrap();
@@ -141,7 +141,7 @@ macro_rules! impl_tree {
         }
       }
       fn get_gt<K: Serialize + Into<$k>>(
-        &mut self,
+        &self,
         key: &K,
       ) -> Result<Option<($k, $v)>, Error> {
         let key: Vec<u8> = serialize(key).unwrap();

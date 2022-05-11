@@ -4,6 +4,7 @@ use std::hash::{Hash, Hasher};
 use bincode::{deserialize, serialize};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
+use sled::IVec;
 
 use super::{Id, Key, Val};
 
@@ -45,6 +46,18 @@ impl From<&NodeKind> for Vec<u8> {
 impl From<Vec<u8>> for NodeKind {
   fn from(vec: Vec<u8>) -> NodeKind {
     deserialize(&vec).unwrap()
+  }
+}
+
+impl From<IVec> for NodeKind {
+  fn from(iv: IVec) -> NodeKind {
+    deserialize(&iv).unwrap()
+  }
+}
+
+impl From<&IVec> for NodeKind {
+  fn from(iv: &IVec) -> NodeKind {
+    deserialize(iv).unwrap()
   }
 }
 
