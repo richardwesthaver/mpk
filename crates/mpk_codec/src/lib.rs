@@ -107,6 +107,8 @@ impl AudioMetadata {
   }
 }
 
+pub struct Resample {}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -120,12 +122,10 @@ mod tests {
   #[cfg(feature = "ffmpeg")]
   #[test]
   fn ffmpeg_get_tags_test() {
-    for (k, v) in ffmpeg::get_tags(
-      &ffmpeg::decode("/Users/ellis/mpk_real/tracks/mp3/03. Fuck The Police.mp3")
-        .unwrap(),
-    )
-    .unwrap()
-    .iter()
+    for (k, v) in
+      ffmpeg::get_tags(&ffmpeg::decode("../../tests/aaaa-Sleepy_4_Life.flac").unwrap())
+        .unwrap()
+        .iter()
     {
       dbg!(format!("{}: {}", k, v));
     }
@@ -152,6 +152,18 @@ mod tests {
       Some("atempo=2.0".into()),
       Some(2),
     );
+  }
+
+  #[cfg(feature = "ffmpeg")]
+  #[test]
+  fn ffmpeg_get_audio_data_test() {
+    let (data, fmt, _, _) =
+      ffmpeg::get_audio_data("../../tests/slayer-Flesh_Storm.mp3").unwrap();
+    dbg!(data.len(), fmt);
+    let f1 = &data[0];
+    let f2 = &data[100];
+    //    dbg!(f2);
+    assert_ne!(f1, f2);
   }
 
   #[cfg(feature = "snd")]

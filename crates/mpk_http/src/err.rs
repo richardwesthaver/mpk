@@ -5,6 +5,7 @@ pub enum Error {
   Http(reqwest::Error),
   TokenExpired,
   TokenRefreshFailed,
+  Value(String),
 }
 
 impl std::error::Error for Error {
@@ -13,6 +14,7 @@ impl std::error::Error for Error {
       Error::Http(ref err) => Some(err),
       Error::TokenExpired => None,
       Error::TokenRefreshFailed => None,
+      Error::Value(_) => None,
     }
   }
 }
@@ -25,6 +27,7 @@ impl std::fmt::Display for Error {
       Error::TokenRefreshFailed => {
         f.write_str("Failed to renew auth with refresh token")
       }
+      Error::Value(ref s) => write!(f, "Invalid value: {}", s),
     }
   }
 }

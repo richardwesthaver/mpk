@@ -17,7 +17,7 @@ mod dispatch;
 pub use dispatch::Dispatcher;
 
 mod eval;
-pub use eval::Evaluator;
+pub use eval::Repl;
 
 pub fn init_repl() -> Result<Editor<ReplHelper>> {
   let config = Config::builder()

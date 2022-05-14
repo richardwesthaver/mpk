@@ -7,6 +7,7 @@ use std::ffi::CString;
 use pest::error::Error;
 use pest::Parser;
 
+pub mod arena;
 pub mod ast;
 use ast::*;
 
@@ -34,23 +35,6 @@ fn build_ast_from_expr(
 ) -> Result<AstNode, Error<Rule>> {
   match pair.as_rule() {
     Rule::expr => build_ast_from_expr(pair.into_inner().next().unwrap()),
-    Rule::monadicExpr => {
-      let mut pair = pair.into_inner();
-      let verb = pair.next().unwrap();
-      let av_or_rhs = pair.next().unwrap();
-      // check if this is an adverb
-      let adverb = match parse_ad_verb(av_or_rhs.clone()) {
-        Ok(av) => av,
-        Err(_) => None,
-      };
-      let expr = if adverb.is_some() {
-        pair.next().unwrap()
-      } else {
-        av_or_rhs
-      };
-      let expr = build_ast_from_expr(expr)?;
-      parse_monadic_verb(verb, adverb, expr)
-    }
     Rule::dyadicExpr => {
       let mut pair = pair.into_inner();
       let lhspair = pair.next().unwrap();
@@ -70,6 +54,23 @@ fn build_ast_from_expr(
 
       let rhs = build_ast_from_expr(rhspair)?;
       parse_dyadic_verb(verb, adverb, lhs, rhs)
+    }
+    Rule::monadicExpr => {
+      let mut pair = pair.into_inner();
+      let verb = pair.next().unwrap();
+      let av_or_rhs = pair.next().unwrap();
+      // check if this is an adverb
+      let adverb = match parse_ad_verb(av_or_rhs.clone()) {
+        Ok(av) => av,
+        Err(_) => None,
+      };
+      let expr = if adverb.is_some() {
+        pair.next().unwrap()
+      } else {
+        av_or_rhs
+      };
+      let expr = build_ast_from_expr(expr)?;
+      parse_monadic_verb(verb, adverb, expr)
     }
     Rule::nouns => {
       let nouns: Program = pair
@@ -140,17 +141,17 @@ fn parse_dyadic_verb(
     "." => Ok(DyadicVerb::Dot),
     e => Err(format!("invalid dyadic verb: {}", e.to_string())),
   };
-  if verb.is_ok() {
+  if let Ok(verb) = verb {
     Ok(AstNode::Dyad {
       lhs: Box::new(lhs),
-      verb: verb.unwrap(),
+      verb,
       adverb,
       rhs: Box::new(rhs),
     })
   } else {
     Err(Error::new_from_span(
       pest::error::ErrorVariant::CustomError {
-        message: "invalid monadic verb".to_string(),
+        message: "invalid dyadic verb".to_string(),
       },
       pair.as_span(),
     ))
@@ -180,9 +181,9 @@ fn parse_monadic_verb(
     "." => Ok(MonadicVerb::Eval),
     e => Err(format!("invalid monadic verb: {}", e.to_string())),
   };
-  if verb.is_ok() {
+  if let Ok(verb) = verb {
     Ok(AstNode::Monad {
-      verb: verb.unwrap(),
+      verb,
       adverb,
       expr: Box::new(expr),
     })
@@ -219,7 +220,7 @@ fn parse_sys_verb(
   pair: pest::iterators::Pair<Rule>,
   args: Option<AstNode>,
 ) -> Result<AstNode, Error<Rule>> {
-  let verb = match pair.as_str().strip_prefix("0:").unwrap() {
+  let verb = match pair.as_str().strip_prefix("\\").unwrap() {
     "sesh" => Ok(SysVerb::Sesh),
     "http" => Ok(SysVerb::Http),
     "osc" => Ok(SysVerb::Osc),

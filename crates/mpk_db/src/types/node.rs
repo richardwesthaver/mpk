@@ -3,8 +3,8 @@ use std::hash::{Hash, Hasher};
 
 use bincode::{deserialize, serialize};
 use serde::{Deserialize, Serialize};
-use ulid::Ulid;
 use sled::IVec;
+use ulid::Ulid;
 
 use super::{Id, Key, Val};
 

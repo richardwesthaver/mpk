@@ -10,15 +10,15 @@
 //! used in MPK_SESH and is especially useful with the analysis data
 //! from MPK_DB.
 //!
-//! REF: https://freesound.org/docs/api/
-//! ENDPOINT: https://freesound.org/apiv2/
+//! REF: <https://freesound.org/docs/api/>
+//! ENDPOINT: <https://freesound.org/apiv2/>
 use std::cmp::min;
 use std::fmt;
 use std::path::Path;
 use std::time::SystemTime;
 
 use futures_util::StreamExt;
-use mpk_config::{ClientConfig, Config};
+use mpk_config::Config;
 use mpk_util::{open_browser, ProgressBar, ProgressStyle};
 use oauth2::{
   basic::{BasicClient, BasicTokenType},
@@ -31,7 +31,7 @@ use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 
-use crate::{Client, Error, Result};
+use crate::{Client, ClientConfig, ClientExt, Error, Result};
 pub const FREESOUND_ENDPOINT: &str = "https://freesound.org/apiv2";
 
 pub async fn write_sound<P: AsRef<Path>>(
@@ -75,6 +75,8 @@ pub struct FreeSoundClient {
   pub cfg: ClientConfig,
 }
 
+impl ClientExt for FreeSoundClient {}
+
 impl FreeSoundClient {
   /// Create a new FreeSoundClient.
   ///
@@ -86,7 +88,7 @@ impl FreeSoundClient {
     FreeSoundClient {
       client: Client::new(),
       cfg: ClientConfig {
-        redirect_url: "http://localhost/freesound/auth".to_string(),
+        redirect_url: Some("http://localhost:8080".to_string()),
         ..Default::default()
       },
     }
@@ -106,17 +108,21 @@ impl FreeSoundClient {
   }
 
   pub fn auth_client(&self) -> BasicClient {
-    let client_id = ClientId::new(self.cfg.client_id.clone());
-    let client_secret = ClientSecret::new(self.cfg.client_secret.clone());
+    let client_id = ClientId::new(self.cfg.client_id.as_ref().unwrap().clone());
+    let client_secret =
+      ClientSecret::new(self.cfg.client_secret.as_ref().unwrap().clone());
     let auth_url = AuthUrl::new(format!(
       "{}/oauth2/authorize/?client_id={}&response_type=code",
-      FREESOUND_ENDPOINT, self.cfg.client_id
+      FREESOUND_ENDPOINT,
+      self.cfg.client_id.as_ref().unwrap().clone()
     ))
     .unwrap();
     let token_url =
       TokenUrl::new(format!("{}/oauth2/access_token/", FREESOUND_ENDPOINT)).unwrap();
     BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
-      .set_redirect_uri(RedirectUrl::new(self.cfg.redirect_url.clone()).unwrap())
+      .set_redirect_uri(
+        RedirectUrl::new(self.cfg.redirect_url.as_ref().unwrap().clone()).unwrap(),
+      )
   }
 
   pub fn update_cfg(
@@ -156,15 +162,16 @@ impl FreeSoundClient {
       Ok(())
     } else {
       let client = self.auth_client();
+      let client_id = self.cfg.client_id.as_ref().unwrap();
       println!(
         "go to: {}/oauth2/authorize/?client_id={}&response_type=code",
-        FREESOUND_ENDPOINT, self.cfg.client_id
+        FREESOUND_ENDPOINT, client_id
       );
       if auto {
         open_browser(
           format!(
             "{}/oauth2/authorize/?client_id={}&response_type=code",
-            FREESOUND_ENDPOINT, self.cfg.client_id
+            FREESOUND_ENDPOINT, client_id
           )
           .as_str(),
         );
@@ -177,7 +184,7 @@ impl FreeSoundClient {
           reader.read_line(&mut line).await.unwrap();
           let redirect_url = line.split_whitespace().nth(1).unwrap();
           let url =
-            Url::parse(&("http://localhost".to_string() + redirect_url)).unwrap();
+            Url::parse(&("http://localhost:8080".to_string() + redirect_url)).unwrap();
 
           let code_pair = url
             .query_pairs()
@@ -246,7 +253,7 @@ impl FreeSoundClient {
     Ok(())
   }
 
-  pub async fn request<'a>(&mut self, req: FreeSoundRequest<'a>) -> Result<Response> {
+  pub async fn request<'a>(&self, req: FreeSoundRequest<'a>) -> Result<Response> {
     let res = self
       .client
       .execute(
@@ -259,7 +266,7 @@ impl FreeSoundClient {
     Ok(res)
   }
 
-  pub async fn get_raw<U: IntoUrl>(&mut self, url: U) -> Result<Response> {
+  pub async fn get_raw<U: IntoUrl>(&self, url: U) -> Result<Response> {
     let res = self
       .client
       .get(url)
@@ -331,18 +338,7 @@ impl<'a> FreeSoundRequest<'a> {
 
   pub fn addr(&self) -> String {
     let slug = match self {
-      FreeSoundRequest::SearchText {
-        query: _,
-        filter: _,
-        sort: _,
-        group_by_pack: _,
-        weights: _,
-        page: _,
-        page_size: _,
-        fields: _,
-        descriptors: _,
-        normalized: _,
-      } => "/search/text".to_string(),
+      FreeSoundRequest::SearchText { .. } => "/search/text".to_string(),
       FreeSoundRequest::SearchContent => "/search/content".to_string(),
       FreeSoundRequest::SearchCombined => "/search/combined".to_string(),
       FreeSoundRequest::Sound { ref id } => format!("/sounds/{}", id),

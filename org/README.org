@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-05-09
+#+DATE: 2022-05-11
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Programming Kit
@@ -134,8 +134,8 @@ First install the dependencies:
 
   # for processing analysis files
   curl https://essentia.upf.edu/extractors/essentia-extractors-v2.1_beta2-linux-x86_64.tar.gz -o essentia-extractors.tar.gz
-  tar -xf essentia-extractors.tar.gz essentia-extractors-v2.1_beta2/streaming_extractor_freesound
-  mv essentia-extractors-v2.1_beta2/streaming_extractor_freesound /usr/bin/essentia_streaming_extractor_freesound && rm -r essentia-extractors-v2.1_beta2
+  tar -xf essentia-extractors.tar.gz essentia-extractors-v2.1_beta2/{streaming_extractor_freesound,streaming_extractor_music}
+  mv essentia-extractors-v2.1_beta2/{streaming_extractor_freesound,streaming_extractor_music} /usr/local/bin/ && rm -r essentia-extractors-v2.1_beta2
 
   sudo pacman -S nim alsa-lib jack2 ffmpeg new-session-manager supercollider
 #+end_src

@@ -1,8 +1,8 @@
 //! MPK_DB/TYPES -- EDGE
 use std::fmt;
 
-use mpk_util::timestamp_nanos;
 use bincode::{deserialize, serialize};
+use mpk_util::timestamp_nanos;
 use serde::{Deserialize, Serialize};
 
 use super::Id;
@@ -35,7 +35,7 @@ impl From<Vec<u8>> for EdgeKind {
   }
 }
 
-impl From<&[u8]> for EdgeKind{
+impl From<&[u8]> for EdgeKind {
   fn from(v: &[u8]) -> EdgeKind {
     deserialize(v).unwrap()
   }

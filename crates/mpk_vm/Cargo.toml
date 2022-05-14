@@ -1,0 +1,9 @@
+[package]
+name = "mpk_vm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bumpalo = { version = "3.9", features = ["allocator_api"] }
+mpk_hash = { path = "../mpk_hash" }
+mpk_parser = { path = "../mpk_parser" }

@@ -1,4 +1,4 @@
-
+//! MPK_ANALYSIS -- ESSENTIA
 /// A Vec<f32>
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VecReal(pub Vec<f32>);

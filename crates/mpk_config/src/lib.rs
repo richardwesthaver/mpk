@@ -280,8 +280,16 @@ impl Default for JackConfig {
   fn default() -> Self {
     JackConfig {
       name: "mpk".into(),
-      audio: if cfg!(target_os = "macos") { "coreaudio".into() } else { "alsa".into() },
-      midi: if cfg!(target_os = "macos") { "coremidi".into() } else { "seq".into() },
+      audio: if cfg!(target_os = "macos") {
+        "coreaudio".into()
+      } else {
+        "alsa".into()
+      },
+      midi: if cfg!(target_os = "macos") {
+        "coremidi".into()
+      } else {
+        "seq".into()
+      },
       device: "default".into(),
       realtime: true,
       auto: ' ',
@@ -394,9 +402,9 @@ impl From<Config> for NetworkConfig {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ClientConfig {
-  pub client_id: String,
-  pub client_secret: String,
-  pub redirect_url: String,
+  pub client_id: Option<String>,
+  pub client_secret: Option<String>,
+  pub redirect_url: Option<String>,
   pub access_token: Option<String>,
   pub refresh_token: Option<String>,
   pub scopes: Option<Vec<String>>,

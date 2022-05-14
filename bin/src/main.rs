@@ -9,9 +9,9 @@ use mpk::{
   codec,
   config::Config,
   db::{
-    meta_merge_op, Checksum, Db, Edge, EdgeKey, EdgeKind, EdgeTree, EdgePropTree, Factory, Id, Key,
-    Meta, MetaKind, MetaTree, Node, NodeKind, NodePropTree, NodeProps, NodeTree, Prop,
-    TreeHandle, Uri, Val, TREE_NAMES,
+    meta_merge_op, Checksum, Db, Edge, EdgeKey, EdgeKind, EdgePropTree, EdgeTree,
+    Factory, Id, Key, Meta, MetaKind, MetaTree, Node, NodeKind, NodePropTree,
+    NodeProps, NodeTree, Prop, TreeHandle, Uri, Val, TREE_NAMES,
   },
   flate, gear, http,
   http::freesound::{write_sound, FreeSoundRequest, FreeSoundResponse},
@@ -107,7 +107,10 @@ enum Command {
     cmd: DbCmd,
   },
   /// Start the REPL
-  Repl,
+  Repl {
+    #[clap(short, long)]
+    debug: bool,
+  },
   /// Print info
   Status {
     #[clap(short, long)]
@@ -433,15 +436,15 @@ async fn main() -> Result<(), Error> {
           }
           if edges {
             let edges = EdgeTree::open(db.inner(), "edge")?;
-	    let edge_props = EdgePropTree::open(db.inner(), "edge_props")?;
+            let edge_props = EdgePropTree::open(db.inner(), "edge_props")?;
             for v in edges.iter() {
               let key: EdgeKey = v.as_ref().unwrap().0.to_vec().into();
-              let val: u128 = u128::from_be_bytes(v.as_ref().unwrap().1.to_vec().try_into().unwrap());
+              let val: u128 =
+                u128::from_be_bytes(v.as_ref().unwrap().1.to_vec().try_into().unwrap());
               let props = edge_props.get(&key)?;
               println!("{key}: {val:?} [{props:?}]");
             }
           }
-
         }
         DbCmd::Query {
           path,
@@ -569,16 +572,16 @@ async fn main() -> Result<(), Error> {
         .unwrap();
       }
     },
-    Command::Repl => {
+    Command::Repl { debug } => {
       let mut rl = repl::init_repl().unwrap();
       let printer = rl.create_external_printer().unwrap();
-      let (mut evaluator, rx) = repl::Evaluator::new(rl);
+      let (mut evaluator, rx) = repl::Repl::new(rl);
       let disp = tokio::spawn(async move {
         let mut dispatcher =
           repl::Dispatcher::new(printer, "127.0.0.1:0", "127.0.0.1:57813", rx).await;
         dispatcher.run().await;
       });
-      evaluator.parse(true).await;
+      evaluator.parse(debug).await;
       disp.abort();
       std::process::exit(0);
     }

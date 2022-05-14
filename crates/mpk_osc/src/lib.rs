@@ -20,6 +20,16 @@ pub trait ToOsc {
   fn args(&self) -> Vec<OscType>;
 }
 
+// this doesn't really save space
+// #[macro_export]
+// macro_rules! matcher {
+//   ($t:tt, $($v:ident$(($($a:ident),+))? => $e:expr),+ ) => {
+//     match $t {
+//     $(Self::$v$(($($a),+))? => {$e}),*
+//     }
+//   }
+// }
+
 #[cfg(test)]
 mod tests {
   use std::net::UdpSocket;

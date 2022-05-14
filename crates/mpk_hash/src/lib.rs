@@ -7,7 +7,7 @@ pub use blake3::{
   derive_key, hash, keyed_hash, Hash as B3Hash, Hasher as B3Hasher, OutputReader,
 };
 use rand::Rng;
-pub use rustc_hash::FxHasher;
+pub use rustc_hash::{FxHashMap, FxHashSet, FxHasher};
 pub const KEY_LEN: usize = 32;
 pub const OUT_LEN: usize = 32;
 pub const HEX_LEN: usize = KEY_LEN * 2;

@@ -7,18 +7,18 @@ use crate::parser::parse;
 pub const CH_LEN: usize = 32;
 
 #[derive(Debug)]
-pub struct Evaluator<H: Helper> {
+pub struct Repl<H: Helper> {
   rl: Editor<H>,
   tx: mpsc::Sender<AstNode>,
 }
 
-impl<H> Evaluator<H>
+impl<H> Repl<H>
 where
   H: Helper,
 {
-  pub fn new(rl: Editor<H>) -> (Self, mpsc::Receiver<AstNode>) {
+  pub fn new(rl: Editor<H>) -> (Repl<H>, mpsc::Receiver<AstNode>) {
     let (tx, rx) = mpsc::channel(CH_LEN);
-    (Evaluator { rl, tx }, rx)
+    (Repl { rl, tx }, rx)
   }
 
   pub async fn parse(&mut self, debug: bool) {

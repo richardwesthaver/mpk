@@ -69,18 +69,29 @@ pub trait TreeHandle: Sized {
   fn set_merge_op<M: MergeOperator + 'static>(&self, op: M);
 }
 
-macro_rules! impl_deref_tree {
-  ($($i:ident),+) => {
-    $(impl Deref for $i {
-      type Target = Tree;
-      fn deref(&self) -> &Self::Target {
-	&self.tree
-      }
-    })*
+macro_rules! make_tree {
+  ($(#[$m:meta])*
+  $v:vis $i:ident, $f:ident) => {
+    $(#[$m])*
+    $v struct $i {
+      $v tree: Tree,
+      $v factory: $f,
+    }
   }
 }
 
-macro_rules! impl_tree {
+macro_rules! impl_deref_tree {
+  ($i:ident) => {
+    impl Deref for $i {
+      type Target = Tree;
+      fn deref(&self) -> &Self::Target {
+        &self.tree
+      }
+    }
+  };
+}
+
+macro_rules! impl_tree_handle {
   ($i:ident, $k:ident, $v:ident, $t:ident, $f:ident) => {
     impl TreeHandle for $i {
       type Key = $k;
@@ -238,42 +249,23 @@ macro_rules! impl_tree {
   };
 }
 
-pub struct NodeTree {
-  pub tree: Tree,
-  pub factory: NodeFactory,
+macro_rules! trees {
+  ($(($i:ident, $k:ident, $v:ident, $t:ident, $f:ident)),+) => {
+    $(
+      make_tree!(#[derive(Debug)] pub $i, $f);
+      impl_deref_tree!($i);
+      impl_tree_handle!($i, $k, $v, $t, $f);
+    )*
+  }
 }
 
-impl_tree!(NodeTree, Id, NodeKind, Node, NodeFactory);
-
-pub struct EdgeTree {
-  pub tree: Tree,
-  pub factory: EdgeFactory,
-}
-
-impl_tree!(EdgeTree, EdgeKey, u128, Edge, EdgeFactory);
-
-pub struct MetaTree {
-  pub tree: Tree,
-  pub factory: MetaFactory,
-}
-
-impl_tree!(MetaTree, MetaKind, IdVec, Meta, MetaFactory);
-
-pub struct NodePropTree {
-  pub tree: Tree,
-  pub factory: NodePropFactory,
-}
-
-impl_tree!(NodePropTree, Id, PropVec, NodeProps, NodePropFactory);
-
-pub struct EdgePropTree {
-  pub tree: Tree,
-  pub factory: EdgePropFactory,
-}
-
-impl_tree!(EdgePropTree, EdgeKey, PropVec, EdgeProps, EdgePropFactory);
-
-impl_deref_tree!(EdgeTree, NodeTree, MetaTree, NodePropTree, EdgePropTree);
+trees!(
+  (NodeTree, Id, NodeKind, Node, NodeFactory),
+  (EdgeTree, EdgeKey, u128, Edge, EdgeFactory),
+  (MetaTree, MetaKind, IdVec, Meta, MetaFactory),
+  (NodePropTree, Id, PropVec, NodeProps, NodePropFactory),
+  (EdgePropTree, EdgeKey, PropVec, EdgeProps, EdgePropFactory)
+);
 
 pub fn meta_merge_op(_key: &[u8], old: Option<&[u8]>, new: &[u8]) -> Option<Vec<u8>> {
   let mut ret = old

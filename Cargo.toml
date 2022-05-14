@@ -5,6 +5,7 @@ members = [
   "ffi",
   "crates/mpk_config",
   "crates/mpk_util",
+  "crates/mpk_vm",
   "crates/mpk_audio",
   "crates/mpk_midi",
   "crates/mpk_jack",

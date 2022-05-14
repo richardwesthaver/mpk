@@ -4,7 +4,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 pub use ffmpeg::{
-  codec, decoder, encoder, filter, format, frame, init, media, rescale, Error, Rescale,
+  codec, decoder, encoder, filter, format, frame, init, media, packet, rescale, Error,
+  Rescale,
 };
 
 pub fn decode<P: AsRef<Path>>(path: P) -> Result<format::context::Input, Error> {
@@ -22,6 +23,34 @@ pub fn get_tags(input: &format::context::Input) -> Option<HashMap<String, String
   } else {
     Some(metadata)
   }
+}
+
+pub fn get_audio_data<P: AsRef<Path>>(
+  path: P,
+) -> Result<(Vec<Vec<u8>>, format::Sample, u32, u16), Error> {
+  let mut ictx = decode(path)?;
+  let mut res = vec![];
+  let stream = ictx
+    .streams()
+    .best(media::Type::Audio)
+    .expect("could not find best audio stream");
+  let stream_id = stream.id();
+  let ctx = ffmpeg::codec::context::Context::from_parameters(stream.parameters())?;
+  let mut decoder = ctx.decoder().audio()?;
+  for p in ictx.packets() {
+    if p.0.id() == stream_id {
+      decoder.send_packet(&p.1)?;
+      let mut decoded = frame::Audio::empty();
+      while decoder.receive_frame(&mut decoded).is_ok() {
+        let data = decoded.data(0).to_vec();
+        //	let l = decoded.plane_mut::<u8>(0).to_vec();
+        //	let r = decoded.plane_mut::<u8>(1).to_vec();
+        //	let lr = (l, r);
+        res.push(data)
+      }
+    }
+  }
+  Ok((res, decoder.format(), decoder.rate(), decoder.channels()))
 }
 
 fn filter(
@@ -71,7 +100,7 @@ fn filter(
   Ok(filter)
 }
 
-struct AudioTranscoder {
+pub struct AudioTranscoder {
   stream: usize,
   filter: filter::Graph,
   decoder: codec::decoder::Audio,
@@ -80,7 +109,7 @@ struct AudioTranscoder {
   out_time_base: ffmpeg::Rational,
 }
 
-fn audio_transcoder<P: AsRef<Path>>(
+pub fn audio_transcoder<P: AsRef<Path>>(
   ictx: &mut format::context::Input,
   octx: &mut format::context::Output,
   path: &P,
