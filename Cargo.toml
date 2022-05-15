@@ -15,6 +15,8 @@ members = [
   "crates/mpk_codec",
   "crates/mpk_engine",
   "crates/mpk_analysis",
+  "crates/mpk_analysis/chromaprint",
+  "crates/mpk_analysis/chromaprint/chromaprint_sys",
   "crates/mpk_db",
   "crates/mpk_sesh",
   "crates/mpk_repl",
