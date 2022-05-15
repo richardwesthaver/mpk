@@ -3,15 +3,25 @@
 //! Rust bindings for chromaprint
 //!
 //! REF: <https://github.com/acoustid/chromaprint>
-pub use chromaprint_sys as sys;
 use std::ffi::CStr;
 use std::{ptr, slice};
 
+pub use chromaprint_sys as sys;
+
 pub fn version() -> String {
-  String::from_utf8(unsafe { CStr::from_ptr(sys::chromaprint_get_version()).to_bytes().to_vec() }).unwrap()
+  String::from_utf8(unsafe {
+    CStr::from_ptr(sys::chromaprint_get_version())
+      .to_bytes()
+      .to_vec()
+  })
+  .unwrap()
 }
 
-pub fn encode_fingerprint(raw: &[u32], algo: sys::ChromaprintAlgorithm, base64: bool) -> Option<Vec<i8>> {
+pub fn encode_fingerprint(
+  raw: &[u32],
+  algo: sys::ChromaprintAlgorithm,
+  base64: bool,
+) -> Option<Vec<i8>> {
   let array: *mut i8 = ptr::null_mut();
   let size = 0 as *mut i32;
   let res = unsafe {
@@ -21,7 +31,8 @@ pub fn encode_fingerprint(raw: &[u32], algo: sys::ChromaprintAlgorithm, base64: 
       algo as i32,
       array.cast(),
       size,
-      base64 as i32)
+      base64 as i32,
+    )
   };
   if res == 1 {
     let encoded = unsafe { slice::from_raw_parts(array, size as usize).to_vec() };
@@ -32,22 +43,40 @@ pub fn encode_fingerprint(raw: &[u32], algo: sys::ChromaprintAlgorithm, base64: 
   }
 }
 
-pub fn decode_fingerprint(encoded: &[i8], base64: bool) -> Option<(Vec<u32>, sys::ChromaprintAlgorithm)> {
+pub fn decode_fingerprint(
+  encoded: &[i8],
+  base64: bool,
+) -> Option<(Vec<u32>, sys::ChromaprintAlgorithm)> {
   let array: *mut u32 = ptr::null_mut();
   let size = 0 as *mut i32;
   let algo = 0 as *mut i32;
   let res = unsafe {
-    sys::chromaprint_decode_fingerprint(encoded.as_ptr(),
-					encoded.len() as i32,
-					array.cast(),
-					size, algo, base64 as i32)
+    sys::chromaprint_decode_fingerprint(
+      encoded.as_ptr(),
+      encoded.len() as i32,
+      array.cast(),
+      size,
+      algo,
+      base64 as i32,
+    )
   };
   if res == 1 {
     let decoded = unsafe { slice::from_raw_parts(array, size as usize).to_vec() };
     unsafe { sys::chromaprint_dealloc(array as *mut std::ffi::c_void) }
-    return Some((decoded, algo as sys::ChromaprintAlgorithm));
+    Some((decoded, algo as sys::ChromaprintAlgorithm));
   }
   None
+}
+
+pub fn hash_fingerprint(raw: &[u32]) -> Option<u32> {
+  let hash: *mut u32 = ptr::null_mut();
+  let res =
+    unsafe { sys::chromaprint_hash_fingerprint(raw.as_ptr(), raw.len() as i32, hash) };
+  if res == 1 {
+    Some(hash as u32)
+  } else {
+    None
+  }
 }
 
 pub struct Chromaprint {
@@ -58,25 +87,56 @@ impl Chromaprint {
   pub fn new() -> Chromaprint {
     unsafe {
       Chromaprint {
-        ctx:  sys::chromaprint_new(sys::ChromaprintAlgorithm_CHROMAPRINT_ALGORITHM_DEFAULT as i32),
+        ctx: sys::chromaprint_new(
+          sys::ChromaprintAlgorithm_CHROMAPRINT_ALGORITHM_DEFAULT as i32,
+        ),
       }
     }
-  }  
+  }
+
   pub fn algorithm(&self) -> sys::ChromaprintAlgorithm {
     unsafe { sys::chromaprint_get_algorithm(self.ctx) as sys::ChromaprintAlgorithm }
   }
 
-    pub fn start(&mut self, sample_rate: u32, num_channels: u32) -> bool {
-        unsafe { sys::chromaprint_start(self.ctx, sample_rate as i32, num_channels as i32) == 1 }
+  pub fn start(&self, sample_rate: u32, num_channels: u32) -> bool {
+    unsafe {
+      sys::chromaprint_start(self.ctx, sample_rate as i32, num_channels as i32) == 1
     }
+  }
 
-    pub fn feed(&mut self, data: &[i16]) -> bool {
-        unsafe { sys::chromaprint_feed(self.ctx, data.as_ptr(), data.len() as i32) == 1 }
-    }
+  pub fn feed(&self, data: &[i16]) -> bool {
+    unsafe { sys::chromaprint_feed(self.ctx, data.as_ptr(), data.len() as i32) == 1 }
+  }
 
-    pub fn finish(&mut self) -> bool {
-        unsafe { sys::chromaprint_finish(self.ctx) == 1 }
+  pub fn finish(&self) -> bool {
+    unsafe { sys::chromaprint_finish(self.ctx) == 1 }
+  }
+
+  pub fn fingerprint(&self) -> Option<String> {
+    let mut fingerprint: *mut i8 = ptr::null_mut();
+    if unsafe { sys::chromaprint_get_fingerprint(self.ctx, &mut fingerprint) } == 1 {
+      let ret =
+        String::from_utf8(unsafe { CStr::from_ptr(fingerprint) }.to_bytes().to_vec())
+          .ok();
+      unsafe { sys::chromaprint_dealloc(fingerprint as *mut std::ffi::c_void) }
+      return ret;
     }
+    None
+  }
+
+  pub fn raw_fingerprint(&self) -> Option<Vec<u32>> {
+    let array: *mut u32 = ptr::null_mut();
+    let size = 0 as *mut i32;
+    if unsafe { sys::chromaprint_get_raw_fingerprint(self.ctx, array.cast(), size) }
+      == 1
+    {
+      let ret = unsafe { slice::from_raw_parts(array, size as usize) }.to_vec();
+      unsafe { sys::chromaprint_dealloc(array as *mut std::ffi::c_void) }
+      return Some(ret);
+    } else {
+      None
+    }
+  }
 }
 
 impl Drop for Chromaprint {
