@@ -4,11 +4,14 @@
 //! other transient data types which need to be allocated by the
 //! Engine.
 #![feature(allocator_api, nonnull_slice_from_raw_parts)]
+mod address;
 mod alloc;
 mod arena;
 mod block;
 mod cons;
+mod object;
 mod rawptr;
+mod util;
 
 pub use arena::Arena;
 #[cfg(test)]

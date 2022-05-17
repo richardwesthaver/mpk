@@ -107,8 +107,6 @@ impl AudioMetadata {
   }
 }
 
-pub struct Resample {}
-
 #[cfg(test)]
 mod tests {
   use super::*;

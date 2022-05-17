@@ -3,13 +3,31 @@ use std::io;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Output};
 
-use chromaprint::{Chromaprint, CHROMAPRINT_ALGORITHM_DEFAULT};
+use chromaprint::{Chromaprint, ChromaprintAlgorithm};
 #[cfg(feature = "ffmpeg")]
 use mpk_codec::ffmpeg;
 #[cfg(feature = "snd")]
 use mpk_codec::snd;
 use mpk_codec::AudioMetadata;
 use mpk_util::walk_dir;
+
+#[derive(Debug)]
+pub enum Error {
+  Chromaprint(chromaprint::Error),
+  Codec(mpk_codec::Error),
+}
+
+impl From<chromaprint::Error> for Error {
+  fn from(e: chromaprint::Error) -> Error {
+    Error::Chromaprint(e)
+  }
+}
+
+impl From<mpk_codec::Error> for Error {
+  fn from(e: mpk_codec::Error) -> Error {
+    Error::Codec(e)
+  }
+}
 
 pub fn tag_walker<P: AsRef<Path>>(path: P) -> Option<AudioMetadata> {
   let path = path.as_ref();
@@ -68,30 +86,19 @@ pub fn fpcalc_extract<P: AsRef<Path>>(input: P) -> Result<Output, io::Error> {
 }
 
 #[cfg(feature = "ffmpeg")]
-pub fn chromaprint_extract<P: AsRef<Path>>(
-  path: P,
-  base64: bool,
-) -> Result<Option<Vec<u8>>, io::Error> {
-  let (data, ty, sr, ch) = ffmpeg::get_audio_data(path)?;
+pub fn chromaprint_extract<P: AsRef<Path>>(path: P) -> Result<Vec<u32>, Error> {
+  let (data, sr, ch) = ffmpeg::get_audio_resample(
+    path,
+    ffmpeg::format::Sample::I16(ffmpeg::format::sample::Type::Planar),
+  )
+  .map_err(|e| Error::Codec(e.into()))?;
   let mut cp = Chromaprint::new();
-  cp.start(sr as i32, ch as i32);
+  cp.start(sr, ch.into())?;
   for i in data {
-    cp.feed(&i);
+    cp.feed(&i.plane(0));
   }
   cp.finish();
-  let raw = cp.raw_fingerprint();
-  if let Some(r) = raw {
-    Ok(Chromaprint::encode(
-      &r,
-      CHROMAPRINT_ALGORITHM_DEFAULT,
-      base64,
-    ))
-  } else {
-    Err(io::Error::new(
-      io::ErrorKind::InvalidInput,
-      "failed to get raw fingerprint",
-    ))
-  }
+  cp.raw_fingerprint().map_err(|e| Error::Chromaprint(e))
 }
 
 #[cfg(test)]
@@ -136,7 +143,7 @@ mod tests {
 
   #[test]
   fn fp_extract_test() {
-    let fp = fpcalc_extract("../../tests/luke_vibert-bongo_beats.mp3");
+    let fp = fpcalc_extract("../../tests/slayer-Flesh_Storm.mp3");
     assert!(fp.is_ok());
     println!("{:?}", fp.unwrap());
   }
@@ -144,10 +151,14 @@ mod tests {
   #[cfg(feature = "chromaprint")]
   #[test]
   fn cp_extract_test() {
-    let fp = chromaprint_extract("../../tests/luke_vibert-bongo_beats.mp3", false)
-      .unwrap()
-      .unwrap();
-    //    let fp: &str = std::str::from_utf8(&fp).unwrap();
-    println!("{:?}", fp.as_slice());
+    let fp = chromaprint_extract("../../tests/slayer-Flesh_Storm.mp3").unwrap();
+    //    dbg!(fp);
+    let encoded = chromaprint::encode_fingerprint(
+      &fp,
+      chromaprint::ChromaprintAlgorithm::default(),
+      true,
+    )
+    .unwrap();
+    dbg!(encoded);
   }
 }

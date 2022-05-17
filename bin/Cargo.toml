@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
+name = "mk"
+path = "src/mk.rs"
+
+[[bin]]
 name = "mpk"
 path = "src/main.rs"
 

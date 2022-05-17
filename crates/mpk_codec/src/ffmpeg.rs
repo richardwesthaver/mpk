@@ -53,6 +53,38 @@ pub fn get_audio_data<P: AsRef<Path>>(
   Ok((res, decoder.format(), decoder.rate(), decoder.channels()))
 }
 
+pub fn get_audio_resample<P: AsRef<Path>>(
+  path: P,
+  format: format::Sample,
+) -> Result<(Vec<frame::Audio>, u32, u16), Error> {
+  let mut ictx = decode(path)?;
+  let mut res = vec![];
+  let stream = ictx
+    .streams()
+    .best(media::Type::Audio)
+    .expect("could not find best audio stream");
+  let stream_id = stream.id();
+  let ctx = ffmpeg::codec::context::Context::from_parameters(stream.parameters())?;
+  let mut decoder = ctx.decoder().audio()?;
+  for p in ictx.packets() {
+    if p.0.id() == stream_id {
+      decoder.send_packet(&p.1)?;
+      let mut decoded = frame::Audio::empty();
+      while decoder.receive_frame(&mut decoded).is_ok() {
+        let mut resampled = frame::Audio::empty();
+        let mut resampler =
+          decoded.resampler(format, decoded.channel_layout(), decoded.rate())?;
+        resampler.run(&decoded, &mut resampled)?;
+        //	let l = decoded.plane_mut::<u8>(0).to_vec();
+        //	let r = decoded.plane_mut::<u8>(1).to_vec();
+        //	let lr = (l, r);
+        res.push(resampled)
+      }
+    }
+  }
+  Ok((res, decoder.rate(), decoder.channels()))
+}
+
 fn filter(
   spec: &str,
   decoder: &codec::decoder::Audio,

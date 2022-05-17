@@ -26,6 +26,7 @@ pub struct Config {
   pub sesh: SeshConfig,
   pub net: NetworkConfig,
   pub engine: EngineConfig,
+  pub gear: GearConfig,
 }
 
 impl Config {
@@ -38,6 +39,7 @@ impl Config {
       jack,
       metro: MetroConfig::default(),
       net: NetworkConfig::default(),
+      gear: GearConfig::default(),
     })
   }
 
@@ -427,5 +429,18 @@ impl ClientConfig {
       .expect("SystemTime is before UNIX_EPOCH!?")
       + expires_in;
     self.expires = Some(expires.as_secs());
+  }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct GearConfig {
+  octatrack: Option<PathBuf>,
+  analog_rytm: Option<PathBuf>,
+  op_1: Option<PathBuf>,
+}
+
+impl From<Config> for GearConfig {
+  fn from(c: Config) -> GearConfig {
+    c.gear
   }
 }

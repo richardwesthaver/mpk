@@ -52,6 +52,8 @@ impl<T: ExternalPrinter> Dispatcher<T> {
   }
 
   pub fn print(&mut self, msg: String) {
+    let mut msg = msg;
+    msg.push_str("\n");
     self.printer.print(msg).unwrap()
   }
 

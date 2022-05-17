@@ -5,5 +5,6 @@ edition = "2021"
 
 [dependencies]
 bumpalo = { version = "3.9", features = ["allocator_api"] }
+parking_lot = "0.12"
 mpk_hash = { path = "../mpk_hash" }
 mpk_parser = { path = "../mpk_parser" }

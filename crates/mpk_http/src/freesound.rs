@@ -1,4 +1,4 @@
-//! MPK_HTTP FREESOUND API
+//! MPK_HTTP -- FREESOUND
 //!
 //! Freesound.org is a collaborative database of Creative Commons
 //! Licensed sounds. It has a growing library of audio uploaded by
