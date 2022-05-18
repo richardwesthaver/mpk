@@ -1,4 +1,6 @@
 //! MPK_VM -- UTIL
+#[macro_use]
+pub(crate) mod bitmap_const;
 use core::sync::atomic::{AtomicPtr, Ordering};
 use core::{
   cell::UnsafeCell,
@@ -8,6 +10,23 @@ use core::{
   ptr,
   ptr::NonNull,
 };
+
+use libc::{free, malloc};
+
+#[cfg(not(feature = "log"))]
+macro_rules! debug {
+  ($($param: tt)*) => {};
+}
+
+#[macro_export]
+macro_rules! as_atomic {
+  ($value: expr;$t: ident) => {
+    unsafe { core::mem::transmute::<_, &'_ core::sync::atomic::$t>($value as *const _) }
+  };
+}
+
+pub mod locks;
+pub mod timer;
 
 pub const fn round_down(x: u64, n: u64) -> u64 {
   x & !n
@@ -281,13 +300,6 @@ macro_rules! get_sp {
   }
 }
 
-#[macro_export]
-macro_rules! as_atomic {
-  ($value: expr;$t: ident) => {
-    unsafe { core::mem::transmute::<_, &'_ core::sync::atomic::$t>($value as *const _) }
-  };
-}
-
 pub unsafe fn zeroed<T>() -> T {
   core::mem::MaybeUninit::<T>::zeroed().assume_init()
 }
@@ -335,3 +347,39 @@ impl<T> VolatileCell<T> {
 
 unsafe impl<T> Sync for VolatileCell<T> {}
 unsafe impl<T> Send for VolatileCell<T> {}
+
+pub struct LibcAlloc;
+use core::alloc::*;
+
+unsafe impl Allocator for LibcAlloc {
+  fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+    match layout.size() {
+      0 => Ok(NonNull::slice_from_raw_parts(layout.dangling(), 0)),
+      size => unsafe {
+        let raw_ptr = malloc(layout.size()).cast::<u8>();
+        let ptr = NonNull::new(raw_ptr).ok_or(AllocError)?;
+        Ok(NonNull::slice_from_raw_parts(ptr, size))
+      },
+    }
+  }
+
+  unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+    if layout.size() != 0 {
+      free(ptr.as_ptr() as *mut libc::c_void);
+    }
+  }
+
+  unsafe fn grow(
+    &self,
+    ptr: NonNull<u8>,
+    old_layout: Layout,
+    new_layout: Layout,
+  ) -> Result<NonNull<[u8]>, AllocError> {
+    if old_layout.size() == 0 {
+      return self.allocate(new_layout);
+    }
+    let raw_ptr = libc::realloc(ptr.as_ptr() as *mut libc::c_void, new_layout.size());
+    let ptr = NonNull::new(raw_ptr.cast::<u8>()).ok_or(AllocError)?;
+    Ok(NonNull::slice_from_raw_parts(ptr, new_layout.size()))
+  }
+}
