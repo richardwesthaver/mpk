@@ -4,6 +4,7 @@ mod sync {
   use core::{
     sync::atomic::{AtomicI8, Ordering},
     usize,
+    arch::asm,
   };
 
   use parking_lot::Mutex;

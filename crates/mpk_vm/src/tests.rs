@@ -6,6 +6,8 @@ use crate::{
   thread::{immix_mutator_yieldpoint, immix_register_thread},
 };
 
+use serial_test::{serial, file_serial};
+
 static INIT: std::sync::Once = std::sync::Once::new();
 
 fn init() {
@@ -17,6 +19,7 @@ fn init() {
 }
 
 #[test]
+#[file_serial]
 fn simple() {
   init();
   inner_simple();
@@ -33,11 +36,12 @@ fn inner_simple() {
   assert_eq!(*p, 42);
 }
 
-// #[test]
-// fn smash() {
-//     init();
-//     inner_smash();
-// }
+#[test]
+#[file_serial]
+fn smash() {
+  init();
+  inner_smash();
+}
 
 #[inline(never)]
 fn inner_smash() {
@@ -85,16 +89,17 @@ static DUMMY_RTTI4096: GCRTTI = GCRTTI {
   finalizer: None,
 };
 
-// #[test]
-// fn middle() {
-//     init();
-//     for _ in 0..20000 {
-//         immix_alloc(4096, &DUMMY_RTTI4096);
-//         immix_alloc(4096, &DUMMY_RTTI4096);
-//     }
-
-//     for _ in 0..20000 {
-//         immix_alloc(2048, &DUMMY_RTTI2048);
-//         immix_alloc(2048, &DUMMY_RTTI2048);
-//     }
-// }
+#[test]
+#[file_serial]
+fn middle() {
+  init();
+  for _ in 0..20000 {
+    immix_alloc(4096, &DUMMY_RTTI4096);
+    immix_alloc(4096, &DUMMY_RTTI4096);
+  }
+  
+  for _ in 0..20000 {
+    immix_alloc(2048, &DUMMY_RTTI2048);
+    immix_alloc(2048, &DUMMY_RTTI2048);
+  }
+}

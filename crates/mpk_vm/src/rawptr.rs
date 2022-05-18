@@ -1,5 +1,5 @@
 //! MPK_VM -- RAWPTR
-use std::ptr::NonNull;
+use core::ptr::NonNull;
 
 /// A container for a bare pointer to an object of type `T`.
 /// At this level, compile-time type information is still

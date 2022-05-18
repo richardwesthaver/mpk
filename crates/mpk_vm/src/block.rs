@@ -2,7 +2,6 @@
 use crate::address::Address;
 use crate::cons::*;
 use crate::object::*;
-use crate::util::*;
 
 // LineMap is used for scanning block for holes
 space_bitmap_gen!(LineMap, LINE_SIZE, BLOCK_SIZE as u64);

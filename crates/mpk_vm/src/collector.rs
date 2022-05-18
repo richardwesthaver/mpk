@@ -6,7 +6,7 @@ use vec_map::VecMap;
 
 use crate::address::Address;
 use crate::{allocation::ImmixSpace, block::Block, cons::*, CollectionType};
-use crate::{large_object_space::LargeObjectSpace, object::*, util::*};
+use crate::{large_object_space::LargeObjectSpace, object::*};
 
 pub struct ImmixCollector;
 pub struct Visitor<'a> {

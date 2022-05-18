@@ -3,6 +3,7 @@
 //! This crate provides an Arena allocator for the MK language and any
 //! other transient data types which need to be allocated by the
 //! Engine.
+#![allow(dead_code)]
 #![feature(
   allocator_api,
   nonnull_slice_from_raw_parts,
@@ -10,11 +11,18 @@
   linked_list_cursors,
   alloc_layout_extra
 )]
+#![cfg_attr(not(test), no_std)]
+
 extern crate alloc;
+
+#[cfg(feature = "log")]
+#[macro_use]
+extern crate log;
+
+use core::arch::asm;
 
 #[macro_use]
 pub(crate) mod util;
-pub(crate) use core::arch::asm;
 pub mod address;
 pub mod allocation;
 pub mod block;
@@ -36,10 +44,11 @@ pub mod thread;
 use alloc::collections::LinkedList;
 use alloc::vec::Vec;
 use core::ptr::NonNull;
-use std::time;
+use instant::Instant;
 
 use address::Address;
 use allocation::ImmixSpace;
+use core::sync::atomic::Ordering;
 #[cfg(not(feature = "threaded"))]
 use bounds::StackBounds;
 use collector::Collector;
@@ -54,7 +63,7 @@ use object::{RawGc, TracerPtr};
 #[cfg(feature = "threaded")]
 use parking_lot::lock_api::RawMutex;
 #[cfg(feature = "threaded")]
-use threading::{immix_get_tls_state, GC_STATE_WAITING};
+use thread::{immix_get_tls_state, GC_STATE_WAITING};
 use util::*;
 
 #[no_mangle]
@@ -151,7 +160,7 @@ impl Immix {
       let stop_threads;
       #[cfg(feature = "threaded")]
       {
-        let start = time::Instant::now();
+        let start = Instant::now();
         let ptls = immix_get_tls_state();
         ptls.stack_end = get_sp!() as *mut _;
         old_state = ptls.gc_state;
@@ -171,7 +180,7 @@ impl Immix {
         old_state = 0;
         threads = ();
       }
-      let collect_roots = time::Instant::now();
+      let collect_roots = Instant::now();
       let mut precise_roots = Vec::new();
       let mut cons = Vec::new();
       for &(callback, data) in self.collect_roots_callback.iter() {
@@ -239,7 +248,7 @@ impl Immix {
         (*(*self.immix).block_allocator).total_blocks(),
         emergency,
       );
-      let mark = time::Instant::now();
+      let mark = Instant::now();
 
       let visited = self.collector.collect(
         &collection_type,
@@ -295,16 +304,16 @@ impl Immix {
           /*#[cfg(feature = "threaded")]
           printf!(
               "GC suspended threads in %ims (%lns)\n\0",
-              stop_threads.whole_milliseconds() as i32,
-              stop_threads.whole_nanoseconds() as u64
+          stop_threads.as_millis() as i32,
+              stop_threads.as_nanos() as u64
           );*/
           #[cfg(all(unix, feature = "threaded"))]
           printf(
             b"GC suspended threads in %i ms (%lu ns)\n\0"
               .as_ptr()
               .cast(),
-            stop_threads.whole_milliseconds() as i32,
-            stop_threads.whole_nanoseconds() as u64,
+            stop_threads.as_millis() as i32,
+            stop_threads.as_nanos() as u64,
           );
           #[cfg(unix)]
           printf(

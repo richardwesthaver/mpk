@@ -1,5 +1,5 @@
 //! MPK_VM -- ADDRESS
-use std::fmt;
+use core::fmt;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Address(usize);

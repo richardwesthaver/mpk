@@ -1,12 +1,12 @@
 //! MPK_VM -- CONS
 //!
 //! Constant values for VM allocators
-use std::mem::size_of;
+use core::mem::size_of;
 
 pub const BLOCK_SIZE: usize = 32 * 1024;
 pub const LINE_SIZE: usize = 128;
 pub const LINE_COUNT: usize = BLOCK_SIZE / LINE_SIZE;
-pub const MAX_ALLOC_SIZE: usize = std::u32::MAX as usize;
+pub const MAX_ALLOC_SIZE: usize = core::u32::MAX as usize;
 
 /// The first object in a block is not at offset 0 - that location is reserved
 /// for a pointer to the BlockMeta struct for the Block - but at the next

@@ -1,4 +1,5 @@
 //! MPK_VM -- BOUNDS
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
 use crate::util::zeroed;
 
 #[derive(Clone, Copy, PartialEq, Eq)]

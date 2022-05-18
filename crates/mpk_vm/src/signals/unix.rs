@@ -37,12 +37,12 @@ unsafe extern "C" fn segv_handler(
     if addr_in_safepoint((&*info).si_addr() as _) {
       debug!(
         "Stopped thread at {:p} for GC",
-        crate::threading::immix_get_tls_state()
+        crate::thread::immix_get_tls_state()
       );
       set_gc_and_wait();
       debug!(
         "Thread at {:p} resumed",
-        crate::threading::immix_get_tls_state()
+        crate::thread::immix_get_tls_state()
       );
       return;
     }

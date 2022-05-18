@@ -94,7 +94,7 @@ pub mod mutex {
   };
 
   use crate::thread_self;
-  use crate::threading::*;
+  use crate::thread::*;
   use crate::util::*;
   #[inline]
   pub fn to_deadline(timeout: Duration) -> Option<Instant> {
