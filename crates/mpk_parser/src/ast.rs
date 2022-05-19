@@ -1,9 +1,9 @@
-use std::ffi::CString;
+use mpk_gc::{Trace, Finalize};
 
-use chrono::naive::{NaiveDate, NaiveTime};
 pub type Program = Vec<AstNode>;
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+
+#[derive(PartialEq, Eq, Debug, Clone, Finalize, Trace)]
 pub enum MonadicVerb {
   Flip,     // +
   Negate,   // -
@@ -26,7 +26,7 @@ pub enum MonadicVerb {
   Eval,     // .
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Finalize, Trace)]
 pub enum DyadicVerb {
   Plus,   // +
   Minus,  // -
@@ -49,7 +49,7 @@ pub enum DyadicVerb {
   Dot,    // .
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Finalize, Trace)]
 pub enum AdVerb {
   Each,      // '
   Over,      // /
@@ -59,22 +59,22 @@ pub enum AdVerb {
   EachLeft,  // \:
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Finalize, Trace)]
 pub enum SysVerb {
-  Sesh, // 0:sesh
-  Http, // 0:http
-  Osc,  // 0:osc
-  Db,   // 0:db
+  Sesh, // \sesh
+  Http, // \http
+  Osc,  // \osc
+  Db,   // \db
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Finalize, Trace)]
 pub enum AstNode {
-  Int(i32),
+  Int(i64),
   Float(f64),
-  Date(NaiveDate),
-  Time(NaiveTime),
+  Date(u128),
+  Time(u128),
   Name(String),
-  Str(CString),
+  Str(String),
   Symbol(String),
   Nouns(Vec<AstNode>),
   Monad {

@@ -5,7 +5,7 @@ members = [
   "ffi",
   "crates/mpk_config",
   "crates/mpk_util",
-  "crates/mpk_vm",
+  "crates/mpk_gc",
   "crates/mpk_audio",
   "crates/mpk_midi",
   "crates/mpk_jack",
@@ -33,3 +33,4 @@ lto = true
 strip = true
 panic = "abort"
 codegen-units = 1
+opt-level = 3

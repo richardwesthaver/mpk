@@ -6,6 +6,8 @@ use rustyline::{
   hint::HistoryHinter, validate::MatchingBracketValidator, CompletionType, Config,
   EditMode, Editor,
 };
+use mpk_parser::ast::AstNode;
+use tokio::sync::mpsc::Receiver;
 
 mod err;
 pub use err::{Error, Result};
@@ -34,6 +36,10 @@ pub fn init_repl() -> Result<Editor<ReplHelper>> {
   let mut rl = Editor::with_config(config);
   rl.set_helper(Some(h));
   Ok(rl)
+}
+
+pub async fn init_dispatcher<T: ExternalPrinter>(printer: T, client: &str, server: &str, rx: Receiver<Vec<AstNode>>) -> Result<Dispatcher<T>> {
+  Ok(Dispatcher::new(printer, client, server, rx).await)
 }
 
 pub fn print_external<'a, T: ExternalPrinter>(printer: &'a mut T, msg: &'a str) {

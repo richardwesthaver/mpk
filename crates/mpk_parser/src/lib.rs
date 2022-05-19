@@ -2,12 +2,8 @@
 #[macro_use]
 extern crate pest_derive;
 
-use std::ffi::CString;
-
 use pest::error::Error;
 use pest::Parser;
-
-pub mod arena;
 pub mod ast;
 use ast::*;
 
@@ -252,7 +248,7 @@ fn build_ast_from_noun(
         "-" => (-1, &istr[1..]),
         _ => (1, &istr[..]),
       };
-      let integer: i32 = istr.parse().unwrap();
+      let integer: i64 = istr.parse().unwrap();
       Ok(AstNode::Int(sign * integer))
     }
     Rule::decimal => {
@@ -274,7 +270,7 @@ fn build_ast_from_noun(
       let str = &str[1..str.len() - 1];
       // Escaped string quotes become single quotes here.
       let str = str.replace("\"\"", "\"");
-      Ok(AstNode::Str(CString::new(&str[..]).unwrap()))
+      Ok(AstNode::Str(String::from(&str[..])))
     }
     Rule::symbol => {
       let sym = pair.as_str().strip_prefix("`").unwrap();

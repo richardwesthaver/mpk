@@ -9,18 +9,19 @@ pub const CH_LEN: usize = 32;
 #[derive(Debug)]
 pub struct Repl<H: Helper> {
   rl: Editor<H>,
-  tx: mpsc::Sender<AstNode>,
+  tx: mpsc::Sender<Vec<AstNode>>,
 }
 
 impl<H> Repl<H>
 where
   H: Helper,
 {
-  pub fn new(rl: Editor<H>) -> (Repl<H>, mpsc::Receiver<AstNode>) {
+  pub fn new(rl: Editor<H>) -> (Repl<H>, mpsc::Receiver<Vec<AstNode>>) {
     let (tx, rx) = mpsc::channel(CH_LEN);
     (Repl { rl, tx }, rx)
   }
 
+  /// Parse a line from stdin and send it over a channel for dispatch. 
   pub async fn parse(&mut self, debug: bool) {
     while let Ok(line) = self.rl.readline("|| ") {
       match parse(line.as_str()) {
@@ -29,23 +30,16 @@ where
           if debug {
             println!("{:?}", prog)
           }
-          for n in prog {
-            match n {
-              AstNode::SysFn { verb: _, args: _ } => {
-                self.tx(n).await;
-              }
-              _ => (),
-            }
-          }
+          self.tx(prog).await;
         }
-        Err(e) => {
+	Err(e) => {
           println!("{:?}", e)
-        }
+	}
       }
     }
   }
 
-  pub async fn tx(&self, node: AstNode) {
+  pub async fn tx(&self, node: Vec<AstNode>) {
     self.tx.send(node).await.unwrap()
   }
 }
