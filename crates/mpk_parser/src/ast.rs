@@ -1,9 +1,10 @@
-use mpk_gc::{Trace, Finalize};
-
+//! MPK_PARSER -- AST
+//!
+//! Abstract Syntax Tree objects of the mk language.
 pub type Program = Vec<AstNode>;
 
 
-#[derive(PartialEq, Eq, Debug, Clone, Finalize, Trace)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum MonadicVerb {
   Flip,     // +
   Negate,   // -
@@ -26,7 +27,7 @@ pub enum MonadicVerb {
   Eval,     // .
 }
 
-#[derive(PartialEq, Eq, Debug, Clone, Finalize, Trace)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum DyadicVerb {
   Plus,   // +
   Minus,  // -
@@ -49,7 +50,7 @@ pub enum DyadicVerb {
   Dot,    // .
 }
 
-#[derive(PartialEq, Eq, Debug, Clone, Finalize, Trace)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum AdVerb {
   Each,      // '
   Over,      // /
@@ -59,7 +60,7 @@ pub enum AdVerb {
   EachLeft,  // \:
 }
 
-#[derive(PartialEq, Eq, Debug, Clone, Finalize, Trace)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum SysVerb {
   Sesh, // \sesh
   Http, // \http
@@ -67,7 +68,7 @@ pub enum SysVerb {
   Db,   // \db
 }
 
-#[derive(PartialEq, Debug, Clone, Finalize, Trace)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum AstNode {
   Int(i64),
   Float(f64),

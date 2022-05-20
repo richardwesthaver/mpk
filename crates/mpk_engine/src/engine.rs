@@ -1,6 +1,7 @@
 //! MPK_ENGINE --- ENGINE
 use std::net::{SocketAddr, ToSocketAddrs};
 
+use crate::Vm;
 use mpk_osc::mpk::{OscMessageKind, ServerMessage};
 use mpk_osc::{decoder, encoder, OscPacket, ToOsc};
 use tokio::net::UdpSocket;
@@ -10,6 +11,7 @@ pub const MTU: usize = 1536;
 pub struct Engine {
   socket: UdpSocket,
   buf: Vec<u8>,
+  vm: Vm,
 }
 
 impl Engine {

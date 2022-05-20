@@ -3,9 +3,10 @@ use clap::Parser;
 use mpk::repl;
 
 pub const HELP: &'static str = "$mk
--d            / debug
--c [addr]     / client addr
--s [addr]     / server addr";
+-d          / debug
+-c addr     / client
+-s addr     / server
+-t N        / timeout";
 
 #[derive(Parser)]
 #[clap(override_help = HELP)]
@@ -16,6 +17,8 @@ struct Args {
   server: Option<String>,
   #[clap(long, short)]
   debug: bool,
+  #[clap(long, short, default_value_t=1_000)]
+  timeout: u64,
 }
 
 #[tokio::main]
@@ -31,20 +34,6 @@ async fn main() {
   } else {
     "127.0.0.1:57813".into()
   };
-
-  let mut rl = repl::init_repl().unwrap();
-  let printer = rl.create_external_printer().unwrap();
-  let (mut evaluator, rx) = repl::Repl::new(rl);
-  let disp = tokio::spawn(async move {
-    let mut d = repl::init_dispatcher(
-      printer,
-      client.as_str(),
-      server.as_str(),
-      rx,
-    ).await.unwrap();
-    d.run().await;
-  });
-  evaluator.parse(args.debug).await;
-  disp.abort();
+  repl::exec(client.as_str(), server.as_str(), args.timeout, args.debug).await.unwrap();
   std::process::exit(0);
 }

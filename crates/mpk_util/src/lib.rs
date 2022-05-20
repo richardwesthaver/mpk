@@ -108,3 +108,12 @@ pub fn walk_dir<P: AsRef<Path>, T: Clone>(
   }
   Ok(())
 }
+
+/// Check if a slice of bytes is full of zeroes. Slightly optimized by
+/// aligning to u128.
+pub fn is_zeroes(buf: &[u8]) -> bool {
+  let (prefix, aligned, suffix) = unsafe { buf.align_to::<u128>() };
+  prefix.iter().all(|&x| x == 0)
+    && suffix.iter().all(|&x| x == 0)
+    && aligned.iter().all(|&x| x == 0)
+}

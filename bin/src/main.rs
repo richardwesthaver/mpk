@@ -10,12 +10,12 @@ use mpk::{
   config::Config,
   db::{
     meta_merge_op, Checksum, Db, Edge, EdgeKey, EdgeKind, EdgePropTree, EdgeTree,
-    Factory, Id, Key, Meta, MetaKind, MetaTree, Node, NodeKind, NodePropTree,
-    NodeProps, NodeTree, Prop, TreeHandle, Uri, Val, TREE_NAMES,
+    Id, Key, Meta, MetaKind, MetaTree, Node, NodeKind, NodePropTree,
+    NodeProps, NodeTree, Prop, TreeHandle, TREE_NAMES,
   },
   flate, gear, http,
   http::freesound::{write_sound, FreeSoundRequest, FreeSoundResponse},
-  jack, midi, osc, repl,
+  jack, midi, osc,
   util::expand_tilde,
   Error,
 };
@@ -105,11 +105,6 @@ enum Command {
   Db {
     #[clap(subcommand)]
     cmd: DbCmd,
-  },
-  /// Start the REPL
-  Repl {
-    #[clap(short, long)]
-    debug: bool,
   },
   /// Print info
   Status {
@@ -572,19 +567,6 @@ async fn main() -> Result<(), Error> {
         .unwrap();
       }
     },
-    Command::Repl { debug } => {
-      let mut rl = repl::init_repl().unwrap();
-      let printer = rl.create_external_printer().unwrap();
-      let (mut evaluator, rx) = repl::Repl::new(rl);
-      let disp = tokio::spawn(async move {
-        let mut dispatcher =
-          repl::Dispatcher::new(printer, "127.0.0.1:0", "127.0.0.1:57813", rx).await;
-        dispatcher.run().await;
-      });
-      evaluator.parse(debug).await;
-      disp.abort();
-      std::process::exit(0);
-    }
     Command::Pack {
       input,
       output,
