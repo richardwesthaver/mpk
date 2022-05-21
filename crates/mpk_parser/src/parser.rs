@@ -1,9 +1,10 @@
 //! MPK_PARSER -- PARSER
 //!
 //! Parse tokens into an unvalidated Program.
-use crate::ast::*;
 use pest::error::Error;
 use pest::Parser;
+
+use crate::ast::*;
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -215,6 +216,11 @@ fn parse_sys_verb(
   args: Option<AstNode>,
 ) -> Result<AstNode, Error<Rule>> {
   let verb = match pair.as_str().strip_prefix("\\").unwrap() {
+    "\\" => Ok(SysVerb::Exit),
+    "v" => Ok(SysVerb::Vars),
+    "w" => Ok(SysVerb::Work),
+    "l" => Ok(SysVerb::Import),
+    "t" => Ok(SysVerb::Timeit),
     "sesh" => Ok(SysVerb::Sesh),
     "http" => Ok(SysVerb::Http),
     "osc" => Ok(SysVerb::Osc),

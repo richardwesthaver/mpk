@@ -1,12 +1,11 @@
 //! MPK_REPL
 pub use mpk_parser as parser;
+use mpk_parser::ast::AstNode;
 use rustyline::ExternalPrinter;
 use rustyline::{
   completion::FilenameCompleter, highlight::MatchingBracketHighlighter,
-  validate::MatchingBracketValidator, CompletionType, Config,
-  EditMode, Editor,
+  validate::MatchingBracketValidator, CompletionType, Config, EditMode, Editor,
 };
-use mpk_parser::ast::AstNode;
 use tokio::sync::mpsc::Receiver;
 
 mod err;
@@ -25,13 +24,9 @@ pub async fn exec(client: &str, server: &str, timeout: u64, debug: bool) -> Resu
   let mut rl = init_repl().unwrap();
   let printer = rl.create_external_printer().unwrap();
   let (mut evaluator, rx) = Repl::new(rl);
-  let mut d = init_dispatcher(
-    printer,
-    client,
-    server,
-    rx,
-    timeout,
-  ).await.unwrap();
+  let mut d = init_dispatcher(printer, client, server, rx, timeout)
+    .await
+    .unwrap();
   let disp = tokio::spawn(async move {
     d.run().await;
   });
@@ -57,7 +52,13 @@ pub fn init_repl() -> Result<Editor<ReplHelper>> {
   Ok(rl)
 }
 
-pub async fn init_dispatcher<T: ExternalPrinter>(printer: T, client: &str, server: &str, rx: Receiver<Vec<AstNode>>, timeout: u64) -> Result<Dispatcher<T>> {
+pub async fn init_dispatcher<T: ExternalPrinter>(
+  printer: T,
+  client: &str,
+  server: &str,
+  rx: Receiver<Vec<AstNode>>,
+  timeout: u64,
+) -> Result<Dispatcher<T>> {
   Ok(Dispatcher::new(printer, client, server, rx, timeout).await)
 }
 

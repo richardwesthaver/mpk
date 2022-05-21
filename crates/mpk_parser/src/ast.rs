@@ -3,7 +3,6 @@
 //! Abstract Syntax Tree objects of the mk language.
 pub type Program = Vec<AstNode>;
 
-
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum MonadicVerb {
   Flip,     // +
@@ -62,10 +61,15 @@ pub enum AdVerb {
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum SysVerb {
-  Sesh, // \sesh
-  Http, // \http
-  Osc,  // \osc
-  Db,   // \db
+  Sesh,   // \sesh
+  Http,   // \http
+  Osc,    // \osc
+  Db,     // \db
+  Vars,   // \v
+  Work,   // \w
+  Import, // \l
+  Timeit, // \t
+  Exit,   // \\
 }
 
 #[derive(PartialEq, Debug, Clone)]

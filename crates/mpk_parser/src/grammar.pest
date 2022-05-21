@@ -14,7 +14,7 @@ monadicExpr = { ((verb ~ adverb) | verb) ~ expr }
 
 dyadicExpr = { ( monadicExpr | nouns )  ~ ((verb ~ adverb) | verb) ~ expr }
 
-sysExpr = { sysverb ~ expr }
+sysExpr = { sysverb ~ expr? }
 
 assgmtExpr = { name ~ ":" ~ expr }
 
@@ -34,7 +34,7 @@ adverb = {
 }
 
 sysverb = {
-  "\\sesh" | "\\http" | "\\osc" | "\\db"
+  "\\" ~ (ASCII_ALPHA+ | "\\")
 }
 
 int = @{ "-"? ~ ASCII_DIGIT+ }

@@ -51,13 +51,12 @@ impl<T: ExternalPrinter> Dispatcher<T> {
       rx,
       timeout,
     };
-    dispatcher
-      .print(format!(
-        "dispatching {} -> {} / !{}",
-        dispatcher.socket.local_addr().unwrap().to_string(),
-        dispatcher.engine_url,
-	timeout
-      ));
+    dispatcher.print(format!(
+      "dispatching {} -> {} / !{}",
+      dispatcher.socket.local_addr().unwrap().to_string(),
+      dispatcher.engine_url,
+      timeout
+    ));
     dispatcher
   }
 
@@ -75,14 +74,14 @@ impl<T: ExternalPrinter> Dispatcher<T> {
     loop {
       while let Ok(_) = self.rx().await {
         match self.dispatch().await {
-	  Ok(_) => {
-	    if let Err(_) = self.recv().await {
+          Ok(_) => {
+            if let Err(_) = self.recv().await {
               self.print("err: dispatch:recv deadline has passed".to_string())
             }
-	    self.buf.fill(0);
-	  },
-	  Err(_) => (),
-	}
+            self.buf.fill(0);
+          }
+          Err(_) => (),
+        }
       }
     }
   }
@@ -103,7 +102,10 @@ impl<T: ExternalPrinter> Dispatcher<T> {
   /// Send an encoded OscPacket to the engine for processing.
   pub async fn dispatch(&mut self) -> std::io::Result<usize> {
     if is_zeroes(&self.buf) {
-      Err(std::io::Error::new(std::io::ErrorKind::WriteZero, "send buffer is empty"))
+      Err(std::io::Error::new(
+        std::io::ErrorKind::WriteZero,
+        "send buffer is empty",
+      ))
     } else {
       self.socket.send_to(&mut self.buf, self.engine_url).await
     }
@@ -113,112 +115,119 @@ impl<T: ExternalPrinter> Dispatcher<T> {
   pub async fn rx(&mut self) -> Result<(), TryRecvError> {
     if let Ok(prog) = self.rx.try_recv() {
       if !prog.is_empty() {
-	for node in prog {
-	  match node {
-	    AstNode::SysFn { ref verb, ref args } => {
+        for node in prog {
+          match node {
+            AstNode::SysFn { ref verb, ref args } => {
               // init OSC addr and args
               let mut addr = "/mpk/".to_string();
               let mut args_buf = vec![];
-	      
+
               match verb {
-		SysVerb::Sesh => addr.push_str("sesh/"),
-		SysVerb::Db => addr.push_str("db/"),
-		
-		SysVerb::Http => addr.push_str("http/"),
-		
-		SysVerb::Osc => {
-		  addr.push_str("osc/");
-		  match args.clone().map(|n| *n).as_ref() {
-		    Some(AstNode::Name(s)) => match s.as_str() {
+                SysVerb::Exit => addr.push_str("vm/exit/"),
+                SysVerb::Vars => addr.push_str("vm/vars/"),
+                SysVerb::Work => addr.push_str("vm/work/"),
+                SysVerb::Import => addr.push_str("vm/import/"),
+                SysVerb::Timeit => addr.push_str("vm/timeit/"),
+                SysVerb::Sesh => addr.push_str("sesh/"),
+                SysVerb::Db => addr.push_str("db/"),
+
+                SysVerb::Http => addr.push_str("http/"),
+
+                SysVerb::Osc => {
+                  addr.push_str("osc/");
+                  match args.clone().map(|n| *n).as_ref() {
+                    Some(AstNode::Name(s)) => match s.as_str() {
                       "mpk" => addr.push_str("self/"),
                       "nsm" => addr.push_str("nsm/"),
                       "ardour" | "ard" => addr.push_str("ard/"),
                       "supercollider" | "sc" => addr.push_str("sc/"),
                       _ => self.print("invalid sys target".to_string()),
-		    },
-		    Some(AstNode::Str(s)) => match s.as_str() {
+                    },
+                    Some(AstNode::Str(s)) => match s.as_str() {
                       "mpk" => addr.push_str("self/"),
                       "nsm" => addr.push_str("nsm/"),
                       "ardour" | "ard" => addr.push_str("ard/"),
                       "supercollider" | "sc" => addr.push_str("sc/"),
                       _ => self.print("invalid sys target".to_string()),
-		    },
-		    Some(AstNode::Symbol(s)) => match s.as_str() {
+                    },
+                    Some(AstNode::Symbol(s)) => match s.as_str() {
                       "mpk" => addr.push_str("self/"),
                       "nsm" => addr.push_str("nsm/"),
                       "ardour" | "ard" => addr.push_str("ard/"),
                       "supercollider" | "sc" => addr.push_str("sc/"),
                       _ => self.print("invalid sys target".to_string()),
-		    },
-		    Some(AstNode::Nouns(l)) => {
+                    },
+                    Some(AstNode::Nouns(l)) => {
                       let mut l = l.into_iter();
                       // first arg is the service target
                       match l.next() {
-			Some(AstNode::Str(s)) => match s.as_str() {
-			  "mpk" => addr.push_str("self/"),
-			  "nsm" => addr.push_str("nsm/"),
-			  "ardour" | "ard" => addr.push_str("ard/"),
-			  "supercollider" | "sc" => addr.push_str("sc/"),
-			  
-			  _ => self.print("invalid sys target".to_string()),
-			},
-			Some(AstNode::Symbol(s)) => match s.as_str() {
-			  "mpk" => addr.push_str("self/"),
-			  "nsm" => addr.push_str("nsm/"),
-			  "ardour" | "ard" => addr.push_str("ard/"),
-			  "supercollider" | "sc" => addr.push_str("sc/"),
-			  _ => self.print("invalid sys target".to_string()),
-			},
-			_ => self.print("first arg should be string or symbol".to_string()),
-                      }
-		      
-                      match l.next() {
-			Some(AstNode::Symbol(s)) => match s.as_str() {
-			  "announce" => addr.push_str("server/announce"),
-			  _ => self.print("invalid sys path".to_string()),
-			},
-			_ => self.print("second arg should be symbol".to_string()),
-                      }
-		      
-                      match l.next() {
-			Some(AstNode::Str(s)) => {
-			  args_buf.push(OscType::String(s.to_string()))
-			}
-			_ => self.print("third arg should be string".to_string()),
+                        Some(AstNode::Str(s)) => match s.as_str() {
+                          "mpk" => addr.push_str("self/"),
+                          "nsm" => addr.push_str("nsm/"),
+                          "ardour" | "ard" => addr.push_str("ard/"),
+                          "supercollider" | "sc" => addr.push_str("sc/"),
+
+                          _ => self.print("invalid sys target".to_string()),
+                        },
+                        Some(AstNode::Symbol(s)) => match s.as_str() {
+                          "mpk" => addr.push_str("self/"),
+                          "nsm" => addr.push_str("nsm/"),
+                          "ardour" | "ard" => addr.push_str("ard/"),
+                          "supercollider" | "sc" => addr.push_str("sc/"),
+                          _ => self.print("invalid sys target".to_string()),
+                        },
+                        _ => {
+                          self.print("first arg should be string or symbol".to_string())
+                        }
                       }
 
                       match l.next() {
-			Some(AstNode::Str(s)) => {
-			  args_buf.push(OscType::String(s.to_string()))
-			}
-			_ => self.print("fourth arg should be string".to_string()),
+                        Some(AstNode::Symbol(s)) => match s.as_str() {
+                          "announce" => addr.push_str("server/announce"),
+                          _ => self.print("invalid sys path".to_string()),
+                        },
+                        _ => self.print("second arg should be symbol".to_string()),
+                      }
+
+                      match l.next() {
+                        Some(AstNode::Str(s)) => {
+                          args_buf.push(OscType::String(s.to_string()))
+                        }
+                        _ => self.print("third arg should be string".to_string()),
+                      }
+
+                      match l.next() {
+                        Some(AstNode::Str(s)) => {
+                          args_buf.push(OscType::String(s.to_string()))
+                        }
+                        _ => self.print("fourth arg should be string".to_string()),
                       }
                       for i in l {
-			match i {
-			  AstNode::Str(s) => {
-			    args_buf.push(OscType::String(s.to_string()))
-			  }
-			  AstNode::Int(n) => args_buf.push(OscType::Long(*n)),
-			  AstNode::Float(n) => args_buf.push(OscType::Double(*n)),
-			  _ => self.print("invalid sysverb args".to_string()),
-			}
+                        match i {
+                          AstNode::Str(s) => {
+                            args_buf.push(OscType::String(s.to_string()))
+                          }
+                          AstNode::Int(n) => args_buf.push(OscType::Long(*n)),
+                          AstNode::Float(n) => args_buf.push(OscType::Double(*n)),
+                          _ => self.print("invalid sysverb args".to_string()),
+                        }
                       }
-		    }
-		    _ => self.print("first arg should be string or symbol".to_string()),
-		  }
-		}
+                    }
+                    _ => self.print("first arg should be string or symbol".to_string()),
+                  }
+                }
               }
               // wrap SysFn in OscMessage and store in self.buf as bytes
               let msg = OscPacket::Message(OscMessage {
-		addr,
-		args: args_buf,
+                addr,
+                args: args_buf,
               });
-	      let mut packet = encoder::encode(&msg).unwrap();
+              let mut packet = encoder::encode(&msg).unwrap();
               self.buf[..packet.len()].swap_with_slice(packet.as_mut_slice());
-	    }
-	    _ => (),
-	  }
-	}
+            }
+            _ => (),
+          }
+        }
       }
       Ok(())
     } else {

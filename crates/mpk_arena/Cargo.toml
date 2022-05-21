@@ -1,0 +1,12 @@
+[package]
+name = "mpk_arena"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+std = []
+default = ["std"]
+
+[dependencies]
+mpk_parser = { path = "../mpk_parser" }
+bumpalo = { version = "3.9", features = ["allocator_api", "boxed"] }

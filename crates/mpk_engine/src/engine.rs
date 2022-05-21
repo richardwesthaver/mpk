@@ -1,10 +1,13 @@
 //! MPK_ENGINE --- ENGINE
 use std::net::{SocketAddr, ToSocketAddrs};
 
-use crate::Vm;
+use mpk_config::Config;
+use mpk_db::Db;
 use mpk_osc::mpk::{OscMessageKind, ServerMessage};
 use mpk_osc::{decoder, encoder, OscPacket, ToOsc};
 use tokio::net::UdpSocket;
+
+use crate::Vm;
 
 pub const MTU: usize = 1536;
 
@@ -12,14 +15,22 @@ pub struct Engine {
   socket: UdpSocket,
   buf: Vec<u8>,
   vm: Vm,
+  db: Db,
 }
 
 impl Engine {
-  pub async fn new<A: ToSocketAddrs>(addr: A) -> Self {
+  pub async fn new<A: ToSocketAddrs>(addr: A, cfg: Config) -> Self {
     let addr = addr.to_socket_addrs().unwrap().next().unwrap();
     let socket = UdpSocket::bind(addr).await.unwrap();
     let buf = vec![0; MTU];
-    let engine = Engine { socket, buf };
+    let vm = Vm;
+    let db = Db::with_config(cfg.db).unwrap();
+    let engine = Engine {
+      socket,
+      buf,
+      vm,
+      db,
+    };
     println!(
       "MPK_ENGINE listening on {}",
       engine.socket.local_addr().unwrap()

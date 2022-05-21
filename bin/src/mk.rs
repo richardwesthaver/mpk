@@ -17,7 +17,7 @@ struct Args {
   server: Option<String>,
   #[clap(long, short)]
   debug: bool,
-  #[clap(long, short, default_value_t=1_000)]
+  #[clap(long, short, default_value_t = 1_000)]
   timeout: u64,
 }
 
@@ -34,6 +34,8 @@ async fn main() {
   } else {
     "127.0.0.1:57813".into()
   };
-  repl::exec(client.as_str(), server.as_str(), args.timeout, args.debug).await.unwrap();
+  repl::exec(client.as_str(), server.as_str(), args.timeout, args.debug)
+    .await
+    .unwrap();
   std::process::exit(0);
 }

@@ -21,11 +21,9 @@ where
     (Repl { rl, tx }, rx)
   }
 
-  /// Parse a line from stdin and send it over a channel for dispatch. 
+  /// Parse a line from stdin and send it over a channel for dispatch.
   pub async fn parse(&mut self, debug: bool) {
     while let Ok(line) = self.rl.readline("|| ") {
-      // early escape
-      if line == "\\\\" { std::process::exit(0) }
       match parse(line.as_str()) {
         Ok(prog) => {
           self.rl.add_history_entry(line);
@@ -34,9 +32,9 @@ where
           }
           self.tx(prog).await;
         }
-	Err(e) => {
+        Err(e) => {
           println!("{:?}", e)
-	}
+        }
       }
     }
   }
