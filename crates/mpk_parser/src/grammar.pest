@@ -1,62 +1,67 @@
 program = _{ SOI ~ "\n"* ~ (stmt ~ "\n"+) * ~ stmt? ~ EOI }
- 
+
 stmt = _{ expr }
- 
+
 expr = {
-    assgmtExpr
+    assgmt
   | verbExpr
   | sysExpr
   | nouns
 }
-verbExpr = _{ monadic | dyadic }
- 
-verb_or_noun = { nouns | verbExpr }
- 
+
 monadic = { ((verb ~ adverb) | verb) ~ expr }
- 
+
 dyadic = { ( monadic | nouns )  ~ ((verb ~ adverb) | verb) ~ expr }
- 
+
+verbExpr = _{ monadic | dyadic }
+
 sysExpr = { sysverb ~ expr? }
- 
-assgmtExpr = { name ~ ":" ~ expr }
- 
+
+fnExpr = { }
+
+assgmt = { name ~ ":" ~ verb_or_noun }
+
 noun = _{ decimal | int | name | string | symbol | list | dict | table}
- 
+
 nouns = { noun+ }
- 
+
+verb_or_noun = { nouns | verbExpr }
+
+expr_or_noun = { nouns | verbExpr | sysExpr | fnExpr }
+
 list = { "(" ~ (verb_or_noun ~ SEP?)* ~ ")" }
- 
+
 dict = { "[" ~ ( (name ~ (":" ~ nouns)?) ~ (SEP ~ name ~ ":" ~ nouns)* ~ SEP?)* ~ "]" }
- 
+
 table = { "[[]" ~ ( (name ~ (":" ~ nouns)?) ~ (SEP ~ name ~ ":" ~ nouns)* ~ SEP?)* ~ "]" }
- 
+
 verb = {
   "+" | "-" | "*" | "%" | "!" | "&"
 | "|" | "<" | ">" | "=" | "~" | ","
 | "^" | "#" | "_" | "$" | "?" | "@"
 | "."
 }
- 
+
 adverb = {
   "':" | "/:" | "\\:" | "'" | "/" | "\\"
 }
- 
+
 sysverb = {
   "\\" ~ (ASCII_ALPHA+ | "\\")
 }
- 
+
 int = @{ "-"? ~ ASCII_DIGIT+ }
- 
+
 decimal = @{ "-"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
- 
+
 name = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
- 
+
 string = @{ "\"" ~ ( "\"\"" | (!"\"" ~ ANY) )* ~ "\"" }
- 
+
 symbol = @{ "`" ~ name }
- 
+
 SEP = _{ ";" }
- 
+
 WHITESPACE = _{ " " | "\t" }
- 
+
 COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
