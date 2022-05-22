@@ -11,25 +11,44 @@ use crate::Vm;
 
 pub const MTU: usize = 1536;
 
+pub const PROXY_COUNT: usize = 6;
+pub const PROXIES: [&str; PROXY_COUNT] = [
+  "/osc/nsm",
+  "/osc/ardour",
+  "/osc/sc",
+  "/http/freesound",
+  "/http/acoustid",
+  "/http/musicbrainz",
+];
+
 pub struct Engine {
   socket: UdpSocket,
   buf: Vec<u8>,
   vm: Vm,
   db: Db,
+  sesh: Option<mpk_sesh::SeshServer>,
+  proxies: Option<[bool; PROXY_COUNT]>,
 }
 
 impl Engine {
-  pub async fn new<A: ToSocketAddrs>(addr: A, cfg: Config) -> Self {
+  pub async fn new<A: ToSocketAddrs>(addr: A) -> Self {
     let addr = addr.to_socket_addrs().unwrap().next().unwrap();
+    // initialize the default configuration
+    let cfg = Config::default();
     let socket = UdpSocket::bind(addr).await.unwrap();
     let buf = vec![0; MTU];
+    // build up the engine modules
     let vm = Vm;
     let db = Db::with_config(cfg.db).unwrap();
+    let sesh = None; // TODO
+    let proxies = None;
     let engine = Engine {
       socket,
       buf,
       vm,
       db,
+      sesh,
+      proxies,
     };
     println!(
       "MPK_ENGINE listening on {}",
@@ -38,6 +57,31 @@ impl Engine {
     engine
   }
 
+  pub async fn with_config(cfg: Config) -> Self {
+    let socket =
+      UdpSocket::bind(cfg.engine.socket.to_socket_addrs().unwrap().next().unwrap())
+        .await
+        .unwrap();
+    let buf = vec![0; MTU];
+    // build up the engine modules from provided CFG
+    let vm = Vm;
+    let db = Db::with_config(cfg.db).unwrap();
+    let sesh = None; // TODO
+    let proxies = None;
+    let engine = Engine {
+      socket,
+      buf,
+      vm,
+      db,
+      sesh,
+      proxies,
+    };
+    println!(
+      "MPK_ENGINE listening on {}",
+      engine.socket.local_addr().unwrap()
+    );
+    engine
+  }
   pub async fn run(&mut self) {
     loop {
       while let Ok((addr, packet)) = self.recv().await {

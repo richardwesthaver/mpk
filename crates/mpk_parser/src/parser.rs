@@ -30,7 +30,7 @@ fn build_ast_from_expr(
 ) -> Result<AstNode, Error<Rule>> {
   match pair.as_rule() {
     Rule::expr => build_ast_from_expr(pair.into_inner().next().unwrap()),
-    Rule::dyadicExpr => {
+    Rule::dyadic => {
       let mut pair = pair.into_inner();
       let lhspair = pair.next().unwrap();
       let lhs = build_ast_from_expr(lhspair)?;
@@ -50,7 +50,7 @@ fn build_ast_from_expr(
       let rhs = build_ast_from_expr(rhspair)?;
       parse_dyadic_verb(verb, adverb, lhs, rhs)
     }
-    Rule::monadicExpr => {
+    Rule::monadic => {
       let mut pair = pair.into_inner();
       let verb = pair.next().unwrap();
       let av_or_rhs = pair.next().unwrap();
@@ -277,6 +277,7 @@ fn build_ast_from_noun(
       Ok(AstNode::Str(String::from(&str[..])))
     }
     Rule::symbol => {
+      // strip leading backtick character
       let sym = pair.as_str().strip_prefix("`").unwrap();
       Ok(AstNode::Symbol(String::from(sym)))
     }
