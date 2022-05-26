@@ -13,7 +13,7 @@ mod slab;
 use alloc::alloc::Allocator;
 use alloc::string::{String, ToString};
 
-use bumpalo::Bump;
+pub use bumpalo::Bump;
 use mpk_parser::ast::AstNode;
 pub use slab::Slab;
 
@@ -122,6 +122,7 @@ impl Objective for Table {
   }
 }
 
+#[derive(Debug)]
 pub struct Arena<'arena, A: Allocator> {
   vars: Slab<'arena, AstNode, A>,
   functions: Slab<'arena, AstNode, A>,

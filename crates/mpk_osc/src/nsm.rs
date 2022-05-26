@@ -352,7 +352,7 @@ impl<'caps> FromStr for ServerCaps<'caps> {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ErrorCode<'a> {
   General(&'a str, &'a str),
   IncompatibleApi(&'a str, &'a str),
@@ -506,7 +506,7 @@ impl<'a> ToOsc for ErrorCode<'a> {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ClientMessage<'a> {
   Announce(&'a str, ClientCaps<'a>),
   Progress(f32),
@@ -652,7 +652,7 @@ impl<'a> ToOsc for ClientMessage<'a> {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ClientReply<'a> {
   Open(&'a str),
   Save(&'a str),
@@ -725,7 +725,7 @@ impl<'a> ToOsc for ClientReply<'a> {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ClientControl<'a> {
   Add(&'a str),
   Save,

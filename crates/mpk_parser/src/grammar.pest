@@ -1,10 +1,12 @@
-program = _{ SOI ~ "\n"* ~ (stmt ~ "\n"+) * ~ stmt? ~ EOI }
+program = _{ SOI ~ "\n"* ~ (stmt ~ ("\n"+ | SEP+))* ~ stmt? ~ EOI }
 
 stmt = _{ expr }
 
 expr = {
     assgmt
   | verbExpr
+  | fnExpr
+  | fnCall
   | sysExpr
   | nouns
 }
@@ -17,23 +19,23 @@ verbExpr = _{ monadic | dyadic }
 
 sysExpr = { sysverb ~ expr? }
 
-fnExpr = { }
+fnExpr = { "{" ~ (LB ~ name ~ SEP? ~ (name ~ SEP?)* ~ RB)? ~ expr_or_noun ~ "}"}
 
-assgmt = { name ~ ":" ~ verb_or_noun }
+fnCall = { name ~ "[" ~ ((expr_or_noun ~ SEP) | expr_or_noun ~ SEP?)* ~ "]" }
 
-noun = _{ decimal | int | name | string | symbol | list | dict | table}
+assgmt = { name ~ ASSIGN ~ expr_or_noun }
+
+noun = _{ decimal | int | name | string | symbol | dict | table | list}
 
 nouns = { noun+ }
 
-verb_or_noun = { nouns | verbExpr }
+expr_or_noun = _{ sysExpr | fnExpr | verbExpr | nouns }
 
-expr_or_noun = { nouns | verbExpr | sysExpr | fnExpr }
+list = { ("(" ~ (expr_or_noun ~ SEP?)* ~ ")") }
 
-list = { "(" ~ (verb_or_noun ~ SEP?)* ~ ")" }
+dict = { "[" ~ (name ~ (ASSIGN ~ expr_or_noun)?)? ~ (SEP ~ name ~ ASSIGN ~ expr_or_noun)* ~ SEP?  ~ "]" }
 
-dict = { "[" ~ ( (name ~ (":" ~ nouns)?) ~ (SEP ~ name ~ ":" ~ nouns)* ~ SEP?)* ~ "]" }
-
-table = { "[[]" ~ ( (name ~ (":" ~ nouns)?) ~ (SEP ~ name ~ ":" ~ nouns)* ~ SEP?)* ~ "]" }
+table = { "[" ~ "[" ~ ((name ~ (ASSIGN ~ nouns)?) ~ (SEP ~ name ~ ASSIGN ~ nouns)* ~ SEP?)* ~ "]" ~ ( (name ~ (ASSIGN ~ nouns)?) ~ (SEP ~ name ~ ASSIGN ~ nouns)* ~ SEP?)* ~ "]" }
 
 verb = {
   "+" | "-" | "*" | "%" | "!" | "&"
@@ -47,7 +49,7 @@ adverb = {
 }
 
 sysverb = {
-  "\\" ~ (ASCII_ALPHA+ | "\\")
+  "\\" ~ ("\\" | name) ~ list*
 }
 
 int = @{ "-"? ~ ASCII_DIGIT+ }
@@ -60,8 +62,11 @@ string = @{ "\"" ~ ( "\"\"" | (!"\"" ~ ANY) )* ~ "\"" }
 
 symbol = @{ "`" ~ name }
 
-SEP = _{ ";" }
+ASSIGN = { ":" }
 
+SEP = _{ ";" }
+LB = {"["}
+RB = {"]"}
 WHITESPACE = _{ " " | "\t" }
 
 COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }

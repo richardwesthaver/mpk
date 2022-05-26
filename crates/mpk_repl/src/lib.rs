@@ -6,7 +6,7 @@ use rustyline::{
   completion::FilenameCompleter, highlight::MatchingBracketHighlighter,
   validate::MatchingBracketValidator, CompletionType, Config, EditMode, Editor,
 };
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc;
 
 mod err;
 pub use err::{Error, Result};
@@ -23,8 +23,8 @@ pub use eval::Repl;
 pub async fn exec(client: &str, server: &str, timeout: u64, debug: bool) -> Result<()> {
   let mut rl = init_repl().unwrap();
   let printer = rl.create_external_printer().unwrap();
-  let (mut evaluator, rx) = Repl::new(rl);
-  let mut d = init_dispatcher(printer, client, server, rx, timeout)
+  let (mut evaluator, rx, tx) = Repl::new(rl);
+  let mut d = init_dispatcher(printer, client, server, rx, tx, timeout)
     .await
     .unwrap();
   let disp = tokio::spawn(async move {
@@ -56,10 +56,11 @@ pub async fn init_dispatcher<T: ExternalPrinter>(
   printer: T,
   client: &str,
   server: &str,
-  rx: Receiver<Vec<AstNode>>,
+  rx: mpsc::Receiver<Vec<AstNode>>,
+  tx: mpsc::Sender<String>,
   timeout: u64,
 ) -> Result<Dispatcher<T>> {
-  Ok(Dispatcher::new(printer, client, server, rx, timeout).await)
+  Ok(Dispatcher::new(printer, client, server, rx, tx, timeout).await)
 }
 
 pub fn print_external<'a, T: ExternalPrinter>(printer: &'a mut T, msg: &'a str) {

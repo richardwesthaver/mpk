@@ -2,7 +2,7 @@
 pub use rosc::{decoder, encoder, OscMessage, OscPacket, OscType};
 
 mod err;
-pub use err::{Error, Result};
+pub use err::{Error, OscError, Result};
 
 pub mod ardour;
 pub mod mpk;

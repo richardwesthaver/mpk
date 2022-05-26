@@ -1,8 +1,10 @@
+//! MPK_OSC -- ERR
+pub use rosc::OscError;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
-  Osc(rosc::OscError),
+  Osc(OscError),
   Io(std::io::Error),
   BadType(String),
   BadMessage(String),
@@ -39,8 +41,8 @@ impl std::fmt::Display for Error {
   }
 }
 
-impl From<rosc::OscError> for Error {
-  fn from(err: rosc::OscError) -> Error {
+impl From<OscError> for Error {
+  fn from(err: OscError) -> Error {
     Error::Osc(err)
   }
 }

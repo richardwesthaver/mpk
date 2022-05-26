@@ -6,7 +6,7 @@ edition = "2021"
 [features]
 full = ["util", "analysis", "config", "hash", "flate",
         "gear", "audio", "jack", "midi", "db", "osc",
-	"engine", "sesh", "http", "parser", "repl"]
+	"engine", "sesh", "http", "parser", "repl", "arena"]
 util = ["mpk_util"]
 config = ["mpk_config"]
 hash = ["mpk_hash"]

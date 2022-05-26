@@ -1,18 +1,20 @@
 //! MPK_PARSER -- PARSER
 //!
 //! Parse tokens into an unvalidated Program.
-use pest::error::Error;
+use mpk_hash::FxHashMap as HashMap;
 use pest::Parser;
 
 use crate::ast::*;
+use crate::err::{convert_error, Error, ErrorVariant, PestError};
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 pub struct MpkParser;
 
-pub fn parse(source: &str) -> Result<Program, Error<Rule>> {
+pub fn parse(source: &str) -> Result<Program, Error> {
   let mut ast = vec![];
   let pairs = MpkParser::parse(Rule::program, source)?;
+
   for pair in pairs {
     match pair.as_rule() {
       Rule::expr => {
@@ -25,9 +27,7 @@ pub fn parse(source: &str) -> Result<Program, Error<Rule>> {
   Ok(ast)
 }
 
-fn build_ast_from_expr(
-  pair: pest::iterators::Pair<Rule>,
-) -> Result<AstNode, Error<Rule>> {
+fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Error> {
   match pair.as_rule() {
     Rule::expr => build_ast_from_expr(pair.into_inner().next().unwrap()),
     Rule::dyadic => {
@@ -73,18 +73,20 @@ fn build_ast_from_expr(
         .map(|p| build_ast_from_noun(p).unwrap())
         .collect();
       // If there's just a single noun, return it without
-      // wrapping it in a Nouns node.
+      // wrapping it in a List.
       match nouns.len() {
         1 => Ok(nouns.get(0).unwrap().clone()),
-        _ => Ok(AstNode::Nouns(nouns)),
+        _ => Ok(AstNode::List(nouns)),
       }
     }
-    Rule::assgmtExpr => {
+    Rule::assgmt => {
       let mut pair = pair.into_inner();
       let name = pair.next().unwrap();
-      let expr = pair.next().unwrap();
-      let expr = build_ast_from_expr(expr)?;
-      Ok(AstNode::IsGlobal {
+      // skip ASSIGN token
+      pair.next().unwrap();
+      let val = pair.next().unwrap();
+      let expr = build_ast_from_expr(val)?;
+      Ok(AstNode::Var {
         name: String::from(name.as_str()),
         expr: Box::new(expr),
       })
@@ -99,12 +101,50 @@ fn build_ast_from_expr(
       };
       parse_sys_verb(verb, args)
     }
-    _ => Err(Error::new_from_span(
-      pest::error::ErrorVariant::CustomError {
+    Rule::fnExpr => {
+      let mut pair = pair.into_inner();
+      let mut args = vec![];
+      let lb_or_expr = pair.next().unwrap();
+      if lb_or_expr.as_str() == "[" {
+        while let Some(i) = pair.next() {
+          if i.as_str() == "]" {
+            break;
+          } else {
+            match parse_fn_arg(i) {
+              Ok(a) => args.push(a),
+              Err(e) => eprintln!("{}", e),
+            }
+          }
+        }
+        parse_fn_expr(Some(args), build_ast_from_expr(pair.next().unwrap())?)
+      } else {
+        parse_fn_expr(None, build_ast_from_expr(lb_or_expr)?)
+      }
+    }
+    // TODO read up on different forms of syntax for fn calls -- `x[1;2;3];x 1; (x 1 2); x (1;2;3)`
+    Rule::fnCall => {
+      let mut pair = pair.into_inner();
+      // can be parsed with `parse_fn_arg` since it's just a name and we need a String.
+      let name = parse_fn_arg(pair.next().unwrap())?;
+      let mut args = vec![];
+      while let Some(a) = pair.next() {
+        match build_ast_from_expr(a) {
+          Ok(a) => args.push(a),
+          Err(e) => eprintln!("{}", e),
+        }
+      }
+      if !args.is_empty() {
+        parse_fn_call(name, Some(args))
+      } else {
+        parse_fn_call(name, None)
+      }
+    }
+    _ => Err(Error::PestErr(PestError::new_from_span(
+      ErrorVariant::CustomError {
         message: "unexpected expression".to_string(),
       },
       pair.as_span(),
-    )),
+    ))),
   }
 }
 
@@ -113,7 +153,7 @@ fn parse_dyadic_verb(
   adverb: Option<AdVerb>,
   lhs: AstNode,
   rhs: AstNode,
-) -> Result<AstNode, Error<Rule>> {
+) -> Result<AstNode, Error> {
   let verb = match pair.as_str() {
     "+" => Ok(DyadicVerb::Plus),
     "-" => Ok(DyadicVerb::Minus),
@@ -144,12 +184,12 @@ fn parse_dyadic_verb(
       rhs: Box::new(rhs),
     })
   } else {
-    Err(Error::new_from_span(
-      pest::error::ErrorVariant::CustomError {
+    Err(Error::PestErr(PestError::new_from_span(
+      ErrorVariant::CustomError {
         message: "invalid dyadic verb".to_string(),
       },
       pair.as_span(),
-    ))
+    )))
   }
 }
 
@@ -157,7 +197,7 @@ fn parse_monadic_verb(
   pair: pest::iterators::Pair<Rule>,
   adverb: Option<AdVerb>,
   expr: AstNode,
-) -> Result<AstNode, Error<Rule>> {
+) -> Result<AstNode, Error> {
   let verb = match pair.as_str() {
     "+" => Ok(MonadicVerb::Flip),
     "-" => Ok(MonadicVerb::Negate),
@@ -183,18 +223,16 @@ fn parse_monadic_verb(
       expr: Box::new(expr),
     })
   } else {
-    Err(Error::new_from_span(
-      pest::error::ErrorVariant::CustomError {
+    Err(Error::PestErr(PestError::new_from_span(
+      ErrorVariant::CustomError {
         message: "invalid monadic verb".to_string(),
       },
       pair.as_span(),
-    ))
+    )))
   }
 }
 
-fn parse_ad_verb(
-  pair: pest::iterators::Pair<Rule>,
-) -> Result<Option<AdVerb>, Error<Rule>> {
+fn parse_ad_verb(pair: pest::iterators::Pair<Rule>) -> Result<Option<AdVerb>, Error> {
   match pair.as_str() {
     "'" => Ok(Some(AdVerb::Each)),
     "/" => Ok(Some(AdVerb::Over)),
@@ -202,28 +240,27 @@ fn parse_ad_verb(
     "':" => Ok(Some(AdVerb::EachPrior)),
     "\\:" => Ok(Some(AdVerb::EachLeft)),
     "/:" => Ok(Some(AdVerb::EachRight)),
-    _ => Err(Error::new_from_span(
-      pest::error::ErrorVariant::CustomError {
+    _ => Err(Error::PestErr(PestError::new_from_span(
+      ErrorVariant::CustomError {
         message: "invalid adverb".to_string(),
       },
       pair.as_span(),
-    )),
+    ))),
   }
 }
 
 fn parse_sys_verb(
   pair: pest::iterators::Pair<Rule>,
   args: Option<AstNode>,
-) -> Result<AstNode, Error<Rule>> {
-  let verb = match pair.as_str().strip_prefix("\\").unwrap() {
+) -> Result<AstNode, Error> {
+  let verb = match pair.as_str().trim().strip_prefix("\\").unwrap() {
     "\\" => Ok(SysVerb::Exit),
     "v" => Ok(SysVerb::Vars),
     "w" => Ok(SysVerb::Work),
     "l" => Ok(SysVerb::Import),
     "t" => Ok(SysVerb::Timeit),
     "sesh" => Ok(SysVerb::Sesh),
-    "http" => Ok(SysVerb::Http),
-    "osc" => Ok(SysVerb::Osc),
+    "proxy" => Ok(SysVerb::Proxy),
     "db" => Ok(SysVerb::Db),
     e => Err(format!("invalid sys verb: {}", e.to_string())),
   };
@@ -233,18 +270,45 @@ fn parse_sys_verb(
       args: args.map(|e| Box::new(e)),
     })
   } else {
-    Err(Error::new_from_span(
-      pest::error::ErrorVariant::CustomError {
-        message: "invalid sys verb".to_string(),
+    Err(Error::PestErr(PestError::new_from_span(
+      ErrorVariant::CustomError {
+        message: "invalid sysfn".to_string(),
       },
       pair.as_span(),
-    ))
+    )))
   }
 }
 
-fn build_ast_from_noun(
+fn parse_fn_arg(pair: pest::iterators::Pair<Rule>) -> Result<String, Error> {
+  match build_ast_from_noun(pair) {
+    Ok(AstNode::Name(n)) => Ok(n),
+    Ok(e) => {
+      let e = e.to_string();
+      Err(Error::InvalidNoun("<name>".to_string(), e.to_string()))
+    }
+    Err(e) => Err(e),
+  }
+}
+
+fn parse_fn_expr(args: Option<Vec<String>>, expr: AstNode) -> Result<AstNode, Error> {
+  Ok(AstNode::UserFn {
+    args,
+    expr: Box::new(expr),
+  })
+}
+
+fn parse_fn_call_args(
   pair: pest::iterators::Pair<Rule>,
-) -> Result<AstNode, Error<Rule>> {
+) -> Result<Option<Vec<AstNode>>, Error> {
+  let args = None;
+  Ok(args)
+}
+
+fn parse_fn_call(name: String, args: Option<Vec<AstNode>>) -> Result<AstNode, Error> {
+  Ok(AstNode::FnCall { name, args })
+}
+
+fn build_ast_from_noun(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Error> {
   match pair.as_rule() {
     Rule::int => {
       let istr = pair.as_str();
@@ -281,13 +345,94 @@ fn build_ast_from_noun(
       let sym = pair.as_str().strip_prefix("`").unwrap();
       Ok(AstNode::Symbol(String::from(sym)))
     }
+    Rule::list => {
+      let mut lst = vec![];
+      for i in pair.into_inner() {
+        match build_ast_from_expr(i) {
+          Ok(p) => lst.push(p),
+          Err(_) => (),
+        }
+      }
+      Ok(AstNode::List(lst))
+    }
+    Rule::dict => {
+      let mut dict = HashMap::default();
+
+      let mut pair = pair.into_inner();
+
+      while pair.peek().is_some() {
+        let key = match build_ast_from_noun(pair.next().unwrap()) {
+          Ok(AstNode::Name(k)) => Some(k),
+          _ => None,
+        };
+
+        match pair.next() {
+          Some(s) => {
+            if s.as_str() == ":" {
+              let val = pair.next().unwrap();
+              let val = match build_ast_from_expr(val) {
+                Ok(v) => Some(v),
+                e => None,
+              };
+              if let Some(k) = key {
+                if let Some(v) = val {
+                  dict.insert(k, v);
+                } else {
+                  dict.insert(k, AstNode::List(vec![]));
+                }
+              };
+            };
+          }
+          None => {
+            if let Some(k) = key {
+              dict.insert(k, AstNode::List(vec![]));
+            };
+          }
+        }
+      }
+      Ok(AstNode::Dict(dict))
+    }
+    Rule::table => {
+      let mut tbl = HashMap::default();
+      let mut pair = pair.into_inner();
+      while pair.peek().is_some() {
+        let col = match build_ast_from_noun(pair.next().unwrap()) {
+          Ok(AstNode::Name(c)) => Some(c),
+          _ => None,
+        };
+        match pair.next() {
+          Some(s) => {
+            if s.as_str() == ":" {
+              let val = pair.next().unwrap();
+              let val = match build_ast_from_expr(val) {
+                Ok(v) => Some(v),
+                _ => None,
+              };
+              if let Some(k) = col {
+                if let Some(v) = val {
+                  tbl.insert(k, v);
+                } else {
+                  tbl.insert(k, AstNode::List(vec![]));
+                }
+              };
+            };
+          }
+          None => {
+            if let Some(k) = col {
+              tbl.insert(k, AstNode::List(vec![]));
+            };
+          }
+        }
+      }
+      Ok(AstNode::Table(tbl))
+    }
     Rule::expr => build_ast_from_expr(pair),
     Rule::name => Ok(AstNode::Name(String::from(pair.as_str()))),
-    _ => Err(Error::new_from_span(
-      pest::error::ErrorVariant::CustomError {
+    _ => Err(Error::PestErr(PestError::new_from_span(
+      ErrorVariant::CustomError {
         message: "invalid noun".to_string(),
       },
       pair.as_span(),
-    )),
+    ))),
   }
 }
