@@ -8,13 +8,29 @@ use mpk_parser::ast::{
 };
 
 use super::ops::*;
+use crate::err::EvalError;
 
 pub fn eval_dyad(
   lhs: AstNode,
   verb: DyadicVerb,
   adverb: Option<AdVerb>,
   rhs: AstNode,
-) -> String {
+) -> Result<String, EvalError> {
+  let rhs = match rhs {
+    Dyad {
+      lhs,
+      verb,
+      adverb,
+      rhs,
+    } => eval_dyad(Dyad {
+      lhs,
+      verb,
+      adverb,
+      rhs,
+    })?,
+    Monad { verb, adverb, expr } => eval_monad(Monad { verb, adverb, expr })?,
+    rhs => rhs,
+  };
   if let Some(ad) = adverb {
     todo!()
   } else {
@@ -25,7 +41,11 @@ pub fn eval_dyad(
   }
 }
 
-pub fn eval_monad(verb: MonadicVerb, adverb: Option<AdVerb>, expr: AstNode) -> String {
+pub fn eval_monad(
+  verb: MonadicVerb,
+  adverb: Option<AdVerb>,
+  expr: AstNode,
+) -> Result<String, EvalError> {
   if let Some(ad) = adverb {
     todo!()
   } else {
@@ -46,7 +66,7 @@ pub fn eval_sysfn() {}
 
 pub fn eval_userfn() {}
 
-pub fn eval_list(list: Vec<AstNode>) -> String {
+pub fn eval_list(list: Vec<AstNode>) -> Result<String, EvalError> {
   let mut res: Vec<String> = Vec::new();
   for node in list {
     match node {
@@ -55,17 +75,17 @@ pub fn eval_list(list: Vec<AstNode>) -> String {
         verb,
         adverb,
         rhs,
-      } => res.push(eval_dyad(*lhs, verb, adverb, *rhs)),
-      Monad { verb, adverb, expr } => res.push(eval_monad(verb, adverb, *expr)),
+      } => res.push(eval_dyad(*lhs, verb, adverb, *rhs)?),
+      Monad { verb, adverb, expr } => res.push(eval_monad(verb, adverb, *expr)?),
       Int(x) => res.push(x.to_string()),
       Float(x) => res.push(x.to_string()),
       Name(x) => res.push(x),
       Str(x) => res.push(x),
       Symbol(x) => res.push(x),
-      List(x) => res.push(eval_list(x).split("\n").intersperse(" ").collect()),
+      List(x) => res.push(eval_list(x)?.split("\n").intersperse(" ").collect()),
       _ => todo!(),
     }
   }
   let res = res.into_iter().intersperse("\n".to_string()).collect();
-  res
+  Ok(res)
 }

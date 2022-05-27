@@ -11,7 +11,7 @@ use mpk_osc::{decoder, encoder, OscPacket, ToOsc};
 use mpk_parser::decode_program;
 use tokio::net::UdpSocket;
 
-use crate::{Result, Vm};
+use crate::{Error, Result, Vm};
 
 pub const MTU: usize = 1536;
 
@@ -136,7 +136,7 @@ impl<'eng> Engine<'eng> {
               .collect::<Vec<_>>()
               .as_slice(),
           );
-          self.vm.eval(program)?
+          self.vm.eval(program).map_err(|e| Error::from(e))?
         }
         _ => todo!(),
       },

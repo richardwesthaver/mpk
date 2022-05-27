@@ -629,12 +629,109 @@ Manager).
     - #![feature(generic_associated_types)]
   - may also need associated type defaults
     - #![feature(associated_type_defaults)]
+* TODO On Digital Audio Workstations
+  The DAW (Digital Audio Workstation) has existed for only a moment in
+  the continuum of creative mediums. DAWs started appearing in the
+  late 1970's, thanks to developments made by dedicated engineers such
+  as Max Matthews (AT&T), Hal Chamberlin, and David Cox (MTU). These
+  early DAWs were born from the commercial need for precise control of
+  audio on computers; government funded speech research, commercial
+  telephone research, and University computer music synthesis
+  centers. The very first DAWs were actually used in US Government
+  funded Speech Research for Sonar and the CIA[fn:2].
+
+  Nowadays the DAW is the cornerstone of the studio. It handles audio
+  recording, sequencing, mixing and resource management. With such a
+  powerful tool, there's rarely a need to work outside of the
+  'box'. With a laptop and some inspiration you can get a lot done.
+
+  Like any analog equivalent that has been digitized, users have
+  thoroughly benefited from the convenience and ease of use that the
+  DAW provides. While at UConn, I would often go to the library and
+  make beats on my laptop between classes, sometimes I would even do
+  so while attending class. This level of creative portability was
+  unheard of 30 years ago, and will only get better as mobile device
+  manufacturers develop smaller and more powerful chips.
+
+  Another benefit of the DAW is its efficacy in education. Most Music
+  Production classes today can be taught without ever entering an
+  analog studio. Lectures become project templates and students can
+  follow along in their own in-box studios. It has never been easier
+  to learn how to make music.
+
+  Indeed, the DAW has been an important evolution in the ways we make
+  music. For all the luxuries it endows us with, there's hardly an
+  argument to be made against the paradigm. Despite this, I will be
+  making one, if only for argument's sake.
+
+  - [[https://en.wikipedia.org/wiki/Digital_sound_revolution][Digital sound revolution - Wikipedia]]
+  - [[https://ccrma.stanford.edu/courses/192b/ProTools-Logic%20Lec.pdf][CCRMA - Music 192B: Week 2, Digital Audio Workstations]]
+
+[fn:2] [[http://www.mtu.com/support/mtudawevolution.htm][Digital Audio Workstation - The Evolution]]
+
+** DAW Workflows
+
+Let’s take a moment to consider an elementary DAW workflow. For this
+example, we will be using Ableton Live. The process is as follows:
+
+- Jam :: \\
+  First, we create. This is the most thrilling part of the process and
+  part of the reason many computer musicians have trouble finishing
+  projects. There is no commitment at this stage and much of what we
+  create won’t make it to the finished product. We’re free to turn all
+  the knobs, make controversial choices, revise, delete, and forget.
+
+- Record :: \\
+  If you ever want to make art, you must make decisions. This is what
+  the next step is all about. We record our Audio and MIDI clips in
+  the Session View and loosely arrange them into sections. This
+  involves trimming the fat from our jam sesh and curating the
+  collection of clips we’re left with. We must be acutely aware of our
+  audience, spectral balance, and song structure, make tough design
+  decisions, and commit to our ideas. This step is deceptively simple,
+  as doing this step well will make the remaining steps flow quite
+  easily and save you a lot of time. Don’t rush it, as moving on to
+  the next step too early will cause you to keep coming back.
+
+- Arrange :: \\
+  Next, we switch to Arrangement View and begin dragging our clips
+  into the timeline. During this process we think in two primary
+  dimensions: length, and depth. In the first dimension, each section
+  must be of appropriate length as well as the total length of our
+  song. In the second, we must assure there is a range of depth over
+  time – both spectral and dynamic. Here we develop cohesion in our
+  song. Sections should flow from one to the next with the intended
+  musical effect, and the song should feel structurally sound (pun
+  intended).
+ 
+- Mix :: \\
+  Finally, we do the mix. One should take an objective approach to
+  this task. Our goal is to trim unintended spectral artifacts and
+  make our mix sound good when reproduced on different speaker
+  systems.
+ 
+There is a healthy level of variation in how these steps are
+performed, but the structure is relatively the same.
+
+** DAWs as Instruments
+*** Trackers
+  - [[https://www.salon.com/1999/04/29/mod_trackers/][Mod love | Salon.com]]
+*** Patchers
+  - [[https://web.archive.org/web/20090603230029/http://freesoftware.ircam.fr/article.php3?id_article=5][freesoftware@ircam - A brief history of MAX]]
+  - [[http://msp.ucsd.edu/Publications/icmc88.pdf][Miller Puckette, IRCAM - The Patcher]]
+
+** A new paradigm
+  - [[https://jackaudio.org/api/][JACK Audio Connection Kit API]]
+  - [[https://gitlab.freedesktop.org/pipewire/pipewire/-/wikis/FAQ][FAQ · Wiki · PipeWire]]
+  - [[http://manpages.ubuntu.com/manpages/bionic/man1/zita-njbridge.1.html][zita-j2n, zita-n2j - Manpage]]
+  - [[http://non.tuxfamily.org/nsm/API.html][Non Session Management API]]
+  - [[https://ccrma.stanford.edu/groups/osc/index.html][OpenSoundControl.org]]
 * tasks
 ** TODO readme v2
-** TODO mpk_config updates [3/4]
+** DONE mpk_config updates [4/4]
 *** DONE add support for external paths
 add external track/sample locations
-*** TODO add support for Elektron USB mode                             :gear:
+*** DONE add support for Elektron USB mode                             :gear:
 add external drive locations
 
 *** DONE env variables
@@ -694,9 +791,46 @@ check [[https://github.com/jnykopp/emaccordion][jnykopp/emaccordion]]
 ** DONE refactor FFI
 ** DONE bootstrap DB
 ** DONE freesound analysis I/O with python
-** TODO platform-specific default configs
+** DONE platform-specific default configs
   jack.audio = 'alsa'
   jack.media = 'seq'
 ** TODO add resources
 ** TODO finish On DAWs
-** TODO init osc/sc
+** DONE init osc/sc
+** TODO AstNode traits
+- AstNodes implement Display so we can return AstNode from evaluator
+- we also need to return AstNode from ops so that we can recursively evaluate
+- we may additionally need to create additional standalone
+  structs/enums which implement specific functionality
+- we should consider if there is any values for GATs or specialization in this scenario
+Solution involves implementing common traits for AstNode (Add, Sub,
+Mul, Iterator, BinOps, etc) so that we can perform ops on them
+directly instead of retrieving their inner values. It will also save
+code in the long term.
+*** TODO Add
+*** TODO AddAssign
+*** TODO BitAnd
+*** TODO BitAndAssign
+*** TODO BitOr
+*** TODO BitOrAssign
+*** TODO BitXor
+*** TODO BitXorAssign
+*** TODO Div
+*** TODO DivAssign
+*** TODO Mul
+*** TODO MulAssign
+*** TODO Rem
+*** TODO RemAssign
+*** TODO Shl
+*** TODO ShlAssign
+*** TODO Shr
+*** TODO ShrAssign
+*** TODO Eq
+*** TODO Index
+*** TODO IndexMut
+*** TODO Deref
+*** TODO DerefMut
+*** TODO Neg
+*** TODO Not
+*** TODO Sub
+*** TODO SubAssign

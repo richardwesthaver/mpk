@@ -1,9 +1,10 @@
 #+TITLE: mpk
-#+DATE: 2022-05-16
+#+DATE: 2022-05-26
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Programming Kit
 #+OPTIONS: ^:{} e:t f:t timestamp:t toc:nil
+
 =mpk= is a /Media Programming Kit/ -- a development kit for digital
 media, taking lessons learned from software engineering and applying
 them to creative pursuits. It is a flexible ecosystem designed to
@@ -16,106 +17,12 @@ composers. Batteries are not included.
   This project is in alpha and will only deal with audio for quite
   some time since that's the medium I'm most interested in. There are
   future plans for image/video/text support.
-
+  
+  
 #+TOC: headlines 2
 
-* TODO On Digital Audio Workstations
-  The DAW (Digital Audio Workstation) has existed for only a moment in
-  the continuum of creative mediums. DAWs started appearing in the
-  late 1970's, thanks to developments made by dedicated engineers such
-  as Max Matthews (AT&T), Hal Chamberlin, and David Cox (MTU). These
-  early DAWs were born from the commercial need for precise control of
-  audio on computers; government funded speech research, commercial
-  telephone research, and University computer music synthesis
-  centers. The very first DAWs were actually used in US Government
-  funded Speech Research for Sonar and the CIA[fn:2].
+* Features
 
-  Nowadays the DAW is the cornerstone of the studio. It handles audio
-  recording, sequencing, mixing and resource management. With such a
-  powerful tool, there's rarely a need to work outside of the
-  'box'. With a laptop and some inspiration you can get a lot done.
-
-  Like any analog equivalent that has been digitized, users have
-  thoroughly benefited from the convenience and ease of use that the
-  DAW provides. While at UConn, I would often go to the library and
-  make beats on my laptop between classes, sometimes I would even do
-  so while attending class. This level of creative portability was
-  unheard of 30 years ago, and will only get better as mobile device
-  manufacturers develop smaller and more powerful chips.
-
-  Another benefit of the DAW is its efficacy in education. Most Music
-  Production classes today can be taught without ever entering an
-  analog studio. Lectures become project templates and students can
-  follow along in their own in-box studios. It has never been easier
-  to learn how to make music.
-
-  Indeed, the DAW has been an important evolution in the ways we make
-  music. For all the luxuries it endows us with, there's hardly an
-  argument to be made against the paradigm. Despite this, I will be
-  making one, if only for argument's sake.
-
-  - [[https://en.wikipedia.org/wiki/Digital_sound_revolution][Digital sound revolution - Wikipedia]]
-  - [[https://ccrma.stanford.edu/courses/192b/ProTools-Logic%20Lec.pdf][CCRMA - Music 192B: Week 2, Digital Audio Workstations]]
-
-[fn:2] [[http://www.mtu.com/support/mtudawevolution.htm][Digital Audio Workstation - The Evolution]]
-
-** DAW Workflows
-
-Let’s take a moment to consider an elementary DAW workflow. For this
-example, we will be using Ableton Live. The process is as follows:
-
-- Jam :: \\
-  First, we create. This is the most thrilling part of the process and
-  part of the reason many computer musicians have trouble finishing
-  projects. There is no commitment at this stage and much of what we
-  create won’t make it to the finished product. We’re free to turn all
-  the knobs, make controversial choices, revise, delete, and forget.
-
-- Record :: \\
-  If you ever want to make art, you must make decisions. This is what
-  the next step is all about. We record our Audio and MIDI clips in
-  the Session View and loosely arrange them into sections. This
-  involves trimming the fat from our jam sesh and curating the
-  collection of clips we’re left with. We must be acutely aware of our
-  audience, spectral balance, and song structure, make tough design
-  decisions, and commit to our ideas. This step is deceptively simple,
-  as doing this step well will make the remaining steps flow quite
-  easily and save you a lot of time. Don’t rush it, as moving on to
-  the next step too early will cause you to keep coming back.
-
-- Arrange :: \\
-  Next, we switch to Arrangement View and begin dragging our clips
-  into the timeline. During this process we think in two primary
-  dimensions: length, and depth. In the first dimension, each section
-  must be of appropriate length as well as the total length of our
-  song. In the second, we must assure there is a range of depth over
-  time – both spectral and dynamic. Here we develop cohesion in our
-  song. Sections should flow from one to the next with the intended
-  musical effect, and the song should feel structurally sound (pun
-  intended).
- 
-- Mix :: \\
-  Finally, we do the mix. One should take an objective approach to
-  this task. Our goal is to trim unintended spectral artifacts and
-  make our mix sound good when reproduced on different speaker
-  systems.
- 
-There is a healthy level of variation in how these steps are
-performed, but the structure is relatively the same.
-
-** DAWs as Instruments
-*** Trackers
-  - [[https://www.salon.com/1999/04/29/mod_trackers/][Mod love | Salon.com]]
-*** Patchers
-  - [[https://web.archive.org/web/20090603230029/http://freesoftware.ircam.fr/article.php3?id_article=5][freesoftware@ircam - A brief history of MAX]]
-  - [[http://msp.ucsd.edu/Publications/icmc88.pdf][Miller Puckette, IRCAM - The Patcher]]
-
-** A new paradigm
-  - [[https://jackaudio.org/api/][JACK Audio Connection Kit API]]
-  - [[https://gitlab.freedesktop.org/pipewire/pipewire/-/wikis/FAQ][FAQ · Wiki · PipeWire]]
-  - [[http://manpages.ubuntu.com/manpages/bionic/man1/zita-njbridge.1.html][zita-j2n, zita-n2j - Manpage]]
-  - [[http://non.tuxfamily.org/nsm/API.html][Non Session Management API]]
-  - [[https://ccrma.stanford.edu/groups/osc/index.html][OpenSoundControl.org]]
 * Usage
 MPK is meant to be used on a Linux box. In this example we'll be using
 Arch Linux.
@@ -124,12 +31,11 @@ MPK also runs on MacOS but some of the project management
 functionality isn't available. Most notably, you can't run the [[https://new-session-manager.jackaudio.org][NSM]]
 server on MacOS, but you can still interact with one remotely. All
 other features are supported on both platforms.
-** Installation
+* Installation
 First install the dependencies:
 #+begin_src shell
   # install rustup
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-  # only required if you intend to run benchmarks (requires the unstable 'test' feature)
   rustup default nightly
 
   # for processing analysis files
@@ -137,7 +43,7 @@ First install the dependencies:
   tar -xf essentia-extractors.tar.gz essentia-extractors-v2.1_beta2/{streaming_extractor_freesound,streaming_extractor_music}
   mv essentia-extractors-v2.1_beta2/{streaming_extractor_freesound,streaming_extractor_music} /usr/local/bin/ && rm -r essentia-extractors-v2.1_beta2
 
-  sudo pacman -S nim alsa-lib jack2 ffmpeg new-session-manager supercollider ffmpeg
+  sudo pacman -S nim alsa-lib jack2 ffmpeg new-session-manager supercollider
 #+end_src
 
 
@@ -149,7 +55,7 @@ binaries in =~/.cargo=.
 
 Run =nim help= to see the other commands and flags available.
 
-** Initialization
+* Initialization
 Once the binary is installed run =mpk init= to initialize the app
 directories at =~/mpk= as well as the database and TOML config file.
 
@@ -167,7 +73,7 @@ sesh
 samples
 tracks
 #+end_src
-** Configuration
+* Configuration
 The default =mpk.toml= config file looks like this:
 #+begin_src conf-toml
 [fs]
@@ -187,7 +93,7 @@ audio = 'alsa'
 midi = 'seq'
 device = 'default'
 realtime = true
-auto = ' '
+autoconnect = ' '
 temp = false
 rate = 44100
 period = 1024
@@ -209,15 +115,15 @@ socket = '127.0.0.1:0'
 [engine]
 socket = '127.0.0.1:0'
 
+[gear]
 #+end_src
 Much of the configuration can be overridden by CLI flags but you may
 want to change some of the default values. Some of the optional
 settings aren't included in the default file:
 - fs.{=ext_samples=, =ext_tracks=, =ext_projects=, =ext_plugins=, =ext_patches=}
-- =extractor.path=
-- =metro.tic=
-- =metro.toc=
-- net.{=freesound=, =musicbrainz=, =youtube=, =spotify=}
+- gear.{=octatrack=, =analog_rytm=, =op_1=}
+- metro.{=tic=, =toc=}
+- net.{=freesound=, =musicbrainz=, =youtube=, =spotify=}.{=client_id=, =client_secret=, =redirect_url=}
 * Dev Dependencies
 =*= := /use your OS package manager (apt, brew, pacman, etc)/
 - [[https://www.rust-lang.org/tools/install][Rust]] :: install with [[https://rustup.rs/][rustup.rs]]

@@ -51,6 +51,12 @@ impl From<mpk_parser::Error> for Error {
   }
 }
 
+impl From<VmError> for Error {
+  fn from(e: VmError) -> Self {
+    Error::Vm(e)
+  }
+}
+
 #[derive(Debug)]
 pub enum VmError {
   Eval(EvalError),
@@ -69,6 +75,12 @@ impl std::fmt::Display for VmError {
     match self {
       VmError::Eval(err) => err.fmt(f),
     }
+  }
+}
+
+impl From<EvalError> for VmError {
+  fn from(e: EvalError) -> Self {
+    VmError::Eval(e)
   }
 }
 
