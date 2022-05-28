@@ -10,6 +10,8 @@ use crate::parser::Rule;
 pub enum Error {
   PestErr(PestError<Rule>),
   InvalidNoun(String, String),
+  Length(usize, usize),
+  Num(String),
 }
 
 impl std::error::Error for Error {
@@ -17,6 +19,8 @@ impl std::error::Error for Error {
     match self {
       Error::PestErr(ref e) => Some(e),
       Error::InvalidNoun(..) => None,
+      Error::Length(..) => None,
+      Error::Num(..) => None,
     }
   }
 }
@@ -26,8 +30,12 @@ impl fmt::Display for Error {
     match self {
       Error::PestErr(ref e) => e.fmt(f),
       Error::InvalidNoun(expected, found) => {
-        f.write_str(format!("expected {}, found {}", expected, found).as_str())
+        f.write_fmt(format_args!("expected {}, found {}", expected, found))
       }
+      Error::Length(expected, found) => {
+        f.write_fmt(format_args!("expected {}, found {}", expected, found))
+      }
+      Error::Num(i) => f.write_fmt(format_args!("failed to parse number {}", i)),
     }
   }
 }
@@ -109,4 +117,35 @@ pub fn line_col(pos: usize, input: &str) -> String {
   };
 
   format!("({}, {})", line - 1, col - 1)
+}
+
+#[derive(Debug)]
+pub enum EvalError {
+  Class,
+  Rank,
+  Length,
+  Type,
+  Domain,
+  Limit,
+  Nyi,
+  Parse,
+  Value,
+}
+
+impl std::error::Error for EvalError {}
+
+impl std::fmt::Display for EvalError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      EvalError::Class => f.write_str(":class"),
+      EvalError::Rank => f.write_str(":rank"),
+      EvalError::Length => f.write_str(":length"),
+      EvalError::Type => f.write_str(":type"),
+      EvalError::Domain => f.write_str(":domain"),
+      EvalError::Limit => f.write_str(":limit"),
+      EvalError::Nyi => f.write_str(":nyi"),
+      EvalError::Parse => f.write_str(":parse"),
+      EvalError::Value => f.write_str(":value"),
+    }
+  }
 }

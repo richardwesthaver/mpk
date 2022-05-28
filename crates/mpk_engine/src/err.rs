@@ -1,4 +1,5 @@
 //! MPK_ENGINE ERR
+pub use mpk_parser::EvalError;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -81,36 +82,5 @@ impl std::fmt::Display for VmError {
 impl From<EvalError> for VmError {
   fn from(e: EvalError) -> Self {
     VmError::Eval(e)
-  }
-}
-
-#[derive(Debug)]
-pub enum EvalError {
-  Class,
-  Rank,
-  Length,
-  Type,
-  Domain,
-  Limit,
-  Nyi,
-  Parse,
-  Value,
-}
-
-impl std::error::Error for EvalError {}
-
-impl std::fmt::Display for EvalError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      EvalError::Class => f.write_str(":class"),
-      EvalError::Rank => f.write_str(":rank"),
-      EvalError::Length => f.write_str(":length"),
-      EvalError::Type => f.write_str(":type"),
-      EvalError::Domain => f.write_str(":domain"),
-      EvalError::Limit => f.write_str(":limit"),
-      EvalError::Nyi => f.write_str(":nyi"),
-      EvalError::Parse => f.write_str(":parse"),
-      EvalError::Value => f.write_str(":value"),
-    }
   }
 }

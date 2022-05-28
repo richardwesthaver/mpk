@@ -1,10 +1,283 @@
 //! MPK_PARSER -- AST
 //!
 //! Abstract Syntax Tree objects of the mk language.
-use chrono::{NaiveDateTime, NaiveTime};
+use std::fmt::Write;
+use std::iter::{ExactSizeIterator, Iterator};
+use std::ops::{Add, Deref};
+use std::time::Duration;
+
 use mpk_hash::FxHashMap as HashMap;
 use serde::{Deserialize, Serialize};
+
+use crate::EvalError;
 pub type Program = Vec<AstNode>;
+
+#[derive(PartialEq, PartialOrd, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Atom {
+  Boolean(bool),
+  Char(Char),
+  Int(Integer),
+  Float(Float),
+  Name(Name), // 8 char max
+  Time(Duration),
+}
+
+impl Add for Atom {
+  type Output = Atom;
+  fn add(self, rhs: Self) -> Self::Output {
+    use Atom::*;
+    match (self, rhs) {
+      (Boolean(x), Boolean(y)) => Boolean(x | y),
+      (Char(x), Char(y)) => Char(x + y),
+      (Char(x), Int(y)) => Int(Integer::G(*x) + y),
+      (Int(x), Int(y)) => Int(x + y),
+      (Float(x), Float(y)) => Float(x + y),
+      (Name(x), Name(y)) => Name(x + y),
+      (Time(x), Time(y)) => Time(x + y),
+      _ => todo!(),
+    }
+  }
+}
+
+impl std::fmt::Display for Atom {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Atom::Boolean(x) => {
+        if *x {
+          f.write_str("1b")
+        } else {
+          f.write_str("0b")
+        }
+      }
+      Atom::Char(x) => x.fmt(f),
+      Atom::Int(x) => x.fmt(f),
+      Atom::Float(x) => x.fmt(f),
+      Atom::Name(x) => x.fmt(f),
+      Atom::Time(x) => x.as_millis().fmt(f),
+    }
+  }
+}
+
+#[derive(
+  PartialEq, PartialOrd, Debug, Clone, Copy, Serialize, Deserialize, Hash, Eq,
+)]
+pub enum Name {
+  N1(u8),
+  N2([u8; 2]),
+  N4([u8; 4]),
+  N8([u8; 8]),
+}
+
+impl Add for Name {
+  type Output = Name;
+  fn add(self, rhs: Self) -> Self::Output {
+    use Name::*;
+    match (self, rhs) {
+      (N1(x), N1(y)) => N2([x, y]),
+      (N1(x), N2(y)) => N4([x, y[0], y[1], 0]),
+      (N2(x), N1(y)) => N4([x[0], x[1], y, 0]),
+      (N2(x), N2(y)) => N4([x[0], x[1], y[0], y[1]]),
+      (N1(x), N4(y)) => N8([x, y[0], y[1], y[2], y[3], 0, 0, 0]),
+      (N2(x), N4(y)) => N8([x[0], x[1], y[0], y[1], y[2], y[3], 0, 0]),
+      (N4(x), N4(y)) => N8([x[0], x[1], x[2], x[3], y[0], y[1], y[2], y[3]]),
+      _ => todo!(),
+    }
+  }
+}
+
+impl From<Integer> for Name {
+  fn from(i: Integer) -> Self {
+    use Name::*;
+    match i {
+      Integer::G(x) => N1(x),
+      Integer::H(x) => N2(x.to_be_bytes()),
+      Integer::I(x) => N4(x.to_be_bytes()),
+      Integer::J(x) => N8(x.to_be_bytes()),
+    }
+  }
+}
+
+impl<'a> From<&'a str> for Name {
+  fn from(s: &'a str) -> Self {
+    use Name::*;
+    let s = s.as_bytes();
+    match s.len() {
+      1 => N1(s[0]),
+      2 => N2([s[0], s[1]]),
+      3 => N4([s[0], s[1], s[2], 0]),
+      4 => N4([s[0], s[1], s[2], s[3]]),
+      5 => N8([s[0], s[1], s[2], s[3], s[4], 0, 0, 0]),
+      6 => N8([s[0], s[1], s[2], s[3], s[4], s[5], 0, 0]),
+      7 => N8([s[0], s[1], s[2], s[3], s[4], s[5], s[6], 0]),
+      8 => N8([s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]]),
+      _ => N8([s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]]),
+    }
+  }
+}
+impl std::fmt::Display for Name {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Name::N1(x) => f.write_str(&(*x as char).to_string()),
+      Name::N2(x) => f.write_str(std::str::from_utf8(x).unwrap()), // no padding is possible so no trim
+      Name::N4(x) => f.write_str(std::str::from_utf8(x.trim_ascii()).unwrap()),
+      Name::N8(x) => f.write_str(std::str::from_utf8(x.trim_ascii()).unwrap()),
+    }
+  }
+}
+
+impl Iterator for Name {
+  type Item = u8;
+  fn next(&mut self) -> Option<Self::Item> {
+    match self {
+      // TODO test if this is necessary else just return None for N1
+      Name::N1(x) => x.to_be_bytes().iter().next().map(|x| *x),
+      Name::N2(x) => x.iter().next().map(|x| *x),
+      Name::N4(x) => x.iter().next().map(|x| *x),
+      Name::N8(x) => x.iter().next().map(|x| *x),
+    }
+  }
+}
+
+impl ExactSizeIterator for Name {
+  fn len(&self) -> usize {
+    match self {
+      Name::N1(x) => 1,
+      Name::N2(x) => 2,
+      Name::N4(x) => 4,
+      Name::N8(x) => 8,
+    }
+  }
+}
+
+#[derive(PartialEq, PartialOrd, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Float {
+  E(f32),
+  F(f64),
+}
+
+impl Add for Float {
+  type Output = Float;
+  fn add(self, rhs: Self) -> Self::Output {
+    use Float::*;
+    match (self, rhs) {
+      (E(x), F(y)) => F(x as f64 + y),
+      (F(x), E(y)) => F(x + y as f64),
+      (F(x), F(y)) => F(x + y),
+      (E(x), E(y)) => E(x + y),
+    }
+  }
+}
+
+impl From<Integer> for Float {
+  fn from(i: Integer) -> Self {
+    use Float::*;
+    match i {
+      Integer::G(x) => Float::E(x as f32),
+      Integer::H(x) => Float::E(x as f32),
+      Integer::I(x) => Float::F(x as f64),
+      Integer::J(x) => Float::F(x as f64),
+    }
+  }
+}
+
+impl std::fmt::Display for Float {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Float::E(x) => x.fmt(f),
+      Float::F(x) => x.fmt(f),
+    }
+  }
+}
+
+#[derive(PartialEq, PartialOrd, Debug, Clone, Copy, Serialize, Deserialize, Eq)]
+pub enum Integer {
+  G(u8),
+  H(u16),
+  I(u32),
+  J(i64),
+}
+
+impl Add for Integer {
+  type Output = Integer;
+  fn add(self, rhs: Self) -> Self::Output {
+    use Integer::*;
+    match (self, rhs) {
+      (G(x), G(y)) => G(x + y),
+      (G(x), H(y)) => H(x as u16 + y),
+      (G(x), I(y)) => I(x as u32 + y),
+      (G(x), J(y)) => J(x as i64 + y),
+      (H(x), G(y)) => H(x + y as u16),
+      (H(x), H(y)) => H(x + y),
+      (H(x), I(y)) => I(x as u32 + y),
+      (H(x), J(y)) => J(x as i64 + y),
+      (I(x), G(y)) => I(x + y as u32),
+      (I(x), H(y)) => I(x + y as u32),
+      (I(x), I(y)) => I(x + y),
+      (I(x), J(y)) => J(x as i64 + y),
+      (J(x), G(y)) => J(x + y as i64),
+      (J(x), H(y)) => J(x + y as i64),
+      (J(x), I(y)) => J(x + y as i64),
+      (J(x), J(y)) => J(x + y),
+    }
+  }
+}
+
+impl From<Char> for Integer {
+  fn from(i: Char) -> Self {
+    Integer::G(i.0)
+  }
+}
+
+impl std::fmt::Display for Integer {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Integer::G(x) => x.fmt(f),
+      Integer::H(x) => x.fmt(f),
+      Integer::I(x) => x.fmt(f),
+      Integer::J(x) => x.fmt(f),
+    }
+  }
+}
+
+#[derive(PartialEq, PartialOrd, Debug, Clone, Copy, Serialize, Deserialize, Eq)]
+pub struct Char(u8);
+
+impl Add for Char {
+  type Output = Char;
+  fn add(self, rhs: Self) -> Self::Output {
+    Char(self.0 + rhs.0)
+  }
+}
+
+impl Deref for Char {
+  type Target = u8;
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+impl From<Integer> for Char {
+  fn from(i: Integer) -> Self {
+    match i {
+      Integer::G(x) => Char(x),
+      Integer::H(x) => Char(x as u8),
+      Integer::I(x) => Char(x as u8),
+      Integer::J(x) => Char(x as u8),
+    }
+  }
+}
+
+impl From<u8> for Char {
+  fn from(c: u8) -> Self {
+    Char(c)
+  }
+}
+
+impl std::fmt::Display for Char {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.write_char(self.0 as char)
+  }
+}
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize, Hash)]
 pub enum MonadicVerb {
@@ -156,16 +429,12 @@ impl std::fmt::Display for SysVerb {
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum AstNode {
-  Int(i64),
-  Float(f64),
-  Date(NaiveDateTime),
-  Time(NaiveTime),
-  Name(String),
-  Str(String),
-  Symbol(String),
+  Atom(Atom),
+  Symbol(Name),
+  Str(Vec<Char>),
   List(Vec<AstNode>),
-  Dict(HashMap<String, AstNode>),
-  Table(HashMap<String, AstNode>),
+  Dict(HashMap<Name, AstNode>),
+  Table(HashMap<Name, AstNode>),
   Monad {
     verb: MonadicVerb,
     adverb: Option<AdVerb>,
@@ -182,15 +451,15 @@ pub enum AstNode {
     args: Option<Box<AstNode>>,
   },
   UserFn {
-    args: Option<Vec<String>>,
+    args: Option<Vec<Name>>,
     expr: Box<AstNode>,
   },
   FnCall {
-    name: String,
+    name: Name,
     args: Option<Vec<AstNode>>,
   },
   Var {
-    name: String,
+    name: Name,
     expr: Box<AstNode>,
   },
 }
@@ -198,12 +467,10 @@ pub enum AstNode {
 impl std::fmt::Display for AstNode {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      AstNode::Int(x) => f.write_str(&x.to_string()),
-      AstNode::Float(x) => f.write_str(&x.to_string()),
-      AstNode::Date(x) => f.write_str(&x.to_string()),
-      AstNode::Time(x) => f.write_str(&x.to_string()),
-      AstNode::Name(x) => f.write_str(&x.to_string()),
-      AstNode::Str(x) => f.write_str(&x.to_string()),
+      AstNode::Atom(x) => x.fmt(f),
+      AstNode::Str(x) => {
+        f.write_str(&x.into_iter().map(|c| c.0 as char).collect::<String>())
+      }
       AstNode::Symbol(x) => f.write_str(&x.to_string()),
       AstNode::List(x) => f.write_fmt(format_args!(
         "{}",
@@ -277,8 +544,8 @@ impl std::fmt::Display for AstNode {
           f.write_fmt(format_args!(
             "{{[{}]{}}}",
             ar.iter()
-              .map(|a| a.as_str())
-              .intersperse(";")
+              .map(|a| a.to_string())
+              .intersperse(";".to_string())
               .collect::<String>(),
             *expr
           ))
@@ -297,10 +564,36 @@ impl std::fmt::Display for AstNode {
               .collect::<String>()
           ))
         } else {
-          f.write_str(&name)
+          f.write_str(&name.to_string())
         }
       }
       AstNode::Var { name, expr } => f.write_fmt(format_args!("{}:{}", name, *expr)),
+    }
+  }
+}
+
+impl Add for AstNode {
+  type Output = Result<AstNode, EvalError>;
+  fn add(self, rhs: Self) -> Self::Output {
+    use AstNode::*;
+    match (self, rhs) {
+      (Atom(x), Atom(y)) => Ok(Atom(x + y)),
+      (Atom(x), List(y)) => {
+        Ok(List(y.iter().map(|y| Atom(x) + y.clone()).try_collect()?))
+      }
+      (List(x), List(y)) => {
+        if x.len() == y.len() {
+          Ok(List(
+            y.iter().zip(x).map(|(x, y)| x.clone() + y).try_collect()?,
+          ))
+        } else {
+          Err(EvalError::Length)
+        }
+      }
+      (List(x), Atom(y)) => {
+        Ok(List(x.iter().map(|x| x.clone() + Atom(y)).try_collect()?))
+      }
+      _ => todo!(),
     }
   }
 }

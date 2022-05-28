@@ -5,7 +5,7 @@ use mpk_hash::FxHashMap as HashMap;
 use pest::Parser;
 
 use crate::ast::*;
-use crate::err::{convert_error, Error, ErrorVariant, PestError};
+use crate::err::{Error, ErrorVariant, PestError};
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -81,13 +81,14 @@ fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Err
     }
     Rule::assgmt => {
       let mut pair = pair.into_inner();
-      let name = pair.next().unwrap();
+      let n = pair.next().unwrap();
+      let name = parse_name(n)?;
       // skip ASSIGN token
       pair.next().unwrap();
       let val = pair.next().unwrap();
       let expr = build_ast_from_expr(val)?;
       Ok(AstNode::Var {
-        name: String::from(name.as_str()),
+        name,
         expr: Box::new(expr),
       })
     }
@@ -279,9 +280,15 @@ fn parse_sys_verb(
   }
 }
 
-fn parse_fn_arg(pair: pest::iterators::Pair<Rule>) -> Result<String, Error> {
+fn parse_fn_arg(pair: pest::iterators::Pair<Rule>) -> Result<Name, Error> {
   match build_ast_from_noun(pair) {
-    Ok(AstNode::Name(n)) => Ok(n),
+    Ok(AstNode::Atom(n)) => {
+      if let Atom::Name(n) = n {
+        Ok(n)
+      } else {
+        Err(Error::InvalidNoun("<name>".to_string(), n.to_string()))
+      }
+    }
     Ok(e) => {
       let e = e.to_string();
       Err(Error::InvalidNoun("<name>".to_string(), e.to_string()))
@@ -290,7 +297,7 @@ fn parse_fn_arg(pair: pest::iterators::Pair<Rule>) -> Result<String, Error> {
   }
 }
 
-fn parse_fn_expr(args: Option<Vec<String>>, expr: AstNode) -> Result<AstNode, Error> {
+fn parse_fn_expr(args: Option<Vec<Name>>, expr: AstNode) -> Result<AstNode, Error> {
   Ok(AstNode::UserFn {
     args,
     expr: Box::new(expr),
@@ -304,46 +311,97 @@ fn parse_fn_call_args(
   Ok(args)
 }
 
-fn parse_fn_call(name: String, args: Option<Vec<AstNode>>) -> Result<AstNode, Error> {
+fn parse_fn_call(name: Name, args: Option<Vec<AstNode>>) -> Result<AstNode, Error> {
   Ok(AstNode::FnCall { name, args })
+}
+
+fn parse_name(pair: pest::iterators::Pair<Rule>) -> Result<Name, Error> {
+  let n = pair.as_str().as_bytes();
+  match n.len() {
+    1 => Ok(Name::N1(n[0])),
+    2 => Ok(Name::N2([n[0], n[1]])),
+    3 => Ok(Name::N4([n[0], n[1], n[2], 0])),
+    4 => Ok(Name::N4([n[0], n[1], n[2], n[3]])),
+    5 => Ok(Name::N8([n[0], n[1], n[2], n[3], n[4], 0, 0, 0])),
+    6 => Ok(Name::N8([n[0], n[1], n[2], n[3], n[4], n[5], 0, 0])),
+    7 => Ok(Name::N8([n[0], n[1], n[2], n[3], n[4], n[5], n[6], 0])),
+    8 => Ok(Name::N8([n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7]])),
+    e => Err(Error::Length(8, e)),
+  }
+}
+
+fn parse_int(pair: pest::iterators::Pair<Rule>) -> Result<Integer, Error> {
+  let i = pair.as_str();
+  let (sign, int) = match &i[..1] {
+    "-" => (-1, &i[1..]),
+    _ => (1, &i[..]),
+  };
+  match sign {
+    1 => {
+      if let Ok(i) = int.parse::<u8>() {
+        Ok(Integer::G(i))
+      } else if let Ok(i) = int.parse::<u16>() {
+        Ok(Integer::H(i))
+      } else if let Ok(i) = int.parse::<u32>() {
+        Ok(Integer::I(i))
+      } else if let Ok(i) = int.parse::<i64>() {
+        Ok(Integer::J(i))
+      } else {
+        Err(Error::Num(i.to_string()))
+      }
+    }
+    -1 => {
+      if let Ok(i) = int.parse::<i64>() {
+        Ok(Integer::J(sign * i))
+      } else {
+        Err(Error::Num(i.to_string()))
+      }
+    }
+    _ => Err(Error::Num(i.to_string())),
+  }
+}
+
+fn parse_float(pair: pest::iterators::Pair<Rule>) -> Result<Float, Error> {
+  let f = pair.as_str();
+  let (sign, flt) = match &f[..1] {
+    "-" => (-1., &f[1..]),
+    _ => (1., &f[..]),
+  };
+  if let Ok(mut f) = flt.parse::<f32>() {
+    if f != 0.0 {
+      f *= sign;
+    }
+    Ok(Float::E(f))
+  } else if let Ok(mut f) = flt.parse::<f64>() {
+    if f != 0.0 {
+      f *= sign as f64;
+    }
+    Ok(Float::F(f))
+  } else {
+    Err(Error::Num(f.to_string()))
+  }
 }
 
 fn build_ast_from_noun(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Error> {
   match pair.as_rule() {
-    Rule::int => {
-      let istr = pair.as_str();
-      let (sign, istr) = match &istr[..1] {
-        "-" => (-1, &istr[1..]),
-        _ => (1, &istr[..]),
-      };
-      let integer: i64 = istr.parse().unwrap();
-      Ok(AstNode::Int(sign * integer))
-    }
-    Rule::decimal => {
-      let dstr = pair.as_str();
-      let (sign, dstr) = match &dstr[..1] {
-        "-" => (-1.0, &dstr[1..]),
-        _ => (1.0, &dstr[..]),
-      };
-      let mut flt: f64 = dstr.parse().unwrap();
-      if flt != 0.0 {
-        // Avoid negative zeroes; only multiply sign by nonzeroes.
-        flt *= sign;
-      }
-      Ok(AstNode::Float(flt))
-    }
+    Rule::int => Ok(AstNode::Atom(Atom::Int(parse_int(pair)?))),
+    Rule::decimal => Ok(AstNode::Atom(Atom::Float(parse_float(pair)?))),
     Rule::string => {
-      let str = &pair.as_str();
+      let str = pair.as_str();
       // Strip leading and ending quotes.
       let str = &str[1..str.len() - 1];
       // Escaped string quotes become single quotes here.
       let str = str.replace("\"\"", "\"");
-      Ok(AstNode::Str(String::from(&str[..])))
+      let str: Vec<Char> = str
+        .into_bytes()
+        .into_iter()
+        .map(|c| Char::from(c))
+        .collect();
+      Ok(AstNode::Str(str))
     }
     Rule::symbol => {
-      // strip leading backtick character
       let sym = pair.as_str().strip_prefix("`").unwrap();
-      Ok(AstNode::Symbol(String::from(sym)))
+      Ok(AstNode::Symbol(Name::from(sym)))
     }
     Rule::list => {
       let mut lst = vec![];
@@ -361,8 +419,8 @@ fn build_ast_from_noun(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Err
       let mut pair = pair.into_inner();
 
       while pair.peek().is_some() {
-        let key = match build_ast_from_noun(pair.next().unwrap()) {
-          Ok(AstNode::Name(k)) => Some(k),
+        let key = match parse_name(pair.next().unwrap()) {
+          Ok(k) => Some(k),
           _ => None,
         };
 
@@ -372,7 +430,7 @@ fn build_ast_from_noun(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Err
               let val = pair.next().unwrap();
               let val = match build_ast_from_expr(val) {
                 Ok(v) => Some(v),
-                e => None,
+                _ => None,
               };
               if let Some(k) = key {
                 if let Some(v) = val {
@@ -396,8 +454,8 @@ fn build_ast_from_noun(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Err
       let mut tbl = HashMap::default();
       let mut pair = pair.into_inner();
       while pair.peek().is_some() {
-        let col = match build_ast_from_noun(pair.next().unwrap()) {
-          Ok(AstNode::Name(c)) => Some(c),
+        let col = match parse_name(pair.next().unwrap()) {
+          Ok(k) => Some(k),
           _ => None,
         };
         match pair.next() {
@@ -427,7 +485,7 @@ fn build_ast_from_noun(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Err
       Ok(AstNode::Table(tbl))
     }
     Rule::expr => build_ast_from_expr(pair),
-    Rule::name => Ok(AstNode::Name(String::from(pair.as_str()))),
+    Rule::name => Ok(AstNode::Atom(Atom::Name(parse_name(pair)?))),
     _ => Err(Error::PestErr(PestError::new_from_span(
       ErrorVariant::CustomError {
         message: "invalid noun".to_string(),

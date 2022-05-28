@@ -15,20 +15,15 @@ pub fn eval_dyad(
   verb: DyadicVerb,
   adverb: Option<AdVerb>,
   rhs: AstNode,
-) -> Result<String, EvalError> {
+) -> Result<AstNode, EvalError> {
   let rhs = match rhs {
     Dyad {
       lhs,
       verb,
       adverb,
       rhs,
-    } => eval_dyad(Dyad {
-      lhs,
-      verb,
-      adverb,
-      rhs,
-    })?,
-    Monad { verb, adverb, expr } => eval_monad(Monad { verb, adverb, expr })?,
+    } => eval_dyad(*lhs, verb, adverb, *rhs)?,
+    Monad { verb, adverb, expr } => eval_monad(verb, adverb, *expr)?,
     rhs => rhs,
   };
   if let Some(ad) = adverb {
@@ -45,7 +40,7 @@ pub fn eval_monad(
   verb: MonadicVerb,
   adverb: Option<AdVerb>,
   expr: AstNode,
-) -> Result<String, EvalError> {
+) -> Result<AstNode, EvalError> {
   if let Some(ad) = adverb {
     todo!()
   } else {
@@ -66,8 +61,8 @@ pub fn eval_sysfn() {}
 
 pub fn eval_userfn() {}
 
-pub fn eval_list(list: Vec<AstNode>) -> Result<String, EvalError> {
-  let mut res: Vec<String> = Vec::new();
+pub fn eval_list(list: Vec<AstNode>) -> Result<AstNode, EvalError> {
+  let mut res: Vec<AstNode> = Vec::new();
   for node in list {
     match node {
       Dyad {
@@ -77,15 +72,9 @@ pub fn eval_list(list: Vec<AstNode>) -> Result<String, EvalError> {
         rhs,
       } => res.push(eval_dyad(*lhs, verb, adverb, *rhs)?),
       Monad { verb, adverb, expr } => res.push(eval_monad(verb, adverb, *expr)?),
-      Int(x) => res.push(x.to_string()),
-      Float(x) => res.push(x.to_string()),
-      Name(x) => res.push(x),
-      Str(x) => res.push(x),
-      Symbol(x) => res.push(x),
-      List(x) => res.push(eval_list(x)?.split("\n").intersperse(" ").collect()),
-      _ => todo!(),
+      List(x) => res.push(eval_list(x)?),
+      x => res.push(x),
     }
   }
-  let res = res.into_iter().intersperse("\n".to_string()).collect();
-  Ok(res)
+  Ok(List(res))
 }

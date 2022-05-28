@@ -28,18 +28,20 @@ impl<'vm, A: Allocator> Vm<'_, A> {
           verb,
           adverb,
           rhs,
-        } => {
-          res.push(eval_dyad(*lhs, verb, adverb, *rhs).map_err(|e| VmError::from(e))?)
-        }
+        } => res.push(
+          eval_dyad(*lhs, verb, adverb, *rhs)
+            .map_err(|e| VmError::from(e))?
+            .to_string(),
+        ),
         AstNode::Monad { verb, adverb, expr } => {
-          res.push(eval_monad(verb, adverb, *expr)?)
+          res.push(eval_monad(verb, adverb, *expr)?.to_string())
         }
-        AstNode::Int(x) => res.push(x.to_string()),
-        AstNode::Float(x) => res.push(x.to_string()),
-        AstNode::Name(x) => res.push(x),
-        AstNode::Str(x) => res.push(x),
-        AstNode::Symbol(x) => res.push(x),
-        AstNode::List(x) => res.push(eval_list(x)?),
+        AstNode::Atom(x) => res.push(x.to_string()),
+        AstNode::Str(x) => {
+          res.push(String::from_utf8(x.into_iter().map(|c| *c).collect()).unwrap())
+        }
+        AstNode::Symbol(x) => res.push(x.to_string()),
+        AstNode::List(x) => res.push(eval_list(x)?.to_string()),
         x => res.push(x.to_string()),
       }
     }

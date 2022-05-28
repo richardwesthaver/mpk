@@ -1,5 +1,11 @@
 //! MPK_AST
-#![feature(is_some_with, iter_intersperse)]
+#![feature(
+  is_some_with,
+  iter_intersperse,
+  iterator_try_collect,
+  slice_flatten,
+  byte_slice_trim_ascii
+)]
 #[macro_use]
 extern crate pest_derive;
 
