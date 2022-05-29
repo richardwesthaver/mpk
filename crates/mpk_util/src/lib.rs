@@ -3,7 +3,8 @@ pub mod nsm;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-
+mod num;
+pub use num::*;
 pub use indicatif::{ProgressBar, ProgressStyle};
 
 /// utility function to expand `~` in PATH.

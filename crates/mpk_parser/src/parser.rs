@@ -316,18 +316,7 @@ fn parse_fn_call(name: Name, args: Option<Vec<AstNode>>) -> Result<AstNode, Erro
 }
 
 fn parse_name(pair: pest::iterators::Pair<Rule>) -> Result<Name, Error> {
-  let n = pair.as_str().as_bytes();
-  match n.len() {
-    1 => Ok(Name::N1(n[0])),
-    2 => Ok(Name::N2([n[0], n[1]])),
-    3 => Ok(Name::N4([n[0], n[1], n[2], 0])),
-    4 => Ok(Name::N4([n[0], n[1], n[2], n[3]])),
-    5 => Ok(Name::N8([n[0], n[1], n[2], n[3], n[4], 0, 0, 0])),
-    6 => Ok(Name::N8([n[0], n[1], n[2], n[3], n[4], n[5], 0, 0])),
-    7 => Ok(Name::N8([n[0], n[1], n[2], n[3], n[4], n[5], n[6], 0])),
-    8 => Ok(Name::N8([n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7]])),
-    e => Err(Error::Length(8, e)),
-  }
+  Ok(Name::from(pair.as_str()))
 }
 
 fn parse_int(pair: pest::iterators::Pair<Rule>) -> Result<Integer, Error> {
@@ -492,5 +481,23 @@ fn build_ast_from_noun(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Err
       },
       pair.as_span(),
     ))),
+  }
+}
+
+#[cfg(test)]
+pub mod tests {
+  use crate::ast::*;
+  use crate::err::{Error, ErrorVariant, PestError};
+  use super::*;
+  #[test]
+  fn parse_program() {
+    assert!(parse("f:{x+y+z};x:[[]c:1 2 3];2+2+/3 4 5;").is_ok())
+  }
+  #[test]
+  fn parse_float() {
+    assert_eq!(parse("1.0 ; ;").unwrap(), vec![AstNode::Atom(Atom::Float(Float::E(1.0)))]);
+    assert_eq!(parse("1000101010101.0 ; ;").unwrap(), vec![AstNode::Atom(Atom::Float(Float::F(10000000.012345)))]);
+
+    assert_eq!(parse("-1.0 ; ;").unwrap(), vec![AstNode::Monad{verb: MonadicVerb::Negate, adverb: None, expr: Box::new(AstNode::Atom(Atom::Float(Float::E(1.0))))}]);
   }
 }
