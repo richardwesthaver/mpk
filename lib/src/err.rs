@@ -11,6 +11,8 @@ pub enum Error {
   Audio(mpk_audio::Error),
   #[cfg(feature = "gear")]
   Gear(mpk_gear::Error),
+  #[cfg(feature = "repl")]
+  Repl(mpk_repl::Error),
   Io(std::io::Error),
 }
 
@@ -27,6 +29,8 @@ impl std::error::Error for Error {
       Error::Audio(ref err) => Some(err),
       #[cfg(feature = "gear")]
       Error::Gear(ref err) => Some(err),
+      #[cfg(feature = "repl")]
+      Error::Repl(ref err) => Some(err),
       Error::Io(ref err) => Some(err),
     }
   }
@@ -45,6 +49,8 @@ impl std::fmt::Display for Error {
       Error::Audio(ref err) => err.fmt(f),
       #[cfg(feature = "gear")]
       Error::Gear(ref err) => err.fmt(f),
+      #[cfg(feature = "repl")]
+      Error::Repl(ref err) => err.fmt(f),
       Error::Io(ref err) => err.fmt(f),
     }
   }
@@ -88,5 +94,12 @@ impl From<mpk_audio::Error> for Error {
 impl From<mpk_gear::Error> for Error {
   fn from(err: mpk_gear::Error) -> Error {
     Error::Gear(err)
+  }
+}
+
+#[cfg(feature = "repl")]
+impl From<mpk_repl::Error> for Error {
+  fn from(err: mpk_repl::Error) -> Error {
+    Error::Repl(err)
   }
 }

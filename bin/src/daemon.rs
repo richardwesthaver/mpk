@@ -1,5 +1,5 @@
 use clap::Parser;
-use mpk::{config::Config, engine::Engine, util::expand_tilde, Error};
+use mpk::{arena::Bump, config::Config, engine::Engine, util::expand_tilde, Error};
 
 #[derive(Parser)]
 #[clap(name = "mpkd")]
@@ -39,8 +39,8 @@ async fn main() -> Result<(), Error> {
   } else {
     cfg.engine.socket
   };
-
-  let mut engine = Engine::new(addr).await;
+  let alc = Bump::new();
+  let mut engine = Engine::new(addr, &alc).await;
 
   if !(args.http || args.db || args.sesh) {
     args.http = true;

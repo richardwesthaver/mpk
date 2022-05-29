@@ -82,14 +82,14 @@ pub fn musicbrainz_extract<P: AsRef<Path>>(
 pub fn fpcalc_extract<P: AsRef<Path>>(input: P) -> Result<Output, io::Error> {
   let mut cmd = Command::new("fpcalc");
   cmd.arg(input.as_ref());
-  cmd.arg("-raw").output()
+  cmd.arg("-text").output()
 }
 
 #[cfg(feature = "ffmpeg")]
 pub fn chromaprint_extract<P: AsRef<Path>>(path: P) -> Result<Vec<u32>, Error> {
   let (data, sr, ch) = ffmpeg::get_audio_resample(
     path,
-    ffmpeg::format::Sample::I16(ffmpeg::format::sample::Type::Planar),
+    ffmpeg::format::Sample::I16(ffmpeg::format::sample::Type::Packed),
   )
   .map_err(|e| Error::Codec(e.into()))?;
   let mut cp = Chromaprint::new();

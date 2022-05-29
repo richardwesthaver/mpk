@@ -6,7 +6,7 @@ edition = "2021"
 [features]
 full = ["util", "analysis", "config", "hash", "flate",
         "gear", "audio", "jack", "midi", "db", "osc",
-	"engine", "sesh", "http", "parser", "repl"]
+	"engine", "sesh", "http", "parser", "repl", "arena"]
 util = ["mpk_util"]
 config = ["mpk_config"]
 hash = ["mpk_hash"]
@@ -20,7 +20,7 @@ audio = ["mpk_audio", "config"]
 jack = ["mpk_jack", "config"]
 db = ["mpk_db", "config", "util", "hash"]
 osc = ["mpk_osc", "util"]
-vm = ["mpk_vm"]
+arena = ["mpk_arena"]
 engine = ["mpk_engine", "config", "parser", "osc", "db", "http", "audio", "jack", "midi", "sesh"]
 sesh = ["mpk_sesh", "config", "osc", "hash", "db", "audio"]
 http = ["mpk_http", "config", "util"]
@@ -28,7 +28,7 @@ repl = ["mpk_repl", "config", "parser", "osc"]
 
 [dependencies]
 mpk_util = { path = "../crates/mpk_util", optional = true }
-mpk_vm = { path = "../crates/mpk_vm", optional = true }
+mpk_arena = { path = "../crates/mpk_arena", optional = true }
 mpk_analysis = { path = "../crates/mpk_analysis", optional = true }
 mpk_config = { path = "../crates/mpk_config", optional = true }
 mpk_hash = { path = "../crates/mpk_hash", optional = true }

@@ -1,4 +1,4 @@
-//! MPK_OSC ARDOUR API
+//! MPK_OSC -- ARDOUR
 //!
 //! REF: https://manual.ardour.org/using-control-surfaces/controlling-ardour-with-osc/
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
 //   name: &'client str,
 // }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ClientMessage<'a> {
   StripList,
   StripSends(&'a str), // this is actually an int but we're just testing and too lazy to remove lifetime
