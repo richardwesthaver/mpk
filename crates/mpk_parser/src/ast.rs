@@ -3,7 +3,7 @@
 //! Abstract Syntax Tree objects of the mk language.
 use std::fmt::Write;
 use std::iter::{ExactSizeIterator, Iterator};
-use std::ops::{Add, Sub, Deref};
+use std::ops::{Add, Deref, Sub};
 use std::time::Duration;
 
 use mpk_hash::FxHashMap as HashMap;
@@ -44,7 +44,7 @@ impl Sub for Atom {
   fn sub(self, rhs: Self) -> Self::Output {
     use Atom::*;
     match (self, rhs) {
-      (Boolean(x), Boolean(y)) => Boolean(x^y),
+      (Boolean(x), Boolean(y)) => Boolean(x ^ y),
       (Char(x), Char(y)) => Char(x - y),
       (Char(x), Int(y)) => Int(Integer::G(*x) - y),
       (Int(x), Int(y)) => Int(x - y),
@@ -106,22 +106,42 @@ impl Sub for Name {
   fn sub(self, rhs: Self) -> Self::Output {
     use Name::*;
     match (self, rhs) {
-      (N1(x), N1(y)) => N1(x-y),
-      (N1(x), N2(y)) => N1(x-y[0]),
-      (N1(x), N4(y)) => N1(x-y[0]),
-      (N1(x), N8(y)) => N1(x-y[0]),
-      (N2(x), N1(y)) => N2([x[0],x[1]-y]),
-      (N2(x), N2(y)) => N2([x[0]-y[0],x[1]-y[1]]),
-      (N2(x), N4(y)) => N2([x[0]-y[0],x[1]-y[1]]),
-      (N2(x), N8(y)) => N2([x[0]-y[0],x[1]-y[1]]),
-      (N4(x), N1(y)) => N4([x[0]-y,x[1],x[2],x[3]]),
-      (N4(x), N2(y)) => N4([x[0]-y[0],x[1]-y[1],x[2],x[3]]),
-      (N4(x), N4(y)) => N4([x[0]-y[0],x[1]-y[1],x[2]-y[2],x[3]-y[3]]),
-      (N4(x), N8(y)) => N4([x[0]-y[0],x[1]-y[1],x[2]-y[2],x[3]-y[3]]),
-      (N8(x), N1(y)) => N8([x[0]-y,x[1],x[2],x[3],x[4],x[5],x[6],x[7]]),
-      (N8(x), N2(y)) => N8([x[0]-y[0],x[1]-y[1],x[2],x[3],x[4],x[5],x[6],x[7]]),
-      (N8(x), N4(y)) => N8([x[0]-y[0], x[1]-y[1], x[2]-y[2], x[3]-y[3],x[4],x[5],x[6],x[7]]),
-      (N8(x), N8(y)) => N8([x[0]-y[0], x[1]-y[1], x[2]-y[2], x[3]-y[3],x[4]-y[4],x[5]-y[5],x[6]-y[6],x[7]-y[7]]),
+      (N1(x), N1(y)) => N1(x - y),
+      (N1(x), N2(y)) => N1(x - y[0]),
+      (N1(x), N4(y)) => N1(x - y[0]),
+      (N1(x), N8(y)) => N1(x - y[0]),
+      (N2(x), N1(y)) => N2([x[0], x[1] - y]),
+      (N2(x), N2(y)) => N2([x[0] - y[0], x[1] - y[1]]),
+      (N2(x), N4(y)) => N2([x[0] - y[0], x[1] - y[1]]),
+      (N2(x), N8(y)) => N2([x[0] - y[0], x[1] - y[1]]),
+      (N4(x), N1(y)) => N4([x[0] - y, x[1], x[2], x[3]]),
+      (N4(x), N2(y)) => N4([x[0] - y[0], x[1] - y[1], x[2], x[3]]),
+      (N4(x), N4(y)) => N4([x[0] - y[0], x[1] - y[1], x[2] - y[2], x[3] - y[3]]),
+      (N4(x), N8(y)) => N4([x[0] - y[0], x[1] - y[1], x[2] - y[2], x[3] - y[3]]),
+      (N8(x), N1(y)) => N8([x[0] - y, x[1], x[2], x[3], x[4], x[5], x[6], x[7]]),
+      (N8(x), N2(y)) => {
+        N8([x[0] - y[0], x[1] - y[1], x[2], x[3], x[4], x[5], x[6], x[7]])
+      }
+      (N8(x), N4(y)) => N8([
+        x[0] - y[0],
+        x[1] - y[1],
+        x[2] - y[2],
+        x[3] - y[3],
+        x[4],
+        x[5],
+        x[6],
+        x[7],
+      ]),
+      (N8(x), N8(y)) => N8([
+        x[0] - y[0],
+        x[1] - y[1],
+        x[2] - y[2],
+        x[3] - y[3],
+        x[4] - y[4],
+        x[5] - y[5],
+        x[6] - y[6],
+        x[7] - y[7],
+      ]),
     }
   }
 }
@@ -244,7 +264,9 @@ impl std::fmt::Display for Float {
   }
 }
 
-#[derive(PartialEq, PartialOrd, Debug, Clone, Copy, Serialize, Deserialize, Eq, Hash)]
+#[derive(
+  PartialEq, PartialOrd, Debug, Clone, Copy, Serialize, Deserialize, Eq, Hash,
+)]
 pub enum Integer {
   G(u8),
   H(u16),
@@ -319,7 +341,9 @@ impl std::fmt::Display for Integer {
   }
 }
 
-#[derive(PartialEq, PartialOrd, Debug, Clone, Copy, Serialize, Deserialize, Eq, Hash)]
+#[derive(
+  PartialEq, PartialOrd, Debug, Clone, Copy, Serialize, Deserialize, Eq, Hash,
+)]
 pub struct Char(u8);
 
 impl Add for Char {

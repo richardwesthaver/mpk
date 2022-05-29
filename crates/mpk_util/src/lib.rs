@@ -4,8 +4,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 mod num;
-pub use num::*;
 pub use indicatif::{ProgressBar, ProgressStyle};
+pub use num::*;
 
 /// utility function to expand `~` in PATH.
 pub fn expand_tilde<P: AsRef<Path>>(path: P) -> Option<PathBuf> {

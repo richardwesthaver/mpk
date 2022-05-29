@@ -486,18 +486,31 @@ fn build_ast_from_noun(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Err
 
 #[cfg(test)]
 pub mod tests {
+  use super::*;
   use crate::ast::*;
   use crate::err::{Error, ErrorVariant, PestError};
-  use super::*;
   #[test]
   fn parse_program() {
     assert!(parse("f:{x+y+z};x:[[]c:1 2 3];2+2+/3 4 5;").is_ok())
   }
   #[test]
   fn parse_float() {
-    assert_eq!(parse("1.0 ; ;").unwrap(), vec![AstNode::Atom(Atom::Float(Float::E(1.0)))]);
-    assert_eq!(parse("1000101010101.0 ; ;").unwrap(), vec![AstNode::Atom(Atom::Float(Float::F(10000000.012345)))]);
+    assert_eq!(
+      parse("1.0 ; ;").unwrap(),
+      vec![AstNode::Atom(Atom::Float(Float::E(1.0)))]
+    );
+    assert_eq!(
+      parse("1000101010101.0 ; ;").unwrap(),
+      vec![AstNode::Atom(Atom::Float(Float::F(10000000.012345)))]
+    );
 
-    assert_eq!(parse("-1.0 ; ;").unwrap(), vec![AstNode::Monad{verb: MonadicVerb::Negate, adverb: None, expr: Box::new(AstNode::Atom(Atom::Float(Float::E(1.0))))}]);
+    assert_eq!(
+      parse("-1.0 ; ;").unwrap(),
+      vec![AstNode::Monad {
+        verb: MonadicVerb::Negate,
+        adverb: None,
+        expr: Box::new(AstNode::Atom(Atom::Float(Float::E(1.0))))
+      }]
+    );
   }
 }
