@@ -192,7 +192,11 @@ task check, "check code lints":
 
 task ox, "export readme to GitHub-flavored Markdown":
   withDir getVcRoot():
-    exec "emacs --eval '(progn (find-file \"org/README.org\") (org-gfm-export-to-markdown) (rename-file \"README.md\" \"../README.md\" t) (save-buffers-kill-terminal))'"
+    cpFile("org/readme.org", "README")
+    cpFile("org/style.org", "STYLE")
+    cpFile("org/todo.org", "TODO")
+    cpFile("org/notes.org", "NOTES")
+    exec "emacs --eval '(progn (let ((files (list \"README\" \"STYLE\" \"TODO\" \"NOTES\"))) (dolist (f files) (find-file f) (mark-whole-buffer) (org-ascii-convert-region-to-utf8)) (save-buffers-kill-terminal)))'"
 
 task mirror, "push code to github mirror":
   withDir stash:

@@ -1,0 +1,108 @@
+* tasks
+** TODO readme v2
+** DONE mpk_config updates [4/4]
+*** DONE add support for external paths
+add external track/sample locations
+*** DONE add support for Elektron USB mode                             :gear:
+add external drive locations
+
+*** DONE env variables
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:12]
+- =MPK_CONFIG=
+- =MPK_SAMPLES=
+- =MPK_TRACKS=
+- =MPK_LOG= ?
+- use enum?
+- macros only return value at compile-time. need to use std::env functions directly
+*** DONE metro and chain config
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:12]
+- both subsections in audio section - [audio.chain] and [audio.metro]?
+  - audio.chain default output
+  - audio.metro default bpm/sig tic/toc
+** TODO docstrings [0/5]
+*** TODO DB
+*** TODO config
+*** TODO audio
+*** TODO FFI
+** DONE finish mpk_extract [8/8]
+*** DONE debug CStrings                                                 :ffi:
+some strings fields are broken when inserting to db - UUIDs, VecText, and VecReal
+- test DB blob insert with floats. if these are ok then they can be ignored
+- check CStrings and make sure they're handled correctly
+*** DONE upserts                                                         :db:
+add update functionality with =WHERE= clauses
+*** DONE retrieve sample_id correctly
+should never insert id of 0 when duplicate found, update or noop instead
+*** DONE account for missing values in essentia
+essentia will miss fields if sample is too short
+*** DONE get paths from config                                       :config:
+- Note taken on [2022-03-29 Tue 17:10] \\
+  using cli args input with std::Process from Rust instead
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:10]
+input else tracks/samples from config else current path
+
+*** DONE incremental batch extractor
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:11]
+- this will likely require a threadpool
+- extractor segfaults when working with large directories, need to
+  insert into db after each extraction
+*** DONE populate all columns in tracks table
+- State "DONE"       from "TODO"       [2022-03-18 Fri 22:36]
+Currently only inserting path
+*** DONE fix MatrixReal segfault
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:11]
+- probably best to switch to ndarray instead of vec<vec<>>
+- likely a dereference issue
+** DONE mpk_midi init [1/1]
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:12]
+just need enough to make emacs integration - =mpk-midi.el=
+can start with terminal process then move to C dynamic module
+check [[https://github.com/jnykopp/emaccordion][jnykopp/emaccordion]]
+*** DONE MIDI config                                                 :config:
+- State "DONE"       from "TODO"       [2022-03-29 Tue 17:12]
+** DONE refactor FFI
+** DONE bootstrap DB
+** DONE freesound analysis I/O with python
+** DONE platform-specific default configs
+  jack.audio = 'alsa'
+  jack.media = 'seq'
+** TODO add resources
+** TODO finish On DAWs
+** DONE init osc/sc
+** TODO AstNode traits
+- AstNodes implement Display so we can return AstNode from evaluator
+- we also need to return AstNode from ops so that we can recursively evaluate
+- we may additionally need to create additional standalone
+  structs/enums which implement specific functionality
+- we should consider if there is any values for GATs or specialization in this scenario
+Solution involves implementing common traits for AstNode (Add, Sub,
+Mul, Iterator, BinOps, etc) so that we can perform ops on them
+directly instead of retrieving their inner values. It will also save
+code in the long term.
+*** TODO Add
+*** TODO AddAssign
+*** TODO BitAnd
+*** TODO BitAndAssign
+*** TODO BitOr
+*** TODO BitOrAssign
+*** TODO BitXor
+*** TODO BitXorAssign
+*** TODO Div
+*** TODO DivAssign
+*** TODO Mul
+*** TODO MulAssign
+*** TODO Rem
+*** TODO RemAssign
+*** TODO Shl
+*** TODO ShlAssign
+*** TODO Shr
+*** TODO ShrAssign
+*** TODO Eq
+*** TODO Index
+*** TODO IndexMut
+*** TODO Deref
+*** TODO DerefMut
+*** TODO Neg
+*** TODO Not
+*** TODO Sub
+*** TODO SubAssign

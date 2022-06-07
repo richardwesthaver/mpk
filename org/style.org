@@ -1,13 +1,30 @@
 #+TITLE: style
-#+DATE: 2022-05-06
+#+DATE: 2022-06-06
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: MPK Style Guide
+#+OPTIONS: ^:{} e:t f:t timestamp:t toc:nil author:nil email:nil
 - 2 spaces everywhere (expect for python code which is formatted with black)
 - line width = 88
-- core modules in =crates/=
-- Org-mode docs
-- derive =Debug= everywhere
-- err.rs is for crate-wide errors
-- all files should start with a comment - =//! $crate_name/$mod -- $submod=
-- foo/{bar1, bar2, bar3} == foo/bar1, foo/bar2, foo/bar3
+- ./
+  |---------+---------+-------------------|
+  | crates/ | rs      | src               |
+  | lib/    | rs      | public api        |
+  | bin/    | rs      | apps              |
+  | tests/  | rs, c   | integration tests |
+  | ffi/    | c, py   | c/py bindings     |
+  | lisp/   | el, scm | el/scm bindings   |
+  | org/    | org     | doc src           |
+  |---------+---------+-------------------|
+- ~RUST~
+  - core modules modules in =crates/=
+  - =src/err.rs= is for crate-wide errors
+  - all src files should start with a comment
+    #+begin_src rust
+      //! {crate_name}/{mod} -- {file}
+
+      // optional
+      //! DESCRIPTION
+      //! ...
+    #+end_src
+

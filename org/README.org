@@ -1,29 +1,33 @@
 #+TITLE: mpk
-#+DATE: 2022-05-26
+#+DATE: 2022-06-06
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Programming Kit
-#+OPTIONS: ^:{} e:t f:t timestamp:t toc:nil
+#+OPTIONS: ^:{} e:t f:t timestamp:t toc:nil num:nil
+- what \\
+  /Media Programming Kit/ -- a development kit for digital media.
 
-=mpk= is a /Media Programming Kit/ -- a development kit for digital
-media, taking lessons learned from software engineering and applying
-them to creative pursuits. It is a flexible ecosystem designed to
-organize my workflow involving hardware, software, and data.
+  - repl
+  - media db
+  - groove box
+  - sesh mgmt
+  - makes
+    - a/v installations
+    - interactive envs
+    - generative art
 
-This application is intended for artists, hackers, and
-composers. Batteries are not included.
-
-- Status :: =ALPHA= \\
-  This project is in alpha and will only deal with audio for quite
-  some time since that's the medium I'm most interested in. There are
-  future plans for image/video/text support.
-  
-  
-#+TOC: headlines 2
-
-* Features
-
-* Usage
+  - status: =ALPHA= \\
+  This project is in early stages and will only deal with audio for
+  quite some time. There are future plans for image/video/text
+  support.
+- why \\
+  - full control over media production pipeline
+  - multi-client scripting environment
+    - UDP:OSC/MIDI/QUIC, TCP:HTTP/S
+    - p2p, 1:1, 1:n, broadcast
+    - deploy on lan or broadband
+  - hackable, FOSS
+* usage
 MPK is meant to be used on a Linux box. In this example we'll be using
 Arch Linux.
 
@@ -31,7 +35,7 @@ MPK also runs on MacOS but some of the project management
 functionality isn't available. Most notably, you can't run the [[https://new-session-manager.jackaudio.org][NSM]]
 server on MacOS, but you can still interact with one remotely. All
 other features are supported on both platforms.
-* Installation
+** install
 First install the dependencies:
 #+begin_src shell
   # install rustup
@@ -55,7 +59,7 @@ binaries in =~/.cargo=.
 
 Run =nim help= to see the other commands and flags available.
 
-* Initialization
+** init
 Once the binary is installed run =mpk init= to initialize the app
 directories at =~/mpk= as well as the database and TOML config file.
 
@@ -73,7 +77,7 @@ sesh
 samples
 tracks
 #+end_src
-* Configuration
+** config
 The default =mpk.toml= config file looks like this:
 #+begin_src conf-toml
 [fs]
@@ -124,13 +128,12 @@ settings aren't included in the default file:
 - gear.{=octatrack=, =analog_rytm=, =op_1=}
 - metro.{=tic=, =toc=}
 - net.{=freesound=, =musicbrainz=, =youtube=, =spotify=}.{=client_id=, =client_secret=, =redirect_url=}
-* Dev Dependencies
-=*= := /use your OS package manager (apt, brew, pacman, etc)/
-- [[https://www.rust-lang.org/tools/install][Rust]] :: install with [[https://rustup.rs/][rustup.rs]]
-- C Compiler :: [[https://gcc.gnu.org/][GCC]] or [[https://llvm.org/][LLVM]] *
-- [[https://nim-lang.org/][Nim]] :: *
-  - used as a build tool via [[https://nim-lang.org/docs/nims.html][NimScript]].
-- [[https://jackaudio.org/][JACK]] :: *
-- [[https://new-session-manager.jackaudio.org][NSM]] :: *
-- [[https://valgrind.org/][Valgrind]] :: *
-  - used to detect issues with FFI memory management.
+* dependencies
+#+begin_src 
+*: use your OS package manager
+?: optional
+#+end_src
+- [[https://www.rust-lang.org/tools/install][Rust]]
+- [[https://llvm.org/][LLVM]]*
+- [[https://jackaudio.org/][JACK]]*?
+- [[https://new-session-manager.jackaudio.org][NSM]]*?
