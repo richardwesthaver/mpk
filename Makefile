@@ -24,14 +24,10 @@ FFI_H?=mpk_ffi.h
 
 ifeq ($(STATIC), 1)
   override FFI:=${_FFI:=.a}
-else
-  ifeq ($(UN), Darwin)
-    override FFI:=${_FFI:=.dylib}
-  else
-    ifeq ($(UN), Linux)
-      override FFI:=${_FFI:=.so}
-    endif
-  endif
+else ifeq ($(UN), Darwin)
+  override FFI:=${_FFI:=.dylib}
+else ifeq ($(UN), Linux)
+  override FFI:=${_FFI:=.so}
 endif
 
 ifeq ($(DEBUG), 1)
@@ -39,7 +35,7 @@ ifeq ($(DEBUG), 1)
   RF=--debug
 endif
   
-.PHONY:install ffi
+.PHONY:install
 all:install ffi;
 fmt:;cargo fmt $(CARGO)
 clean:;cargo clean $(CARGO);rm -rf out build Cargo.lock
@@ -49,7 +45,7 @@ bench:;cd tests/benches && cargo bench $(CARGO)
 build:$(SRC);cargo build $(RF) $(CARGO)
 install:$(SRC);cargo install $(CARGO)
 out:;mkdir -p $@;
-ffi:build;@cp $(TARGET)/$(_FFI) out/$(_FFI)
+ffi:out;@cp $(TARGET)/$(_FFI) out/$(_FFI)
 	ifeq ($(PY_FFI), 1) $(shell cp ffi/build.py out/build.py && cd out && python3 build.py) endif
 
 ox:$(DOCS) $(ORG);$(foreach d,$(ORG),cp $(d) $(call UC,$(patsubst org/%.org,%,$(d));))
