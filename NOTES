@@ -1,4 +1,47 @@
-1 Background
+1 compiler
+══════════
+
+  we have partially implemented a tree walking interpretter - now time
+  to implement a compiler. starting with byte-compilation
+  • [Bytecode compilers and interpreters | Max Bernstein]
+  • [A Bytecode Virtual Machine · Crafting Interpreters]
+  • [Virtual Machine (VM), Bytecode and Interpreter - Create Your Own
+    Programming Language with Rust]
+  • <https://www.cs.wustl.edu/~cytron/cacweb/Tutorial/Visitor/>
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   op      code  ?                        
+   VOID       0  nop                      
+   PUSH       1  push val onto stack      
+   LOOKUP     2  lookup name in env       
+   IF         3                           
+   JMP        4  jump to rel pos in stack 
+   FN         5                           
+                                        
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ━━━━━━━━
+   SN     
+   LN     
+   X      
+   J      
+   RJ     
+   MF     
+  ━━━━━━━━
+
+
+[Bytecode compilers and interpreters | Max Bernstein]
+<https://bernsteinbear.com/blog/bytecode-interpreters/>
+
+[A Bytecode Virtual Machine · Crafting Interpreters]
+<https://craftinginterpreters.com/a-bytecode-virtual-machine.html>
+
+[Virtual Machine (VM), Bytecode and Interpreter - Create Your Own
+Programming Language with Rust]
+<https://createlang.rs/01_calculator/vm.html>
+
+
+2 Background
 ════════════
 
   Over the years I've seen many popular creative tools implement
@@ -46,7 +89,7 @@
   tricky bits I previously mentioned. That's where the magic is.
 
 
-2 lilypond
+3 lilypond
 ══════════
 
   ┌────
@@ -63,7 +106,7 @@
   └────
 
 
-3 thoughts
+4 thoughts
 ══════════
 
   • studio management, organization, support, storage, indexing
@@ -141,7 +184,7 @@
 [Disasterpeace] <https://disasterpeace.com>
 
 
-4 tech
+5 tech
 ══════
 
   • notation
@@ -154,7 +197,7 @@
   • io
 
 
-5 sql notes
+6 sql notes
 ═══════════
 
   Indexes should not be used in −
@@ -222,7 +265,7 @@
     └────
 
 
-6 db sync
+7 db sync
 ═════════
 
   ┌────
@@ -236,7 +279,7 @@
   └────
 
 
-7 IPC
+8 IPC
 ═════
 
   We have quite a bit of functionality now. It's time to think about how
@@ -268,7 +311,7 @@
     • raw or bincode
 
 
-8 DSL
+9 DSL
 ═════
 
   [GitHub - cloudflare/wirefilter: An execution engine for
@@ -306,11 +349,11 @@ filters] <https://github.com/cloudflare/wirefilter>
 [Crafting Interpreters] <http://craftinginterpreters.com/>
 
 
-9 Crates
-════════
+10 Crates
+═════════
 
-9.1 `mpk'
-─────────
+10.1 `mpk'
+──────────
 
   The MPK binary providing CLI access to the library features.
   ┌────
@@ -342,16 +385,16 @@ filters] <https://github.com/cloudflare/wirefilter>
   └────
 
 
-9.2 `mpk_config'
-────────────────
+10.2 `mpk_config'
+─────────────────
 
   User configuration with read/write support for TOML (typically from
   `mpk.toml'). Used to initialize other modules at runtime (for example
   `DbConfig' for `Mdb::new_with_config').
 
 
-9.3 `mpk_db'
-────────────
+10.3 `mpk_db'
+─────────────
 
   The `Mdb' struct provides an API to the underlying SQLite database
   which works with the custom structs defined in [types.rs].
@@ -650,8 +693,8 @@ filters] <https://github.com/cloudflare/wirefilter>
 [types.rs] <file:src/mpk_db/src/types.rs>
 
 
-9.4 `mpk_py'
-────────────
+10.4 `mpk_py'
+─────────────
 
   The MIR[1] tool (`mpk_extract.py') uses Python as a bridge between
   Essentia[2] for feature extraction and the MPK database. There are a
@@ -684,14 +727,14 @@ filters] <https://github.com/cloudflare/wirefilter>
   └────
 
 
-9.5 `mpk_ffi'
-─────────────
+10.5 `mpk_ffi'
+──────────────
 
   C-compatible MPK FFI with C-header and python binding generators.
 
 
-9.6 `mpk_audio'
-───────────────
+10.6 `mpk_audio'
+────────────────
 
   The audio module leverages [cpal] and [rodio] for audio playback and
   recording. It provides high-level standalone tools with simple use
@@ -709,20 +752,20 @@ filters] <https://github.com/cloudflare/wirefilter>
 [rodio] <https://github.com/RustAudio/rodio>
 
 
-9.7 `mpk_flate'
-───────────────
+10.7 `mpk_flate'
+────────────────
 
   Zstd compression and Tar archival utilities.
 
 
-9.8 `mpk_codec'
-───────────────
+10.8 `mpk_codec'
+────────────────
 
   Audio file encoding and decoding.
 
 
-9.9 `mpk_gear'
-──────────────
+10.9 `mpk_gear'
+───────────────
 
   MPK interface for hardware devices connected via USB.
   • Elektron Octatrack MKII
@@ -731,27 +774,27 @@ filters] <https://github.com/cloudflare/wirefilter>
   • Korg SV-1
 
 
-9.10 `mpk_jack'
-───────────────
+10.10 `mpk_jack'
+────────────────
 
   MPK interface for JACK.
 
 
-9.11 `mpk_sesh'
-───────────────
+10.11 `mpk_sesh'
+────────────────
 
   MPK session management. Inspired by NSM
 
 
-9.12 `mpk_midi'
-───────────────
+10.12 `mpk_midi'
+────────────────
 
   MPK MIDI interface supporting real-time processing, encoding/decoding,
   and Sysex patching.
 
 
-9.13 `mpk_http'
-───────────────
+10.13 `mpk_http'
+────────────────
 
   HTTP client APIs for MPK. Currently includes [freesound.org],
   [musicbrainz.org], and [coverartarchive.org].
@@ -764,8 +807,8 @@ filters] <https://github.com/cloudflare/wirefilter>
 [coverartarchive.org] <https://coverartarchive.org/>
 
 
-9.14 `mpk_osc'
-──────────────
+10.14 `mpk_osc'
+───────────────
 
   OSC (Open Sound Control) APIs for MPK. Includes an API client for
   [NSM] (New/Non-Session Manager).
@@ -774,8 +817,8 @@ filters] <https://github.com/cloudflare/wirefilter>
 [NSM] <https://new-session-manager.jackaudio.org/>
 
 
-9.15 `mpk_hash'
-───────────────
+10.15 `mpk_hash'
+────────────────
 
   [BLAKE3] hashing utilities (for file checksums)
 
@@ -783,7 +826,7 @@ filters] <https://github.com/cloudflare/wirefilter>
 [BLAKE3] <https://github.com/BLAKE3-team/BLAKE3>
 
 
-10 generic arrays
+11 generic arrays
 ═════════════════
 
   • use std::array::from_fn for generic arrays
@@ -794,7 +837,7 @@ filters] <https://github.com/cloudflare/wirefilter>
     • #![feature(associated_type_defaults)]
 
 
-11 TODO On Digital Audio Workstations
+12 TODO On Digital Audio Workstations
 ═════════════════════════════════════
 
   The DAW (Digital Audio Workstation) has existed for only a moment in
@@ -841,7 +884,7 @@ filters] <https://github.com/cloudflare/wirefilter>
 [CCRMA - Music 192B: Week 2, Digital Audio Workstations]
 <https://ccrma.stanford.edu/courses/192b/ProTools-Logic%20Lec.pdf>
 
-11.1 DAW Workflows
+12.1 DAW Workflows
 ──────────────────
 
   Let’s take a moment to consider an elementary DAW workflow. For this
@@ -893,10 +936,10 @@ filters] <https://github.com/cloudflare/wirefilter>
   performed, but the structure is relatively the same.
 
 
-11.2 DAWs as Instruments
+12.2 DAWs as Instruments
 ────────────────────────
 
-11.2.1 Trackers
+12.2.1 Trackers
 ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
 
   • [Mod love | Salon.com]
@@ -905,7 +948,7 @@ filters] <https://github.com/cloudflare/wirefilter>
 [Mod love | Salon.com] <https://www.salon.com/1999/04/29/mod_trackers/>
 
 
-11.2.2 Patchers
+12.2.2 Patchers
 ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
 
   • [freesoftware@ircam - A brief history of MAX]
@@ -919,7 +962,7 @@ filters] <https://github.com/cloudflare/wirefilter>
 <http://msp.ucsd.edu/Publications/icmc88.pdf>
 
 
-11.3 A new paradigm
+12.3 A new paradigm
 ───────────────────
 
   • [JACK Audio Connection Kit API]

@@ -1,5 +1,5 @@
 #+TITLE: mpk
-#+DATE: 2022-06-06
+#+DATE: 2022-06-11
 #+AUTHOR: ellis
 #+EMAIL: ellis@rwest.io
 #+DESCRIPTION: Media Programming Kit
@@ -50,15 +50,10 @@ First install the dependencies:
   sudo pacman -S nim alsa-lib jack2 ffmpeg new-session-manager supercollider
 #+end_src
 
-
-It is recommended to install [[https://nim-lang.org/][Nim]] so that you can run the build scripts
-in =config.nims=.
-
-Simply run =nim install= in the project root to install the mpk
-binaries in =~/.cargo=.
-
-Run =nim help= to see the other commands and flags available.
-
+then install the apps:
+#+begin_src shell
+make
+#+end_src
 ** init
 Once the binary is installed run =mpk init= to initialize the app
 directories at =~/mpk= as well as the database and TOML config file.

@@ -13,21 +13,23 @@ UC=$(shell echo '$1' | tr '[:lower:]' '[:upper:]')
 UN=$(shell uname)
 FE=$(STASH)/fast-export/hg-fast-export.sh
 
+# TODO
 STATIC?=0
 DEBUG?=0
 PY_FFI?=1
-
-FFI?=libmpk_ffi
+CARGO?=
+FFI?=0
+_FFI?=libmpk_ffi
 FFI_H?=mpk_ffi.h
 
 ifeq ($(STATIC), 1)
-  override FFI:=${FFI:=.a}
+  override FFI:=${_FFI:=.a}
 else
   ifeq ($(UN), Darwin)
-    override FFI:=${FFI:=.dylib}
+    override FFI:=${_FFI:=.dylib}
   else
     ifeq ($(UN), Linux)
-      override FFI:=${FFI:=.so}
+      override FFI:=${_FFI:=.so}
     endif
   endif
 endif
@@ -38,15 +40,16 @@ ifeq ($(DEBUG), 1)
 endif
   
 .PHONY:install ffi
-
-fmt:;cargo fmt
-clean:;cargo clean;rm -rf out build Cargo.lock
-check:;cargo clippy
-test:;cargo test $(RF) --all
-bench:;cd tests/benches && cargo bench
-build:$(SRC);cargo build $(RF)
+all:install ffi;
+fmt:;cargo fmt $(CARGO)
+clean:;cargo clean $(CARGO);rm -rf out build Cargo.lock
+check:;cargo clippy $(CARGO)
+test:;cargo test $(RF) $(CARGO)
+bench:;cd tests/benches && cargo bench $(CARGO)
+build:$(SRC);cargo build $(RF) $(CARGO)
+install:$(SRC);cargo install $(CARGO)
 out:;mkdir -p $@;
-ffi:build;@cp $(TARGET)/$(FFI) out/$(FFI)
+ffi:build;@cp $(TARGET)/$(_FFI) out/$(_FFI)
 	ifeq ($(PY_FFI), 1) $(shell cp ffi/build.py out/build.py && cd out && python3 build.py) endif
 
 ox:$(DOCS) $(ORG);$(foreach d,$(ORG),cp $(d) $(call UC,$(patsubst org/%.org,%,$(d));))

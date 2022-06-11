@@ -53,17 +53,10 @@ install
   │ sudo pacman -S nim alsa-lib jack2 ffmpeg new-session-manager supercollider
   └────
 
-
-  It is recommended to install [Nim] so that you can run the build
-  scripts in `config.nims'.
-
-  Simply run `nim install' in the project root to install the mpk
-  binaries in `~/.cargo'.
-
-  Run `nim help' to see the other commands and flags available.
-
-
-[Nim] <https://nim-lang.org/>
+  then install the apps:
+  ┌────
+  │ make
+  └────
 
 
 init
