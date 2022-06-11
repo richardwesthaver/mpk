@@ -1,7 +1,7 @@
 //! MPK_PARSER -- DECODE
-use crate::ast::*;
+use crate::parser::Prog;
 
-pub fn decode_program(prog: &[&[u8]]) -> Program {
+pub fn decode_program(prog: &[&[u8]]) -> Prog {
   let mut data = vec![];
   for node in prog {
     data.push(bincode::deserialize(node).unwrap())

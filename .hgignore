@@ -1,4 +1,4 @@
-^vendor|^target|^build
+^vendor|^target|^out
 !^tests
 .*__pycache__
 .lock$|.*.flac$|.*_mpk|.*.s?o$|.*.dylib$|.*.wav$

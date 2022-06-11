@@ -7,8 +7,7 @@
 use std::net::{SocketAddr, ToSocketAddrs};
 
 use mpk_osc::{
-  decoder, encoder, mpk::client::VmMessageKind, mpk::server::ServerMessage,
-  mpk::ClientMessage, OscMessage, OscPacket, OscType, ToOsc,
+  decoder, encoder, mpk::client::VmMessageKind, mpk::server::ServerMessage, ToOsc,
 };
 use mpk_util::is_zeroes;
 use tokio::net::UdpSocket;
@@ -17,8 +16,7 @@ use tokio::sync::mpsc::{
   error::{TryRecvError, TrySendError},
 };
 
-use crate::parser::ast::Program;
-use crate::parser::encode_program;
+use crate::parser::{encode_program, Prog};
 use crate::ExternalPrinter;
 
 pub const MTU: usize = 1536;
@@ -36,7 +34,7 @@ pub struct Dispatcher<T: ExternalPrinter> {
   socket: UdpSocket,
   engine_url: SocketAddr,
   buf: [u8; MTU],
-  rx: mpsc::Receiver<Program>,
+  rx: mpsc::Receiver<Prog>,
   tx: mpsc::Sender<String>,
   timeout: u64,
 }
@@ -47,7 +45,7 @@ impl<T: ExternalPrinter> Dispatcher<T> {
     printer: T,
     addr: A,
     engine_url: A,
-    rx: mpsc::Receiver<Program>,
+    rx: mpsc::Receiver<Prog>,
     tx: mpsc::Sender<String>,
     timeout: u64,
   ) -> Self {

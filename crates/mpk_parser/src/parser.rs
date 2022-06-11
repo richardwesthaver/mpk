@@ -1,33 +1,42 @@
 //! MPK_PARSER -- PARSER
 //!
-//! Parse tokens into an unvalidated Program.
+//! Parse tokens into an unvalidated Prog.
 use mpk_hash::FxHashMap as HashMap;
 use pest::Parser;
+use serde::{Deserialize, Serialize};
 
 use crate::ast::*;
 use crate::err::{Error, ErrorVariant, PestError};
+use crate::span::Span;
+
+pub type Prog = Vec<Node>;
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct Node(pub AstNode, pub Span);
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 pub struct MpkParser;
 
-pub fn parse(source: &str) -> Result<Program, Error> {
-  let mut ast = vec![];
+pub fn parse(source: &str) -> Result<Prog, Error> {
+  let mut prog = vec![];
   let pairs = MpkParser::parse(Rule::program, source)?;
 
   for pair in pairs {
+    let span: Span = pair.as_span().into();
     match pair.as_rule() {
       Rule::expr => {
-        ast.push(build_ast_from_expr(pair)?);
+        prog.push(Node(build_ast_from_expr(pair)?, span));
       }
       _ => {}
     }
   }
 
-  Ok(ast)
+  Ok(prog)
 }
 
 fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Error> {
+  // get a span without consuming
   match pair.as_rule() {
     Rule::expr => build_ast_from_expr(pair.into_inner().next().unwrap()),
     Rule::dyadic => {
@@ -68,7 +77,7 @@ fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> Result<AstNode, Err
       parse_monadic_verb(verb, adverb, expr)
     }
     Rule::nouns => {
-      let nouns: Program = pair
+      let nouns: Vec<AstNode> = pair
         .into_inner()
         .map(|p| build_ast_from_noun(p).unwrap())
         .collect();
@@ -304,12 +313,12 @@ fn parse_fn_expr(args: Option<Vec<Name>>, expr: AstNode) -> Result<AstNode, Erro
   })
 }
 
-fn parse_fn_call_args(
-  pair: pest::iterators::Pair<Rule>,
-) -> Result<Option<Vec<AstNode>>, Error> {
-  let args = None;
-  Ok(args)
-}
+// fn parse_fn_call_args(
+//   _pair: pest::iterators::Pair<Rule>,
+// ) -> Result<Option<Vec<AstNode>>, Error> {
+//   let args = None;
+//   Ok(args)
+// }
 
 fn parse_fn_call(name: Name, args: Option<Vec<AstNode>>) -> Result<AstNode, Error> {
   Ok(AstNode::FnCall { name, args })

@@ -10,7 +10,6 @@ use mpk_hash::FxHashMap as HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::EvalError;
-pub type Program = Vec<AstNode>;
 
 #[derive(PartialEq, PartialOrd, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Atom {

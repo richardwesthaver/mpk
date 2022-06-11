@@ -1,7 +1,6 @@
 //! MPK_ENGINE --- ENGINE
 use std::net::{SocketAddr, ToSocketAddrs};
 
-use mpk_arena::Bump;
 use mpk_config::Config;
 use mpk_db::Db;
 use mpk_osc::mpk::{
@@ -9,9 +8,11 @@ use mpk_osc::mpk::{
 };
 use mpk_osc::{decoder, encoder, OscPacket, ToOsc};
 use mpk_parser::decode_program;
+use mpk_vm::Bump;
+use mpk_vm::Vm;
 use tokio::net::UdpSocket;
 
-use crate::{Error, Result, Vm};
+use crate::{Error, Result};
 
 pub const MTU: usize = 1536;
 

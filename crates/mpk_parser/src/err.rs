@@ -119,6 +119,8 @@ pub fn line_col(pos: usize, input: &str) -> String {
   format!("({}, {})", line - 1, col - 1)
 }
 
+/// shakti errors
+/// https://estradajke.github.io/k9-simples/k9/Errors.html
 #[derive(Debug)]
 pub enum EvalError {
   Class,

@@ -12,7 +12,7 @@ fn main() {
   let config = cbindgen::Config::from_file("cbindgen.toml")
     .expect("Unable to find cbindgen.toml configuration file");
 
-  let build_dir = root_dir.join("build/");
+  let build_dir = root_dir.join("out/");
   if !build_dir.exists() {
     create_dir(&build_dir).unwrap();
   }

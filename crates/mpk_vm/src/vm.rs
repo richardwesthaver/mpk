@@ -1,28 +1,35 @@
-//! MPK_ENGINE -- VM
+//! MPK_VM -- vm
+//! stack machine (currently a tree-walker)
+pub mod eval;
+pub mod ops;
+use eval::*;
+
+mod env;
+mod s;
 use core::alloc::Allocator;
 
-use mpk_arena::{Arena, Bump};
-use mpk_osc::mpk::server::ResultMessageKind;
-use mpk_parser::ast::{AdVerb, AstNode, DyadicVerb, Program};
+use mpk_parser::ast::{AdVerb, AstNode, DyadicVerb};
+use mpk_parser::Prog;
 
-use crate::err::VmError;
-mod eval;
-mod ops;
-use eval::*;
+use crate::VmError;
+use crate::{m::Bump, Arena};
+
+const STACK_LIMIT: usize = 1024;
 
 pub struct Vm<'vm, A: Allocator> {
   arena: Arena<'vm, A>,
+  ip: usize,
 }
 
 impl<'vm, A: Allocator> Vm<'_, A> {
   pub fn new(alc: &'vm Bump) -> Vm<&'vm Bump> {
     let arena = Arena::<&'vm Bump>::new(alc);
-    Vm { arena }
+    Vm { arena, ip: 0 }
   }
-  pub fn eval(&self, program: Program) -> Result<ResultMessageKind, VmError> {
+  pub fn eval(&self, program: Prog) -> Result<Vec<String>, VmError> {
     let mut res: Vec<String> = Vec::new();
     for node in program {
-      match node {
+      match node.0 {
         AstNode::Dyad {
           lhs,
           verb,
@@ -47,6 +54,6 @@ impl<'vm, A: Allocator> Vm<'_, A> {
     }
     let res = res.into_iter().intersperse("\n".to_string()).collect();
 
-    Ok(ResultMessageKind::Ok(res))
+    Ok(res)
   }
 }

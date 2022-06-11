@@ -1,6 +1,6 @@
 //! MPK_REPL
 pub use mpk_parser as parser;
-use mpk_parser::ast::AstNode;
+use mpk_parser::Prog;
 use rustyline::ExternalPrinter;
 use rustyline::{
   completion::FilenameCompleter, highlight::MatchingBracketHighlighter,
@@ -56,7 +56,7 @@ pub async fn init_dispatcher<T: ExternalPrinter>(
   printer: T,
   client: &str,
   server: &str,
-  rx: mpsc::Receiver<Vec<AstNode>>,
+  rx: mpsc::Receiver<Prog>,
   tx: mpsc::Sender<String>,
   timeout: u64,
 ) -> Result<Dispatcher<T>> {

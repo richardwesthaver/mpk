@@ -1,0 +1,15 @@
+[package]
+name = "mpk_vm"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+mpk_parser = { path = "../mpk_parser" }
+bumpalo = { version = "3.9", features = ["allocator_api", "boxed"] }
+im-rc = "15.1.0"
+serde = { version = "1.0", features = ["derive"] }
+bincode = "1.3"

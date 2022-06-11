@@ -17,7 +17,7 @@
   | org/    | org     | doc src           |
   |---------+---------+-------------------|
 - ~RUST~
-  - core modules modules in =crates/=
+  - core modules in =crates/=
   - =src/err.rs= is for crate-wide errors
   - all src files should start with a comment
     #+begin_src rust

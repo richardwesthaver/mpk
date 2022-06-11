@@ -9,7 +9,7 @@ path = "lib.rs"
 [dependencies]
 mpk_db = { path = "../../crates/mpk_db" }
 mpk_hash = { path = "../../crates/mpk_hash" }
-mpk_arena = { path = "../../crates/mpk_arena" }
+mpk_vm = { path = "../../crates/mpk_vm" }
 rand = "0.8"
 
 [[bench]]

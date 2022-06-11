@@ -1,4 +1,27 @@
 #+TITLE: notes
+* compiler
+we have partially implemented a tree walking interpretter - now time
+to implement a compiler. starting with byte-compilation
+- [[https://bernsteinbear.com/blog/bytecode-interpreters/][Bytecode compilers and interpreters | Max Bernstein]]
+- [[https://craftinginterpreters.com/a-bytecode-virtual-machine.html][A Bytecode Virtual Machine · Crafting Interpreters]]
+- [[https://createlang.rs/01_calculator/vm.html][Virtual Machine (VM), Bytecode and Interpreter - Create Your Own Programming Language with Rust]]
+- https://www.cs.wustl.edu/~cytron/cacweb/Tutorial/Visitor/
+
+| op     | code | ?                        |
+| VOID   |    0 | nop                      |
+| PUSH   |    1 | push val onto stack      |
+| LOOKUP |    2 | lookup name in env       |
+| IF     |    3 |                          |
+| JMP    |    4 | jump to rel pos in stack |
+| FN     |    5 |                          |
+|        |      |                          |
+
+| SN   |      |      |
+| LN   |      |      |
+| X    |      |      |
+| J    |      |      |
+| RJ   |      |      |
+| MF   |      |      |
 * Background
 Over the years I've seen many popular creative tools implement
 subscription-based/freemium payment models, web-based/always-online

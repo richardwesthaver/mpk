@@ -1,13 +1,10 @@
 //! MPK_ENGINE -- VM/OPS
 //!
 //! Individual mk operators
-use mpk_parser::ast::{
-  AstNode::{self, *},
-  *,
-};
+use mpk_parser::ast::{AstNode, AstNode::*};
 
 use super::eval::*;
-use crate::err::EvalError;
+use crate::EvalError;
 
 pub fn add(lhs: AstNode, rhs: AstNode) -> Result<AstNode, EvalError> {
   match (lhs, rhs) {

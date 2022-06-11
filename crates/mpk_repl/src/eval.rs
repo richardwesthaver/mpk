@@ -1,15 +1,15 @@
 use rustyline::{Editor, Helper};
 use tokio::sync::mpsc;
 
-use crate::parser::ast::AstNode;
 use crate::parser::parse;
+use crate::parser::Prog;
 
 pub const CH_LEN: usize = 32;
 
 #[derive(Debug)]
 pub struct Repl<H: Helper> {
   rl: Editor<H>,
-  tx: mpsc::Sender<Vec<AstNode>>,
+  tx: mpsc::Sender<Prog>,
   rx: mpsc::Receiver<String>,
 }
 
@@ -17,9 +17,7 @@ impl<H> Repl<H>
 where
   H: Helper,
 {
-  pub fn new(
-    rl: Editor<H>,
-  ) -> (Repl<H>, mpsc::Receiver<Vec<AstNode>>, mpsc::Sender<String>) {
+  pub fn new(rl: Editor<H>) -> (Repl<H>, mpsc::Receiver<Prog>, mpsc::Sender<String>) {
     let (tx, d_rx) = mpsc::channel(CH_LEN);
     let (d_tx, rx) = mpsc::channel(1);
     (Repl { rl, tx, rx }, d_rx, d_tx)
@@ -44,8 +42,8 @@ where
     }
   }
 
-  pub async fn tx(&self, node: Vec<AstNode>) {
-    self.tx.send(node).await.unwrap()
+  pub async fn tx(&self, p: Prog) {
+    self.tx.send(p).await.unwrap()
   }
 
   pub async fn rx(&mut self) {

@@ -4,11 +4,11 @@
 use mpk_parser::ast::{
   AdVerb,
   AstNode::{self, *},
-  DyadicVerb, MonadicVerb,
+  Atom, DyadicVerb, MonadicVerb,
 };
 
 use super::ops::*;
-use crate::err::EvalError;
+use crate::EvalError;
 
 pub fn eval_dyad(
   lhs: AstNode,

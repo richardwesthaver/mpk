@@ -11,6 +11,7 @@ extern crate pest_derive;
 
 pub mod ast;
 mod parser;
+pub mod span;
 pub use parser::*;
 mod encode;
 pub use encode::encode_program;

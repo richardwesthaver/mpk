@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.0", features = ["net"] }
-mpk_arena = { path = "../mpk_arena" }
+mpk_vm = { path = "../mpk_vm" }
 mpk_config = { path = "../mpk_config" }
 mpk_parser = { path = "../mpk_parser" }
 mpk_db = { path = "../mpk_db" }
