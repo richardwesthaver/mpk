@@ -1,7 +1,6 @@
-//! MPK_PARSER -- SPAN
+//! mpk_parser -- span
 use core::ops::Range;
 use std::fmt;
-
 use pest::Span as PSpan;
 use serde::{Deserialize, Serialize};
 

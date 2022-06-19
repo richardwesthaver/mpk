@@ -1,5 +1,5 @@
 use clap::Parser;
-use mpk::{arena::Bump, config::Config, engine::Engine, util::expand_tilde, Error};
+use mpk::{vm::Bump, config::Config, engine::Engine, util::expand_tilde, Error};
 
 #[derive(Parser)]
 #[clap(name = "mpkd")]

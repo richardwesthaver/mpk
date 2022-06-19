@@ -9,7 +9,9 @@ std = []
 
 [dependencies]
 mpk_parser = { path = "../mpk_parser" }
+mpk_hash = { path = "../mpk_hash" }
 bumpalo = { version = "3.9", features = ["allocator_api", "boxed"] }
 im-rc = "15.1.0"
 serde = { version = "1.0", features = ["derive"] }
 bincode = "1.3"
+log = "0.4.17"

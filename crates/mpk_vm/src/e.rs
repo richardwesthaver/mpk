@@ -8,6 +8,7 @@ pub enum VmError {
   Eval(EvalError),
   Generic(String),
   Conversion(String),
+  UnexpectedToken(String),
 }
 
 impl std::error::Error for VmError {
@@ -16,6 +17,7 @@ impl std::error::Error for VmError {
       VmError::Eval(ref e) => Some(e),
       VmError::Generic(_) => None,
       VmError::Conversion(_) => None,
+      VmError::UnexpectedToken(_) => None,
     }
   }
 }
@@ -26,6 +28,7 @@ impl std::fmt::Display for VmError {
       VmError::Eval(err) => err.fmt(f),
       VmError::Generic(m) => m.fmt(f),
       VmError::Conversion(m) => m.fmt(f),
+      VmError::UnexpectedToken(m) => m.fmt(f),
     }
   }
 }
@@ -48,9 +51,6 @@ macro_rules! stop {
 
 #[macro_export]
 macro_rules! throw {
-    // ($type:ident) => {
-    //     || SteelErr::$type
-    // };
     ($type:ident => $fmt:expr, $($arg:tt)+) => {
         || VmError::$type(format!($fmt, $($arg)+))
     };

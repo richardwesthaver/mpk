@@ -1,7 +1,7 @@
-//! MPK_VM -- ARENA
+//! mpk_vm -- m
 mod slab;
-use alloc::alloc::Allocator;
-use alloc::string::{String, ToString};
+use std::alloc::Allocator;
+use std::string::{String, ToString};
 
 pub use bumpalo::Bump;
 use mpk_parser::ast::AstNode;

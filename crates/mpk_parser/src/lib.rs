@@ -10,6 +10,7 @@
 extern crate pest_derive;
 
 pub mod ast;
+pub mod visitor;
 mod parser;
 pub mod span;
 pub use parser::*;

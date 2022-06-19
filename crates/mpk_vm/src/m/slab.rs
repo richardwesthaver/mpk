@@ -1,8 +1,8 @@
 //! mpk_vm/m/ -- slab.rs
 //! A port of slab with custom allocator support
 //! https://github.com/tokio-rs/slab
-use alloc::alloc::Allocator;
-use alloc::vec::{self, Vec};
+use std::alloc::Allocator;
+use std::vec::{self, Vec};
 use core::iter::{self, FusedIterator};
 use core::marker::PhantomData;
 // use core::iter::FromIterator;

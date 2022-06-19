@@ -1,7 +1,6 @@
 # mpk -- makefile
 SRC=lib bin crates ffi lisp tests
-DOCS=README STYLE NOTES TODO
-ORG=org/readme.org org/style.org org/todo.org org/notes.org
+ORG=org/readme.org org/style.org org/todo.org org/notes.org org/design.org
 ROOT=$(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 STASH=~/stash
 
@@ -48,10 +47,9 @@ out:;mkdir -p $@;
 ffi:out;@cp $(TARGET)/$(_FFI) out/$(_FFI)
 	ifeq ($(PY_FFI), 1) $(shell cp ffi/build.py out/build.py && cd out && python3 build.py) endif
 
-ox:$(DOCS) $(ORG);$(foreach d,$(ORG),cp $(d) $(call UC,$(patsubst org/%.org,%,$(d));))
-	emacs --eval '(let ((files (list "README" "STYLE" "TODO" "NOTES"))) \
-	(dolist (f files) (find-file f) (mark-whole-buffer) (org-ascii-convert-region-to-utf8)) \
-	(save-buffers-kill-terminal))'
+ox:$(ORG);$(foreach d,$(ORG),cp $(d) $(call UC,$(patsubst org/%.org,%,$(d));))
+	emacs --eval '(let ((files (list "README" "STYLE" "TODO" "NOTES" "DESIGN"))) \
+	(dolist (f files) (find-file f) (mark-whole-buffer) (org-ascii-convert-region-to-utf8)) (save-buffers-kill-terminal t))'
 mirror:$(FE) $(ROOT) out
 	mkdir -p out/$@;
 	git init out/$@;

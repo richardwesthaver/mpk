@@ -7,7 +7,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
   Osc(mpk_osc::Error),
   Parser(mpk_parser::Error),
-  Vm(VmError),
+  Vm(mpk_vm::VmError),
   //  Arena(mpk_arena::Error),
   Io(std::io::Error),
 }
@@ -52,35 +52,8 @@ impl From<mpk_parser::Error> for Error {
   }
 }
 
-impl From<VmError> for Error {
-  fn from(e: VmError) -> Self {
+impl From<mpk_vm::VmError> for Error {
+  fn from(e: mpk_vm::VmError) -> Self {
     Error::Vm(e)
-  }
-}
-
-#[derive(Debug)]
-pub enum VmError {
-  Eval(EvalError),
-}
-
-impl std::error::Error for VmError {
-  fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-    match self {
-      VmError::Eval(ref e) => Some(e),
-    }
-  }
-}
-
-impl std::fmt::Display for VmError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      VmError::Eval(err) => err.fmt(f),
-    }
-  }
-}
-
-impl From<EvalError> for VmError {
-  fn from(e: EvalError) -> Self {
-    VmError::Eval(e)
   }
 }

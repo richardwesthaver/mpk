@@ -151,7 +151,7 @@ impl<'eng> Engine<'eng> {
         todo!()
       }
     };
-    Ok(ServerMessage::Result(res))
+    Ok(ServerMessage::Result(ResultMessageKind::Ok(res)))
   }
 
   pub async fn send(&self, msg: ServerMessage<'_>, to: &SocketAddr) {

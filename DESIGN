@@ -1,0 +1,129 @@
+At a high level, the MPK system is composed of two programs: a client,
+providing the user interface, and a server containing the runtime
+engine. The client is responsible for sending messages to the server,
+which are decoded and dispatched to engine modules. Modules include a
+VM, Database, Session Manager (sesh), and Proxies. Each component of the
+system is highly configurable via CLI flags and TOML files.
+
+	                   +------+	   
+	      +----------->|client|       	      
+	      |            +------+     	      
+	      |                |	      
+	 +--------+            | 
+	 |  CLI   |          +---+
+	 +--------+     ~~~~ |msg| ~~~~ 	 
+	 |mpk.toml|          +---+	
+	 +--------+            |
+	      |                v  	       	      
+	      |            +------+    +--------+ 	      
+	      +----------->|server|===>| engine | 	      
+	                   +------+    +--------+        
+	                               | vm     |
+	                               | db     |
+	                               | sesh   |
+	                               | proxy  |
+	                               +--------+
+
+Below, we will discuss the implementation of each low-level component
+individually, their design, and how they interact with eachother. In
+addition, we will review the architecture of similar components in other
+systems and how ours compare.
+
+
+lang
+════
+
+  The primary means of user interaction in our system is a programming
+  language dubbed 'mk', short for 'media k'. It is directly derived from
+  Arthur Whitney's array programming language, `k' – more specifically
+  `k9' (aka shakti). k is an elegant and highly terse language designed
+  primarily for use in the finance industry. mk is a DSL specifically
+  designed for the MPK system.
+
+  • why k?
+    In my research, I have found no examples of k being used for media
+    development. This makes it a particularly unusual choice for such a
+    crucial part of our system. Other code-driven media systems are
+    typically derived from Lisp, Python, Haskell, Ruby, Lua, or JS.
+
+    What I did find is a thread in the official shakti mailing list
+    where some disgruntled programmers voice their grievances over the
+    unfortunate nature of western music theory:
+
+          the [ionian] scale has 7 notes.  1 3 5 (strongest
+          harmonics) * 1/3 1 3/1
+
+          i.e.
+
+          1 9/8 5/4 4/3 3/2 5/3 15/8
+
+          C D E F G A B
+
+          bach messed this up by adjusting to closest irrational
+          12th root of 2.  good marketing though.
+
+          and of course:
+
+          'a fifth' is a half 'a fourth' is a third
+
+          but then to make amends:
+
+          'a third' is a fifth
+
+          gotta love it.  so much for convention.
+
+          – Arthur Whitney, 2021-07-27
+
+    What really struck me is the mention of Stanley Jordan, a jazz
+    guitarist and pioneer of the 'tapping' technique. I learned that
+    Erik Friis, who was a participant in this thread, co-authored a few
+    papers with Jordan on APL and Music. I had no idea Stanley Jordan
+    was an experienced programmer, and after some further reading I was
+    quite inspired! It was reassuring to know that an array-based
+    language, for music at least, wasn't such a crazy thought.
+
+    My reasoning for picking k is as follows:
+    ⁃ media, control, and composition data is naturally represented as
+      arrays
+    ⁃ fast prototyping
+    ⁃ code is written and read like poetry
+    ⁃ it's fun
+
+    • why not APL?
+      APL is the OG, having first been developed in the 1960s and
+      pre-dating some of the oldest software known to man (including
+      C). As mentioned, there is some prior art we could have leveraged
+      if we chose this lang. The other option I considered was BQN,
+      which is a more modern APL dialect. I decided against these
+      options primarily due to the symbolic notation. I want to rely
+      only on ASCII symbols and not have to implement a custom keymap
+      just to interact with my lang. For example, here's how you write
+      the Euclidian distance between two coordinates `x' and `y':
+      • APL: `x(2*∘÷⍨1⊥2*⍨-)y'
+      • BQN: `x+´⌾(×˜)∘-y'
+      • k: `z:y-x;%+/z*z'
+
+      As we can see, there are non-ASCII characters in the APL and BQN
+      solutions, while the k solution uses only ASCII characters.
+
+
+vm
+══
+
+  The purpose of the Virtual Machine is to interpret the mk
+  language. The raw Abstract Syntax Tree (AST) is first passed to a
+  bytecode compiler which generates a sequence of opcodes, and then fed
+  to the vm interpreter loop. It is currently a stack-machine but I'm
+  considering implementing a register-based version.
+
+
+db
+══
+
+
+sesh
+════
+
+
+proxies
+═══════

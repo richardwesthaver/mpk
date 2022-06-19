@@ -1,5 +1,5 @@
 //! MPK_VM -- OBJ
-use alloc::vec::Vec;
+use std::vec::Vec;
 use std::{
   any::Any,
   cell::RefCell,
@@ -9,12 +9,13 @@ use std::{
   hash::{Hash, Hasher},
   ops::Fn,
   rc::{Rc, Weak},
+  time::Duration,
 };
-
+use mpk_parser::ast::{AstNode, Atom, Float, Integer};
 use im_rc::{HashMap, Vector};
 use Obj::*;
 
-use crate::{i::Ins, Gc, Result, VmError};
+use crate::{i::Ins, Gc, Result, VmError, stop};
 
 pub type FnSig = fn(&[Obj]) -> Result<Obj>;
 pub type BoxFnSig = Rc<dyn Fn(&[Obj]) -> Result<Obj>>;
@@ -93,7 +94,7 @@ pub enum Obj {
   A,
   B(bool),
   C(char),
-  D(u64),
+  D(Duration),
   E(f32),
   F(f64),
   G(u8),
@@ -102,12 +103,12 @@ pub enum Obj {
   J(u64),
   K(u128),
   L(Gc<Vector<Obj>>),
+  M(Gc<HashMap<Obj, Obj>>),
   Fn(FnSig),
   Str(Gc<String>),
   Sym(Gc<String>),
   Custom(Gc<Box<dyn CustomType>>),
   Closure(Gc<ByteCodeLambda>),
-  Map(Gc<HashMap<Obj, Obj>>),
   Vec(Gc<Vector<Obj>>),
   BoxFn(BoxFnSig),
   //  Tbl(Gc<HashMap<Obj, Obj>>),
@@ -116,6 +117,26 @@ pub enum Obj {
 impl From<char> for Obj {
   fn from(val: char) -> Obj {
     Obj::C(val)
+  }
+}
+
+impl TryInto<AstNode> for Obj {
+  type Error = VmError;
+  fn try_into(self) -> Result<AstNode> {
+    match self {
+      A => todo!(),
+      B(x) => Ok(Atom::Boolean(x).into()),
+      C(x) => Ok(Atom::Char(x).into()),
+      D(x) => Ok(Atom::Time(x).into()),
+      E(x) => Ok(Atom::Float(x.into()).into()),
+      F(x) => Ok(Atom::Float(x.into()).into()),
+      G(x) => Ok(Atom::Int(x.into()).into()),
+      H(x) => Ok(Atom::Int(x.into()).into()),
+      I(x) => Ok(Atom::Int(x.into()).into()),
+      J(x) => Ok(Atom::Int(x.into()).into()),
+      K(x) => Ok(Atom::Int(x.into()).into()),
+      _ => stop!(Conversion => "failed to convert Obj to AstNode")
+    }
   }
 }
 
@@ -167,7 +188,6 @@ impl<T: FromObj> FromObj for Option<T> {
 
 // TODO make into_obj return a result type
 // This allows errors to propagate
-
 impl<T: IntoObj, E: std::fmt::Debug> IntoObj for std::result::Result<T, E> {
   fn into_obj(self) -> Result<Obj> {
     match self {
@@ -346,7 +366,7 @@ impl<K: IntoObj, V: IntoObj> IntoObj for std::collections::HashMap<K, V> {
     for (key, val) in self.drain() {
       hm.insert(key.into_obj()?, val.into_obj()?);
     }
-    Ok(Obj::Map(Gc::new(hm)))
+    Ok(Obj::M(Gc::new(hm)))
   }
 }
 
@@ -355,7 +375,7 @@ impl<M: FromObj + Eq + std::hash::Hash, V: FromObj> FromObj
 {
   fn from_obj(val: Obj) -> Result<Self> {
     // todo!()
-    if let Map(hm) = val {
+    if let M(hm) = val {
       let mut h = std::collections::HashMap::new();
       for (key, value) in hm.unwrap().into_iter() {
         h.insert(M::from_obj(key)?, V::from_obj(value)?);
@@ -386,7 +406,7 @@ impl Obj {
 //	| Tbl(_)
         | Str(_)
         | Sym(_)
-        | Map(_) //        | Closure(_)
+        | M(_) //        | Closure(_)
     )
   }
   pub fn is_function(&self) -> bool {
@@ -416,7 +436,7 @@ impl PartialEq for Obj {
       (Str(x), Str(y)) => x == y,
       (Sym(x), Sym(y)) => x == y,
       (Vec(x), Vec(y)) => x == y,
-      (Map(x), Map(y)) => x == y,
+      (M(x), M(y)) => x == y,
       //      (Tbl(x),Tbl(y)) => x==y,
       (_, _) => false,
     }
@@ -443,7 +463,7 @@ impl Hash for Obj {
         "`".hash(s);
         x.hash(s)
       }
-      Map(x) => x.hash(s),
+      M(x) => x.hash(s),
       Vec(x) => x.hash(s),
       //      Tbl(x) => x.hash(s),
       Fn(_) => unimplemented!(),
@@ -504,7 +524,7 @@ fn obj_display(o: &Obj, f: &mut fmt::Formatter) -> fmt::Result {
       }
     }
     C(x) => write!(f, "{}", x),
-    D(x) => write!(f, "{}", x),
+    D(x) => write!(f, "{}", x.as_secs_f64()),
     E(x) => write!(f, "{}", x),
     F(x) => write!(f, "{}", x),
     G(x) => write!(f, "{}", x),
@@ -527,7 +547,7 @@ fn obj_display(o: &Obj, f: &mut fmt::Formatter) -> fmt::Result {
     Fn(_) => write!(f, "{{fn}}"),
     Str(x) => write!(f, "{}", x),
     Sym(x) => write!(f, "{}", x),
-    Map(x) => {
+    M(x) => {
       let mut str: Vec<String> = vec![];
       for (k, v) in x.iter() {
         str.push(format!("{}|{}", k, v.to_string()));
@@ -685,7 +705,7 @@ impl UpValue {
   }
 
   // Given a reference to the stack, either get the value from the stack index
-  // Or snag the steelval stored inside the upvalue
+  // Or snag the Obj stored inside the upvalue
   pub(crate) fn mutate_value(&mut self, stack: &mut [Obj], value: Obj) -> Obj {
     match self.location {
       Location::Stack(idx) => {
@@ -746,8 +766,8 @@ impl UpValue {
   }
 }
 
-// Either points to a stack index, or it points to a SteelVal directly
-// When performing an OPCODE::GET_UPVALUE, index into the array in the current
+// Either points to a stack index or an Obj directly When performing
+// an OPCODE::GET_UPVALUE, index into the array in the current
 // function being executed in the stack frame, and pull it in
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) enum Location {

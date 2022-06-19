@@ -2,7 +2,7 @@
 //!
 //! vm instruction set
 use mpk_parser::span::Span;
-use mpk_parser::Node;
+use mpk_parser::ast::AstNode;
 use serde::{Deserialize, Serialize};
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Serialize, Deserialize)]
@@ -27,8 +27,27 @@ pub enum Op {
   PANIC = 17,
   CLEAR = 18,
   TAILCALL = 19,
+  APPLY,
   SET,
+  COLLECT,
+  READ,
+  COLLECTTO,
+  METALOOKUP,
+  CALLCC,
+  READLOCAL,
+  SETLOCAL,
+  READUPVALUE,
+  SETUPVALUE,
+  FILLUPVALUE,
+  FILLLOCALUPVALUE,
+  CLOSEUPVALUE, // Should be 1 for close, 0 for not
   TCOJMP,
+  CALLGLOBAL,
+  CALLGLOBALTAIL,
+  LOADINT0, // Load const 0
+  LOADINT1,
+  LOADINT2,
+  CGLOCALCONST,  
 }
 
 /// Instruction loaded with lots of information prior to being condensed
@@ -38,7 +57,7 @@ pub enum Op {
 pub struct Instruction {
   pub op: Op,
   pub payload_size: usize,
-  pub contents: Option<Node>,
+  pub contents: Option<AstNode>,
   pub constant: bool,
 }
 
@@ -46,7 +65,7 @@ impl Instruction {
   pub fn new(
     op: Op,
     payload_size: usize,
-    contents: Node,
+    contents: AstNode,
     constant: bool,
   ) -> Instruction {
     Instruction {
@@ -57,7 +76,7 @@ impl Instruction {
     }
   }
 
-  pub fn new_panic(span: Node) -> Instruction {
+  pub fn new_panic(span: AstNode) -> Instruction {
     Instruction {
       op: Op::PANIC,
       payload_size: 0,
@@ -70,6 +89,14 @@ impl Instruction {
       op: Op::POP,
       payload_size: 0,
       contents: None,
+      constant: false,
+    }
+  }
+  pub fn new_local(idx: usize, contents: AstNode) -> Instruction {
+    Instruction {
+      op: Op::READLOCAL,
+      payload_size: idx,
+      contents: Some(contents),
       constant: false,
     }
   }
@@ -117,7 +144,7 @@ impl Instruction {
     }
   }
 
-  pub fn new_bind(contents: Node) -> Instruction {
+  pub fn new_bind(contents: AstNode) -> Instruction {
     Instruction {
       op: Op::BIND,
       payload_size: 0,

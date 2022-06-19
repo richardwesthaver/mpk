@@ -2,6 +2,7 @@
 //! stack machine (currently a tree-walker)
 pub mod eval;
 pub mod ops;
+pub mod const_eval;
 use eval::*;
 
 mod env;
@@ -26,7 +27,7 @@ impl<'vm, A: Allocator> Vm<'_, A> {
     let arena = Arena::<&'vm Bump>::new(alc);
     Vm { arena, ip: 0 }
   }
-  pub fn eval(&self, program: Prog) -> Result<Vec<String>, VmError> {
+  pub fn eval(&self, program: Prog) -> Result<String, VmError> {
     let mut res: Vec<String> = Vec::new();
     for node in program {
       match node.0 {
