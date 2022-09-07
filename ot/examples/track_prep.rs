@@ -15,10 +15,10 @@ fn main() -> std::io::Result<()> {
     if let Some(ext) = f.extension() {
       match ext.to_str().unwrap() {
 	"wav" => {
-	  // first 5 characters of a file_name is the tempo:
+	  // first 6 characters of a file_name is the tempo:
 	  // (140.00_ARTIST_TRACK.wav)
 	  let tempo: f32 = f.file_name().unwrap()
-	    .to_str().unwrap()[..5]
+	    .to_str().unwrap()[..6]
 	    .parse().expect("failed to parse tempo from file name");
 
 	  let len: u32 = WavReader::open(&f).unwrap().samples::<i16>().count() as u32;
