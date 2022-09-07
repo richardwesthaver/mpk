@@ -1,9 +1,0 @@
-[package]
-name = "chromaprint_sys"
-version = "0.1.0"
-edition = "2021"
-build = "build.rs"
-links = "chromaprint"
-
-[build-dependencies]
-bindgen = "0.59.2"

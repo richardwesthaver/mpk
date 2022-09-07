@@ -1,0 +1,8 @@
+[package]
+name = "mtz"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+zstd = "0.9"
+tar = "0.4"

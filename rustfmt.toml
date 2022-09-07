@@ -1,6 +1,0 @@
-tab_spaces = 2
-use_field_init_shorthand = true
-group_imports = "StdExternalCrate"
-#report_fixme = "Always"
-#report_todo = "Always"
-max_width = 88

@@ -1,0 +1,27 @@
+#+TITLE: MPK
+/Media Programming Kit/ is my toolkit for creative pursuits (art,
+music, video, performance, etc). It contains a bunch of tools that I
+use in my workflow.
+
+* Programs
+** DONE mtz
+package/unpackage a directory in tar.zst format
+** DONE mot
+create Octatrack metadata files for tracks
+** DONE mfs
+Freesound API client.
+** TODO msp
+Sample player.
+** TODO mmb
+Musicbrainz API client.
+** TODO mrm
+Removes duplicate files in ~/media.
+** TODO mtx
+Media transfer client.
+** TODO mrx
+Media transfer server.
+
+* Ideas
+** bare metal sound system
+implement audio drivers at ring -1 [[https://github.com/RafaelRMachado/Msc_UefiHda_PreOs_Accessibility][HDA drivers in UEFI]]
+use built-in speakers and sensors to create sound system
